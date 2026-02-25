@@ -191,7 +191,7 @@ setglobal "tabstop=8"
 
 - `wildmode` (`string`, default `"full"`) [`PARTIAL`]
   - コマンドライン補完の Tab 挙動を指定します。
-  - 現状は `longest`, `list`, `full` の最小対応です。
+  - 現状は `longest`, `list`, `full` の最小対応です（`list:full` 形式も可）。
 
 - `wildignore` (`string`, default `""`) [`DONE`]
   - コマンドライン path 補完から除外するパターンを指定します。

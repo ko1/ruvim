@@ -1372,11 +1372,13 @@ module RuVim
       raw = @editor.effective_option("wildmode").to_s
       return [:full] if raw.empty?
 
-      raw.split(",").map do |tok|
-        case tok.strip.downcase
-        when "longest" then :longest
-        when "list", "list:full" then :list
-        when "full" then :full
+      raw.split(",").flat_map do |tok|
+        tok.to_s.split(":").map do |part|
+          case part.strip.downcase
+          when "longest" then :longest
+          when "list" then :list
+          when "full" then :full
+          end
         end
       end.compact
     end

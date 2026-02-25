@@ -81,6 +81,28 @@ class AppCompletionTest < Minitest::Test
     end
   end
 
+  def test_command_line_completion_accepts_wildmode_list_colon_full
+    @editor.materialize_intro_buffer!
+    @editor.set_option("wildmode", "list:full", scope: :global)
+
+    Dir.mktmpdir("ruvim-wild-colon") do |dir|
+      a = File.join(dir, "aa.txt")
+      b = File.join(dir, "ab.txt")
+      File.write(a, "")
+      File.write(b, "")
+
+      @editor.enter_command_line_mode(":")
+      cmd = @editor.command_line
+      cmd.replace_text("e #{File.join(dir, "a")}")
+
+      @app.send(:command_line_complete)
+      assert_equal "e #{File.join(dir, "a")}", cmd.text
+
+      @app.send(:command_line_complete)
+      assert([a, b].any? { |p| cmd.text.end_with?(p) })
+    end
+  end
+
   def test_insert_completion_respects_completeopt_noselect_and_pumheight
     @editor.materialize_intro_buffer!
     @editor.set_option("completeopt", "menu,menuone,noselect", scope: :global)
