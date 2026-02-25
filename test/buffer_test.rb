@@ -47,4 +47,26 @@ class BufferTest < Minitest::Test
     assert_equal "bar 日本語 編集", b.line_at(0)
     assert_equal 10, b.line_length(0)
   end
+
+  def test_invalid_bytes_are_decoded_to_valid_utf8_with_replacement
+    path = "/tmp/ruvim_invalid_bytes_test.txt"
+    File.binwrite(path, "A\xFFB\n".b)
+
+    b = RuVim::Buffer.from_file(id: 1, path: path)
+    line = b.line_at(0)
+    assert_equal Encoding::UTF_8, line.encoding
+    assert_equal true, line.valid_encoding?
+    assert_match(/A.*B/, line)
+  end
+
+  def test_write_to_saves_utf8_text
+    path = "/tmp/ruvim_write_utf8_test.txt"
+    b = RuVim::Buffer.new(id: 1, lines: ["日本語", "abc"])
+    b.write_to(path)
+
+    data = File.binread(path)
+    text = data.force_encoding(Encoding::UTF_8)
+    assert_equal true, text.valid_encoding?
+    assert_equal "日本語\nabc", text
+  end
 end

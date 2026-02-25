@@ -233,10 +233,9 @@
   - `TextMetrics` を中心に `Window` / `Screen` の単位を分離（char index / grapheme / screen column）
   - `docs/spec.md` に現状の座標系と責務分担を明文化
 
-- エンコーディング方針の明文化と実装整理
-  - 読み込み時の decode 戦略（UTF-8 / default_external / scrub）の仕様化
-  - 保存時の encoding 方針（常に UTF-8 か、元 encoding を保持するか）
-  - 不正バイト列を含むファイルの表示・編集・保存の挙動テスト
+- [DONE] エンコーディング方針の明文化と実装整理
+  - `docs/spec.md` に decode/save の現状方針（UTF-8 / `default_external` / `scrub`）を明記
+  - `test/buffer_test.rb` に不正バイト列 decode と UTF-8 保存のテスト追加
 
 - 表示幅ベース描画の共通化
   - 文字列の切り詰め/パディングを ANSI 付きでも安全に扱う helper を整理

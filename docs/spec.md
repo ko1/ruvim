@@ -433,7 +433,23 @@ ANSI エスケープシーケンスによる再描画です。
 
 - 左右移動（`h/l`・矢印左右）は grapheme cluster を考慮するが、他の移動は未統一
 - 完全な Unicode grapheme / East Asian Width 互換ではない
-- スクロール幅判定は文字数ベースのまま（表示幅ベース最適化は未実装）
+- 横スクロール可視判定は `screen column` ベース（`TextMetrics` 利用）
+
+### エンコーディング方針（現状）
+
+- 読み込み:
+  - `File.binread` で bytes を取得
+  - `RuVim::Buffer.decode_text` で UTF-8 へ変換して保持
+  - UTF-8 として妥当ならそのまま使用
+  - 不正 UTF-8 の場合は `Encoding.default_external` を試し、それでもダメなら `scrub`
+- 内部表現:
+  - `Buffer#lines` は UTF-8 `String` 前提
+- 保存:
+  - 現状は `File.binwrite` で `lines.join("\n")` をそのまま保存
+  - 実質的に UTF-8 保存（元 encoding の保持は未実装）
+- 制約:
+  - 元ファイル encoding の保持/再保存は未対応
+  - 不正バイト列を完全保持したまま編集するモードは未実装
 
 ## Undo / Redo 仕様（現状）
 
