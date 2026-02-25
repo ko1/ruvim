@@ -5,7 +5,7 @@
 このリポジトリは Ruby 標準ライブラリのみで動きます。
 
 ```bash
-ruby -Ilib exe/ruvim
+ruvim
 ```
 
 ファイルを指定しない起動では、Vim 風の `intro screen`（RuVim では intro 用の read-only 特殊バッファ）を表示します。
@@ -14,12 +14,13 @@ ruby -Ilib exe/ruvim
 ファイルを開いて起動:
 
 ```bash
-ruby -Ilib exe/ruvim path/to/file.txt
+ruvim path/to/file.txt
 ```
 
 ### 起動オプション（Vim 風・現状）
 
-- `--help`, `--version`
+- `--help`（ヘルプを表示して終了）
+- `--version`（バージョンを表示して終了）
 - `--clean`（ユーザー設定と ftplugin を読まない）
 - `-d`（diff mode placeholder。現状は未実装メッセージのみ）
 - `-q errors.log`（quickfix startup placeholder。現状は未実装メッセージのみ）
@@ -41,15 +42,17 @@ ruby -Ilib exe/ruvim path/to/file.txt
 例:
 
 ```bash
-ruby -Ilib exe/ruvim --clean file.txt
-ruby -Ilib exe/ruvim -R file.txt
-ruby -Ilib exe/ruvim --cmd 'set number' -u /tmp/minimal_init.rb file.txt
-ruby -Ilib exe/ruvim -u /tmp/minimal_init.rb -c 'set number' file.txt
-ruby -Ilib exe/ruvim +10 file.txt
-ruby -Ilib exe/ruvim -o a.rb b.rb
-ruby -Ilib exe/ruvim -O a.rb b.rb
-ruby -Ilib exe/ruvim -p a.rb b.rb
+ruvim --clean file.txt
+ruvim -R file.txt
+ruvim --cmd 'set number' -u /tmp/minimal_init.rb file.txt
+ruvim -u /tmp/minimal_init.rb -c 'set number' file.txt
+ruvim +10 file.txt
+ruvim -o a.rb b.rb
+ruvim -O a.rb b.rb
+ruvim -p a.rb b.rb
 ```
+
+開発環境で gem 未インストールのまま試す場合は `ruby -Ilib exe/ruvim` でも起動できます。
 
 ## 基本操作
 
@@ -304,7 +307,7 @@ register prefix を付けると register を指定できます。
 例:
 
 ```bash
-RUVIM_AMBIGUOUS_WIDTH=2 ruby -Ilib exe/ruvim
+RUVIM_AMBIGUOUS_WIDTH=2 ruvim
 ```
 
 ## バッファ管理

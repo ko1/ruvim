@@ -170,7 +170,7 @@ RuVim::ExCommandRegistry.instance.register(
 
 ## 起動オプション（CLI, 現状）
 
-`exe/ruvim` は `RuVim::CLI` を通して起動オプションを解釈します（`bin/ruvim` は互換ラッパー）。
+インストール後の `ruvim` コマンド（実体は `exe/ruvim`）は `RuVim::CLI` を通して起動オプションを解釈します（`bin/ruvim` は互換ラッパー）。
 
 - `--help`, `--version`
 - `--clean`

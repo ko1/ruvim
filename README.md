@@ -10,31 +10,61 @@ Ruby で実装した Vim ライクなターミナルエディタです。
 
 ## 起動
 
-開発環境で直接起動:
+起動:
 
 ```bash
-ruby -Ilib exe/ruvim
+ruvim
 ```
 
 ファイルを開いて起動:
 
 ```bash
-ruby -Ilib exe/ruvim path/to/file.txt
+ruvim path/to/file.txt
 ```
 
 主な CLI オプション:
 
+- `ruvim --help`
+  - ヘルプを表示して終了
+- `ruvim --version`
+  - バージョンを表示して終了
+- `ruvim --clean`
+  - ユーザー設定 / ftplugin を読まずに起動
+- `ruvim -R file.txt`
+  - readonly モードで開く（`w` を拒否）
+- `ruvim -M file.txt`
+  - modifiable off 相当（編集操作を拒否、readonly も有効化）
+- `ruvim -Z file.txt`
+  - restricted mode（config/ftplugin 無効、`:ruby` 無効）
+- `ruvim -u /tmp/init.rb`
+  - 設定ファイルを指定
+- `ruvim -u NONE`
+  - ユーザー設定を読まない（ftplugin は有効）
+- `ruvim --cmd 'set number' file.txt`
+  - user config 読み込み前に Ex コマンドを実行
+- `ruvim -c 'set number' file.txt`
+  - 起動後に Ex コマンドを実行
+- `ruvim +10 file.txt`
+  - 起動後に 10 行目へ移動
+- `ruvim + file.txt`
+  - 起動後に最終行へ移動
+- `ruvim -o a.rb b.rb`
+  - 複数ファイルを水平 split で開く（最小実装）
+- `ruvim -O a.rb b.rb`
+  - 複数ファイルを垂直 split で開く（最小実装）
+- `ruvim -p a.rb b.rb`
+  - 複数ファイルを tab で開く（最小実装）
+- `ruvim -d file.txt`
+  - diff mode placeholder（現状は未実装メッセージのみ）
+- `ruvim -q errors.log`
+  - quickfix startup placeholder（現状は未実装メッセージのみ）
+- `ruvim -S Session.vim`
+  - session startup placeholder（現状は未実装メッセージのみ）
+
+開発環境で gem 未インストールのまま試す場合:
+
 ```bash
-ruby -Ilib exe/ruvim --help
-ruby -Ilib exe/ruvim --version
-ruby -Ilib exe/ruvim --clean
-ruby -Ilib exe/ruvim -d file.txt   # placeholder (diff UI 未実装)
-ruby -Ilib exe/ruvim -q errors.log  # placeholder (quickfix 未実装)
-ruby -Ilib exe/ruvim -S Session.vim # placeholder (session 未実装)
-ruby -Ilib exe/ruvim -u /tmp/init.rb
-ruby -Ilib exe/ruvim --cmd 'set number' file.txt
-ruby -Ilib exe/ruvim -c 'set number' file.txt
-ruby -Ilib exe/ruvim +10 file.txt
+ruby -Ilib exe/ruvim
 ```
 
 ## 主な操作（抜粋）
