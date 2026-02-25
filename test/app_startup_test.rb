@@ -34,4 +34,16 @@ class AppStartupTest < Minitest::Test
       assert_equal "c", editor.current_buffer.line_at(editor.current_window.cursor_y)
     end
   end
+
+  def test_startup_readonly_marks_opened_buffer_readonly
+    Tempfile.create(["ruvim-startup", ".txt"]) do |f|
+      f.write("hello\n")
+      f.flush
+
+      app = RuVim::App.new(path: f.path, clean: true, readonly: true)
+      editor = app.instance_variable_get(:@editor)
+
+      assert_equal true, editor.current_buffer.readonly?
+    end
+  end
 end

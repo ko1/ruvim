@@ -75,6 +75,10 @@ module RuVim
       @readonly
     end
 
+    def readonly=(value)
+      @readonly = !!value
+    end
+
     def modifiable?
       @modifiable
     end

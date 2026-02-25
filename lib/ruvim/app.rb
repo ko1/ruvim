@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil)
+    def initialize(path: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -14,6 +14,7 @@ module RuVim
       @clean_mode = clean
       @skip_user_config = skip_user_config
       @config_path = config_path
+      @startup_readonly = readonly
 
       register_builtins!
       bind_default_keys!
@@ -24,6 +25,7 @@ module RuVim
       @editor.ensure_bootstrap_buffer!
       @editor.open_path(path) if path
       @editor.show_intro_buffer_if_applicable! unless path
+      apply_startup_readonly! if path
       load_current_ftplugin!
       run_startup_actions!(startup_actions)
     end
@@ -1325,6 +1327,14 @@ module RuVim
       when :line_end
         move_cursor_to_line(@editor.current_buffer.line_count)
       end
+    end
+
+    def apply_startup_readonly!
+      buf = @editor.current_buffer
+      return unless buf&.file_buffer?
+
+      buf.readonly = true
+      @editor.echo("readonly: #{buf.display_name}")
     end
 
     def move_cursor_to_line(line_number)

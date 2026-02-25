@@ -29,6 +29,13 @@ class CLITest < Minitest::Test
     assert_equal "/tmp/ruvimrc.rb", opts.config_path
   end
 
+  def test_parse_readonly_option
+    opts = RuVim::CLI.parse(["-R", "file.txt"])
+
+    assert_equal true, opts.readonly
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_help_and_version_return_without_starting_ui
     out = StringIO.new
     err = StringIO.new
@@ -43,6 +50,7 @@ class CLITest < Minitest::Test
     code = RuVim::CLI.run(["--help"], stdout: out, stderr: err, stdin: StringIO.new)
     assert_equal 0, code
     assert_match(/Usage: ruvim/, out.string)
+    assert_match(/-R\s+Open file readonly/, out.string)
     assert_equal "", err.string
   end
 
