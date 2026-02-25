@@ -208,6 +208,7 @@ module RuVim
 
     def render_cells(cells, display_col, editor, buffer_row:, window:, buffer:, width:, source_line:, source_col_offset:, leading_display_prefix:)
       highlighted = +""
+      tabstop = tabstop_for(editor, window, buffer)
       visual = (editor.current_window_id == window.id && editor.visual_active?) ? editor.visual_selection(window) : nil
       text_for_highlight = source_line[source_col_offset..].to_s
       search_cols = search_highlight_source_cols(editor, text_for_highlight, source_col_offset: source_col_offset)
@@ -220,7 +221,8 @@ module RuVim
       current_line = (editor.current_window_id == window.id && window.cursor_y == buffer_row)
       cursorline_enabled = cursorline && current_line
       colorcolumns = colorcolumn_display_cols(editor, window, buffer)
-      display_pos = RuVim::DisplayWidth.display_width(leading_display_prefix.to_s, tabstop: tabstop_for(editor, window, buffer))
+      leading_prefix_width = RuVim::DisplayWidth.display_width(leading_display_prefix.to_s, tabstop:)
+      display_pos = leading_prefix_width
 
       cells.each_with_index do |cell, idx|
         ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
@@ -245,9 +247,17 @@ module RuVim
       end
 
       if editor.current_window_id == window.id && window.cursor_y == buffer_row
-        if window.cursor_x >= source_col_offset && window.cursor_x >= (cells.last&.source_col.to_i + 1) && display_col < width
+        cursor_target = virtual_cursor_display_pos(source_line, window.cursor_x, source_col_offset:, tabstop:, leading_prefix_width:)
+        if cursor_target && cursor_target >= display_pos && cursor_target < width
+          gap = cursor_target - display_pos
+          if gap.positive?
+            highlighted << (" " * gap)
+            display_col += gap
+            display_pos += gap
+          end
           highlighted << "\e[7m \e[m"
           display_col += 1
+          display_pos += 1
         end
       end
 
@@ -265,6 +275,15 @@ module RuVim
         highlighted << (" " * trailing)
       end
       highlighted
+    end
+
+    def virtual_cursor_display_pos(source_line, cursor_x, source_col_offset:, tabstop:, leading_prefix_width:)
+      return nil if cursor_x < source_col_offset
+
+      base = RuVim::TextMetrics.screen_col_for_char_index(source_line, cursor_x, tabstop:) -
+             RuVim::TextMetrics.screen_col_for_char_index(source_line, source_col_offset, tabstop:)
+      extra = [cursor_x.to_i - source_line.to_s.length, 0].max
+      leading_prefix_width + [base, 0].max + extra
     end
 
     def window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
@@ -584,14 +603,16 @@ module RuVim
         seg = segs[seg_index] || { source_col_start: 0, display_prefix: "" }
         row = rect[:top] + visual_rows_before + seg_index
         seg_prefix_w = RuVim::DisplayWidth.display_width(seg[:display_prefix].to_s, tabstop:)
-        cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:)
+        extra_virtual = [window.cursor_x - line.length, 0].max
+        cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) + extra_virtual
         seg_sc = RuVim::TextMetrics.screen_col_for_char_index(line, seg[:source_col_start], tabstop:)
         col = rect[:left] + gutter_w + seg_prefix_w + [cursor_sc - seg_sc, 0].max
       else
         row = rect[:top] + (window.cursor_y - window.row_offset)
+        extra_virtual = [window.cursor_x - line.length, 0].max
         prefix_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) -
                             RuVim::TextMetrics.screen_col_for_char_index(line, window.col_offset, tabstop:)
-        col = rect[:left] + gutter_w + [prefix_screen_col, 0].max
+        col = rect[:left] + gutter_w + [prefix_screen_col, 0].max + extra_virtual
       end
       [row, col]
     end

@@ -176,6 +176,26 @@ class ScreenTest < Minitest::Test
     assert_includes row2, ">>"
   end
 
+  def test_cursor_screen_position_supports_virtualedit_past_eol
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["abc"])
+    editor.set_option("virtualedit", "onemore", scope: :global)
+    win.cursor_y = 0
+    win.cursor_x = 4
+
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    pos = screen.send(:cursor_screen_position, editor, text_rows, rects)
+
+    # col 1-based; "abc" places cursor at 4, one-past-eol should be 5
+    assert_equal [1, 5], pos
+  end
+
   def test_linebreak_and_breakindent_prefer_space_wrap
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

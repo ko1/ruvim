@@ -1596,22 +1596,31 @@ module RuVim
     def move_cursor_horizontally(ctx, direction:, count:)
       count = [count.to_i, 1].max
       allow_wrap = whichwrap_allows?(ctx, direction)
-      onemore = virtualedit_onemore?(ctx)
+      virtualedit_mode = virtualedit_mode(ctx)
       count.times do
         line = ctx.buffer.line_at(ctx.window.cursor_y)
         if direction == :left
-          if ctx.window.cursor_x.positive?
+          if ctx.window.cursor_x > line.length && virtualedit_mode
+            ctx.window.cursor_x -= 1
+          elsif ctx.window.cursor_x.positive?
             ctx.window.cursor_x = RuVim::TextMetrics.previous_grapheme_char_index(line, ctx.window.cursor_x)
           elsif allow_wrap && ctx.window.cursor_y.positive?
             ctx.window.cursor_y -= 1
             ctx.window.cursor_x = ctx.buffer.line_length(ctx.window.cursor_y)
           end
         else
-          max_right = line.length + (onemore ? 1 : 0)
+          max_right =
+            case virtualedit_mode
+            when :all then line.length + count + 1024 # practical cap; clamp below uses current cursor
+            when :onemore then line.length + 1
+            else line.length
+            end
           if ctx.window.cursor_x < max_right
             ctx.window.cursor_x =
-              if onemore && ctx.window.cursor_x == line.length
+              if virtualedit_mode == :onemore && ctx.window.cursor_x == line.length
                 line.length + 1
+              elsif virtualedit_mode == :all && ctx.window.cursor_x >= line.length
+                ctx.window.cursor_x + 1
               else
                 RuVim::TextMetrics.next_grapheme_char_index(line, ctx.window.cursor_x)
               end
@@ -1622,7 +1631,16 @@ module RuVim
           end
         end
       end
-      ctx.window.clamp_to_buffer(ctx.buffer, max_extra_col: onemore ? 1 : 0)
+      extra =
+        case virtualedit_mode
+        when :all
+          [ctx.window.cursor_x - ctx.buffer.line_length(ctx.window.cursor_y), 0].max
+        when :onemore
+          1
+        else
+          0
+        end
+      ctx.window.clamp_to_buffer(ctx.buffer, max_extra_col: extra)
     end
 
     def whichwrap_allows?(ctx, direction)
@@ -1637,9 +1655,13 @@ module RuVim
       end
     end
 
-    def virtualedit_onemore?(ctx)
+    def virtualedit_mode(ctx)
       spec = ctx.editor.effective_option("virtualedit", window: ctx.window, buffer: ctx.buffer).to_s
-      spec.split(",").map { |s| s.strip.downcase }.include?("onemore")
+      toks = spec.split(",").map { |s| s.strip.downcase }
+      return :all if toks.include?("all")
+      return :onemore if toks.include?("onemore")
+
+      nil
     end
 
     def cursor_to_offset(buffer, row, col)

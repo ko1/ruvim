@@ -87,4 +87,18 @@ class AppMotionTest < Minitest::Test
     press("l")
     assert_equal 4, @editor.current_window.cursor_x
   end
+
+  def test_virtualedit_all_allows_multiple_columns_past_eol
+    b = @editor.current_buffer
+    b.replace_all_lines!(["abc"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 3
+    @editor.set_option("virtualedit", "all", scope: :global)
+
+    press("l", "l", "l")
+    assert_equal 6, @editor.current_window.cursor_x
+
+    press("h", "h")
+    assert_equal 4, @editor.current_window.cursor_x
+  end
 end

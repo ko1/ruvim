@@ -139,7 +139,7 @@ setglobal "tabstop=8"
 
 - `virtualedit` (`string`, default `""`) [`PARTIAL`]
   - 実文字のない位置へのカーソル移動可否を指定します。
-  - 現状は `onemore` の最小対応（行末の 1 つ先まで）です。
+  - 現状は `onemore` と `all` の最小対応（主に左右移動と描画）です。
 
 - `ignorecase` (`bool`, default `false`) [`DONE`]
   - 検索/置換の大文字小文字を無視します。
