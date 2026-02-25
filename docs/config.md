@@ -183,7 +183,7 @@ setglobal "tabstop=8"
 
 - `completeopt` (`string`, default `"menu,menuone,noselect"`) [`PARTIAL`]
   - Insert mode 補完 UI/選択挙動を指定します。
-  - 現状は `menu`, `menuone`, `noselect` をメッセージ行ベースの簡易 UI に反映します。
+  - 現状は `menu`, `menuone`, `noselect`, `noinsert` をメッセージ行ベースの簡易 UI に反映します。
 
 - `pumheight` (`int`, default `10`) [`PARTIAL`]
   - 補完候補 UI の最大表示件数です。

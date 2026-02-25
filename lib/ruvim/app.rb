@@ -1485,9 +1485,21 @@ module RuVim
         return
       end
 
+      if state[:index].nil? && insert_completion_noinsert?
+        preview_idx = direction.positive? ? 0 : matches.length - 1
+        state[:index] = :pending_insert
+        state[:pending_index] = preview_idx
+        show_insert_completion_menu(matches, selected: preview_idx, current: matches[preview_idx])
+        return
+      end
+
       idx = state[:index]
       idx = nil if idx == :pending_select
-      idx = idx.nil? ? (direction.positive? ? 0 : matches.length - 1) : (idx + direction) % matches.length
+      if idx == :pending_insert
+        idx = state.delete(:pending_index) || (direction.positive? ? 0 : matches.length - 1)
+      else
+        idx = idx.nil? ? (direction.positive? ? 0 : matches.length - 1) : (idx + direction) % matches.length
+      end
       replacement = matches[idx]
 
       end_col = state[:current_end_col]
@@ -1510,6 +1522,10 @@ module RuVim
 
     def insert_completion_noselect?
       @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }.include?("noselect")
+    end
+
+    def insert_completion_noinsert?
+      @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }.include?("noinsert")
     end
 
     def insert_completion_menu_enabled?

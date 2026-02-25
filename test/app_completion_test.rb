@@ -98,4 +98,21 @@ class AppCompletionTest < Minitest::Test
     @app.send(:handle_insert_key, :ctrl_n)
     assert_equal "foobar", b.line_at(0)
   end
+
+  def test_insert_completion_respects_completeopt_noinsert
+    @editor.materialize_intro_buffer!
+    @editor.set_option("completeopt", "menu,noinsert", scope: :global)
+    b = @editor.current_buffer
+    b.replace_all_lines!(["fo", "foobar", "fookey"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 2
+    @editor.enter_insert_mode
+
+    @app.send(:handle_insert_key, :ctrl_n)
+    assert_equal "fo", b.line_at(0)
+    assert_includes @editor.message, "["
+
+    @app.send(:handle_insert_key, :ctrl_n)
+    assert_equal "foobar", b.line_at(0)
+  end
 end
