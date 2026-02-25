@@ -5,4 +5,4 @@ bar 日本語 編集
 baz                     
 ~                       
 ~                       
--- NORMAL -- t1/1 w 1:1 
+-- NORMAL -- [No Na 1:1 

@@ -558,14 +558,9 @@ module RuVim
              end
 
       path = buffer.display_name
-      ft = editor.effective_option("filetype", buffer:, window:) || File.extname(buffer.path.to_s).delete_prefix(".")
-      ft = "-" if ft.empty?
       mod = buffer.modified? ? " [+]" : ""
       msg = editor.message_error? ? "" : editor.message.to_s
-      win_idx = (editor.window_order.index(editor.current_window_id) || 0) + 1
-      win_total = editor.window_order.length
-      tab_info = "t#{editor.current_tabpage_number}/#{editor.tabpage_count}"
-      left = "#{mode} #{tab_info} w#{win_idx}/#{win_total} b#{buffer.id} #{path} [ft=#{ft}]#{mod}"
+      left = "#{mode} #{path}#{mod}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1} "
       body_width = [width - right.length, 0].max
       "#{compose_status_body(left, msg, body_width)}#{right}"
