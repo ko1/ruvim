@@ -33,10 +33,14 @@
 - `diw` / `daw` : 単語 text object delete（簡易）
 - `di"` / `da"` : quote text object delete（簡易）
 - `di)` / `da)` : paren text object delete（簡易）
+- `di]` / `da]`, `di}` / `da}` : bracket / brace text object delete（簡易）
+- ``di` `` / ``da` `` : backtick quote text object delete（簡易）
+- `dip` / `dap` : paragraph text object delete（簡易）
 - `yy` / `yw` : yank
 - `yiw` / `yaw` : 単語 text object yank（簡易）
 - `yi"` / `ya"` : quote text object yank（簡易）
 - `yi)` / `ya)` : paren text object yank（簡易）
+- `yi]` / `ya]`, `yi}` / `ya}`, ``yi` `` / ``ya` ``, `yip` / `yap`（簡易）
 - `p` / `P` : paste
 - `"a`, `"A`, `"_`, `"+`, `"*` + operator/paste : register 指定
 - `m{a-zA-Z}` : mark を設定（小文字 local / 大文字 global）
@@ -47,6 +51,7 @@
 - `ciw` / `caw` : 単語 text object change（簡易）
 - `ci"` / `ca"` : quote text object change（簡易）
 - `ci)` / `ca)` : paren text object change（簡易）
+- `ci]` / `ca]`, `ci}` / `ca}`, ``ci` `` / ``ca` ``, `cip` / `cap`（簡易）
 - `v` : Visual (characterwise)
 - `V` : Visual (linewise)
 - `Ctrl-w w` : 次の window へ移動
@@ -87,7 +92,7 @@
 - `V` : linewise Visual の開始/切替
 - `y` : 選択範囲を yank
 - `d` : 選択範囲を delete
-- `i` / `a` + object : text object を選択（`iw`, `aw`, `i"`, `a"`, `i)`, `a)`）
+- `i` / `a` + object : text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c` : Normal mode に戻る
 
 ## Command-line mode

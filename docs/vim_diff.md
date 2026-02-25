@@ -38,7 +38,7 @@
   - `y`, `d` 中心
   - Vim の細かい選択挙動や text object は一部未実装
 - operator-pending は `d`, `y`, `c` の一部を実装
-  - text object は `iw`, `aw`, `i"`, `a"`, `i)`, `a)` のみ（簡易）
+  - text object は `iw/aw`, `ip/ap`, `i"/a"`, ``i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}` を実装（簡易）
   - Vim の text object 群全体は未実装
 - word motion（`w`, `b`, `e`）は簡易定義
   - Vim の厳密な単語境界とは一致しない場合がある
@@ -143,7 +143,7 @@
 
 ## 未実装（Vim との差分として大きいもの）
 
-- text objects は一部のみ（`iw`, `aw`, `i"`, `a"`, `i)`, `a)`）
+- text objects は一部のみ（`iw/aw`, `ip/ap`, `i"/a"`, ``i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}`）
 - change operator（`c` 系）は基礎のみ
 - macros / replay は基礎のみ（`q{reg}`, `@{reg}`, `@@`）
 - marks / jumps は基礎のみ（`m`, `'`, `` ` ``, `''`, `````, `<C-o>`, `<C-i>`）

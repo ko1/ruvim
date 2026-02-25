@@ -157,11 +157,15 @@ ruby -Ilib exe/ruvim +10 file.txt
 - `diw` / `daw` : 単語 text object（簡易）
 - `di"` / `da"` : ダブルクォート text object（簡易）
 - `di)` / `da)` : 丸括弧 text object（簡易）
+- `di]` / `da]`, `di}` / `da}` : bracket / brace text object（簡易）
+- ``di` `` / ``da` `` : backtick quote text object（簡易）
+- `dip` / `dap` : paragraph text object（簡易）
 
 ## yank / paste / replace
 
 - `yy` : 現在行を yank
 - `yw` : 単語方向に yank
+- `yi]`, `yi}`, ``yi` ``, `yip` など text object yank（簡易）
 - `p` : カーソル後ろに paste
 - `P` : カーソル前に paste
 - `r<char>` : カーソル位置の1文字を置換
@@ -209,6 +213,7 @@ register prefix を付けると register を指定できます。
 - `cc` : 行を change
 - `c$` : 行末まで change
 - `ciw`, `caw` : 単語 text object を change（簡易）
+- `ci]`, `ca}`, ``ci` ``, `cip`, `cap` なども利用可（簡易）
 
 `c` は削除後に Insert mode に入ります。
 
@@ -219,7 +224,7 @@ register prefix を付けると register を指定できます。
 - 移動して範囲を選択
 - `y` : yank
 - `d` : delete
-- `i` / `a` + object : text object を選択（例: `vi"`, `va)`, `viw`）
+- `i` / `a` + object : text object を選択（例: `vi"`, `va)`, `viw`, `vip`, `vi]`, ``vi` ``）
 - `Esc` / `Ctrl-c` : キャンセル（Normal mode に戻る）
 
 ## ユーザー定義 Ex コマンド（`:command`）

@@ -274,8 +274,8 @@ module RuVim
         when "w" then delete_word_forward(ctx, count)
         when "iw" then delete_text_object_word(ctx, around: false)
         when "aw" then delete_text_object_word(ctx, around: true)
-        when 'i"', "a\"", "i)", "a)" then delete_text_object(ctx, motion)
-        else false
+        else
+          text_object_motion?(motion) ? delete_text_object(ctx, motion) : false
         end
       ctx.editor.echo("Unsupported motion for d: #{motion}") unless handled
       handled
@@ -417,12 +417,14 @@ module RuVim
         yank_text_object_word(ctx, around: false)
       when "aw"
         yank_text_object_word(ctx, around: true)
-      when 'i"', "a\"", "i)", "a)"
-        yank_text_object(ctx, motion)
       when "y"
         yank_line(ctx, count:)
       else
-        ctx.editor.echo("Unsupported motion for y: #{motion}")
+        if text_object_motion?(motion)
+          yank_text_object(ctx, motion)
+        else
+          ctx.editor.echo("Unsupported motion for y: #{motion}")
+        end
       end
     end
 
@@ -1092,13 +1094,27 @@ module RuVim
       case kind
       when "w"
         word_object_span(buffer, window, around:)
+      when "p"
+        paragraph_object_span(buffer, window, around:)
       when '"'
         quote_object_span(buffer, window, quote: '"', around:)
+      when "'"
+        quote_object_span(buffer, window, quote: "'", around:)
+      when "`"
+        quote_object_span(buffer, window, quote: "`", around:)
       when ")"
         paren_object_span(buffer, window, open: "(", close: ")", around:)
+      when "]"
+        paren_object_span(buffer, window, open: "[", close: "]", around:)
+      when "}"
+        paren_object_span(buffer, window, open: "{", close: "}", around:)
       else
         nil
       end
+    end
+
+    def text_object_motion?(motion)
+      motion.is_a?(String) && motion.match?(/\A[ia](w|p|["'`\)\]\}])\z/)
     end
 
     def quote_object_span(buffer, window, quote:, around:)
@@ -1135,6 +1151,50 @@ module RuVim
         { start_row: row, start_col: left, end_row: row, end_col: right + 1 }
       else
         { start_row: row, start_col: left + 1, end_row: row, end_col: right }
+      end
+    end
+
+    def paragraph_object_span(buffer, window, around:)
+      row = [[window.cursor_y, 0].max, buffer.line_count - 1].min
+      return nil if row.negative?
+
+      blank = buffer.line_at(row).strip.empty?
+      start_row = row
+      end_row = row
+
+      while start_row.positive? && (buffer.line_at(start_row - 1).strip.empty? == blank)
+        start_row -= 1
+      end
+      while end_row + 1 < buffer.line_count && (buffer.line_at(end_row + 1).strip.empty? == blank)
+        end_row += 1
+      end
+
+      if around && !blank
+        if end_row + 1 < buffer.line_count && buffer.line_at(end_row + 1).strip.empty?
+          while end_row + 1 < buffer.line_count && buffer.line_at(end_row + 1).strip.empty?
+            end_row += 1
+          end
+        elsif start_row.positive? && buffer.line_at(start_row - 1).strip.empty?
+          while start_row.positive? && buffer.line_at(start_row - 1).strip.empty?
+            start_row -= 1
+          end
+        end
+      end
+
+      if around && end_row + 1 < buffer.line_count
+        {
+          start_row: start_row,
+          start_col: 0,
+          end_row: end_row + 1,
+          end_col: 0
+        }
+      else
+        {
+          start_row: start_row,
+          start_col: 0,
+          end_row: end_row,
+          end_col: buffer.line_length(end_row)
+        }
       end
     end
 

@@ -170,7 +170,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `x`: カーソル位置の文字削除
 - `dd`: 現在行削除
 - `d` + motion: operator-pending delete（例: `dw`, `dj`, `dk`, `d$`, `dh`, `dl`）
-- text object（`iw`, `aw`, `i"`, `a"`, `i)`, `a)`）を `d/y/c` と Visual で一部利用可
+- text object（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）を `d/y/c` と Visual で一部利用可
 - `yy`, `yw`: yank
 - `p`, `P`: paste
 - `r<char>`: 1文字置換
@@ -201,7 +201,7 @@ RuVim::ExCommandRegistry.instance.register(
 - 移動キー: `h/j/k/l`, `w/b/e`, `0/$/^`, `gg/G`, 矢印キー
 - `y`: 選択範囲を yank
 - `d`: 選択範囲を delete
-- `i`/`a` + object: text object を選択（`iw`, `aw`, `i"`, `a"`, `i)`, `a)`）
+- `i`/`a` + object: text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c`: Normal mode に戻る
 
 ### Command-line mode

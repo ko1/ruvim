@@ -298,7 +298,7 @@
   - メモ:
     - black hole (`"_`) と yank register `0` から着手が効果的
 
-- text object 拡充（`ip/ap`, `i]`, `a}`, ``i` ``, など）
+- [DONE] text object 拡充（`ip/ap`, `i]`, `a}`, ``i` ``, など）
   - 効果: 高（operator/visual の表現力向上）
   - コスト: 中
   - 依存:
