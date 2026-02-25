@@ -67,41 +67,41 @@
 - `wrap`（長い行を折り返す）
 - `linebreak`（単語境界寄りで折り返す）
 - `breakindent`（折り返し行のインデント）
-- `cursorline`（現在行ハイライト）
-- `scrolloff`（上下マージン行数）
-- `sidescrolloff`（左右マージン桁数）
-- `expandtab`（Tab 入力を空白化）
-- `shiftwidth`（`>`/`<` やインデント幅の基準）
-- `softtabstop`（Tab/BS 時の編集幅）
-- `autoindent`（改行時に前行インデントを引き継ぐ）
-- `smartindent`（言語非依存の簡易インデント）
-- `incsearch`（検索入力中の逐次移動/ハイライト）
-- `splitbelow`（`:split` の配置方向）
-- `splitright`（`:vsplit` の配置方向）
-- `hidden`（未保存バッファ切替の挙動）
-- `clipboard`（unnamed/unnamedplus 連携方針）
-- `timeoutlen`（マップ待ち時間）
-- `ttimeoutlen`（端末キーコード待ち時間）
+- `[DONE]` `cursorline`（現在行ハイライト）
+- `[DONE]` `scrolloff`（上下マージン行数）
+- `[DONE]` `sidescrolloff`（左右マージン桁数）
+- `[DONE]` `expandtab`（Tab 入力を空白化）
+- `[DONE]` `shiftwidth`（`>`/`<` やインデント幅の基準）
+- `[DONE]` `softtabstop`（Tab/BS 時の編集幅）
+- `[DONE]` `autoindent`（改行時に前行インデントを引き継ぐ）
+- `[DONE]` `smartindent`（言語非依存の簡易インデント）
+- `[DONE]` `incsearch`（検索入力中の逐次移動/ハイライト）
+- `[DONE]` `splitbelow`（`:split` の配置方向）
+- `[DONE]` `splitright`（`:vsplit` の配置方向）
+- `[DONE]` `hidden`（未保存バッファ切替の挙動）
+- `[DONE]` `clipboard`（unnamed/unnamedplus 連携方針）
+- `[DONE]` `timeoutlen`（マップ待ち時間）
+- `[DONE]` `ttimeoutlen`（端末キーコード待ち時間）
 
 ### P1: 使う人が多い / UI と編集体験を整える
 
-- `list`（不可視文字の表示）
-- `listchars`（不可視文字の表示内容）
+- `[DONE]` `list`（不可視文字の表示、最小）
+- `[DONE]` `listchars`（不可視文字の表示内容、`tab/trail/nbsp` 最小）
 - `showbreak`（折り返し行の先頭表示）
-- `colorcolumn`（桁ガイド）
+- `[DONE]` `colorcolumn`（桁ガイド）
 - `signcolumn`（サイン列の表示）
-- `numberwidth`（行番号列の幅）
-- `showmatch`（対応括弧を一時強調）
+- `[DONE]` `numberwidth`（行番号列の幅）
+- `[DONE]` `showmatch`（対応括弧を一時強調、最小）
 - `matchtime`（`showmatch` の表示時間）
-- `backspace`（Insert mode での BS 挙動）
-- `whichwrap`（左右移動が行をまたぐ条件）
+- `[PARTIAL]` `backspace`（Insert mode での BS 挙動: `start/eol` 最小）
+- `[PARTIAL]` `whichwrap`（左右移動が行をまたぐ条件: `h/l` 最小）
 - `virtualedit`（実文字のない位置へのカーソル）
-- `iskeyword`（単語境界の定義）
+- `[PARTIAL]` `iskeyword`（単語境界の定義: word motion / 補完 / 一部 textobj）
 - `completeopt`（補完 UI の挙動）
 - `pumheight`（補完候補 UI の高さ）
 - `wildmode`（コマンドライン補完の挙動）
-- `wildignore`（補完から除外するパターン）
-- `wildignorecase`（補完の大文字小文字）
+- `[DONE]` `wildignore`（補完から除外するパターン）
+- `[DONE]` `wildignorecase`（補完の大文字小文字）
 - `wildmenu`（コマンドライン補完 UI）
 - `path`（`gf` / 検索系のパス探索）
 - `suffixesadd`（補完/検索時の拡張子補完）

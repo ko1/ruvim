@@ -12,11 +12,11 @@ module RuVim
     end
 
     def cursor_left(ctx, count:, **)
-      ctx.window.move_left(ctx.buffer, count)
+      move_cursor_horizontally(ctx, direction: :left, count:)
     end
 
     def cursor_right(ctx, count:, **)
-      ctx.window.move_right(ctx.buffer, count)
+      move_cursor_horizontally(ctx, direction: :right, count:)
     end
 
     def cursor_up(ctx, count:, **)
@@ -428,7 +428,7 @@ module RuVim
       when "w"
         y = ctx.window.cursor_y
         x = ctx.window.cursor_x
-        target = advance_word_forward(ctx.buffer, y, x, count)
+        target = advance_word_forward(ctx.buffer, y, x, count, editor: ctx.editor, window: ctx.window)
         target ||= { row: y, col: x }
         text = ctx.buffer.span_text(y, x, target[:row], target[:col])
         store_yank_register(ctx, text:, type: :charwise)
@@ -1162,7 +1162,7 @@ module RuVim
     def delete_word_forward(ctx, count)
       y = ctx.window.cursor_y
       x = ctx.window.cursor_x
-      target = advance_word_forward(ctx.buffer, y, x, count)
+      target = advance_word_forward(ctx.buffer, y, x, count, editor: ctx.editor, window: ctx.window)
       return true unless target
 
       deleted = ctx.buffer.span_text(y, x, target[:row], target[:col])
@@ -1224,12 +1224,13 @@ module RuVim
       true
     end
 
-    def advance_word_forward(buffer, row, col, count)
+    def advance_word_forward(buffer, row, col, count, editor: nil, window: nil)
       text = buffer.lines.join("\n")
       flat = cursor_to_offset(buffer, row, col)
       idx = flat
+      keyword_rx = keyword_char_regex(editor, buffer, window)
       count.times do
-        idx = next_word_start_offset(text, idx)
+        idx = next_word_start_offset(text, idx, keyword_rx)
         return nil unless idx
       end
       offset_to_cursor(buffer, idx)
@@ -1244,9 +1245,9 @@ module RuVim
       count.times do
         target =
           case kind
-          when :forward_start then advance_word_forward(buffer, target[:row], target[:col], 1)
-          when :backward_start then advance_word_backward(buffer, target[:row], target[:col], 1)
-          when :forward_end then advance_word_end(buffer, target[:row], target[:col], 1)
+          when :forward_start then advance_word_forward(buffer, target[:row], target[:col], 1, editor: ctx.editor, window: ctx.window)
+          when :backward_start then advance_word_backward(buffer, target[:row], target[:col], 1, editor: ctx.editor, window: ctx.window)
+          when :forward_end then advance_word_end(buffer, target[:row], target[:col], 1, editor: ctx.editor, window: ctx.window)
           end
         break unless target
       end
@@ -1257,60 +1258,62 @@ module RuVim
       ctx.window.clamp_to_buffer(buffer)
     end
 
-    def advance_word_backward(buffer, row, col, _count)
+    def advance_word_backward(buffer, row, col, _count, editor: nil, window: nil)
       text = buffer.lines.join("\n")
       idx = cursor_to_offset(buffer, row, col)
       idx = [idx - 1, 0].max
-      while idx > 0 && char_class(text[idx]) == :space
+      keyword_rx = keyword_char_regex(editor, buffer, window)
+      while idx > 0 && char_class(text[idx], keyword_rx) == :space
         idx -= 1
       end
-      cls = char_class(text[idx])
-      while idx > 0 && char_class(text[idx - 1]) == cls && cls != :space
+      cls = char_class(text[idx], keyword_rx)
+      while idx > 0 && char_class(text[idx - 1], keyword_rx) == cls && cls != :space
         idx -= 1
       end
-      while idx > 0 && char_class(text[idx]) == :space
+      while idx > 0 && char_class(text[idx], keyword_rx) == :space
         idx += 1
       end
       offset_to_cursor(buffer, idx)
     end
 
-    def advance_word_end(buffer, row, col, _count)
+    def advance_word_end(buffer, row, col, _count, editor: nil, window: nil)
       text = buffer.lines.join("\n")
       idx = cursor_to_offset(buffer, row, col)
       n = text.length
-      while idx < n && char_class(text[idx]) == :space
+      keyword_rx = keyword_char_regex(editor, buffer, window)
+      while idx < n && char_class(text[idx], keyword_rx) == :space
         idx += 1
       end
       return nil if idx >= n
 
-      cls = char_class(text[idx])
-      idx += 1 while idx + 1 < n && char_class(text[idx + 1]) == cls && cls != :space
+      cls = char_class(text[idx], keyword_rx)
+      idx += 1 while idx + 1 < n && char_class(text[idx + 1], keyword_rx) == cls && cls != :space
       offset_to_cursor(buffer, idx)
     end
 
-    def next_word_start_offset(text, from_offset)
+    def next_word_start_offset(text, from_offset, keyword_rx = nil)
       i = [from_offset, 0].max
       n = text.length
       return nil if i >= n
 
-      cls = char_class(text[i])
+      cls = char_class(text[i], keyword_rx)
       if cls == :word
-        i += 1 while i < n && char_class(text[i]) == :word
+        i += 1 while i < n && char_class(text[i], keyword_rx) == :word
       elsif cls == :space
-        i += 1 while i < n && char_class(text[i]) == :space
+        i += 1 while i < n && char_class(text[i], keyword_rx) == :space
       else
         i += 1
       end
-      i += 1 while i < n && char_class(text[i]) == :space
+      i += 1 while i < n && char_class(text[i], keyword_rx) == :space
       return n if i > n
 
       i <= n ? i : nil
     end
 
-    def char_class(ch)
+    def char_class(ch, keyword_rx = nil)
       return :space if ch == "\n"
       return :space if ch =~ /\s/
-      return :word if ch =~ /[[:alnum:]_]/
+      return :word if keyword_char?(ch, keyword_rx)
       :punct
     end
 
@@ -1336,11 +1339,12 @@ module RuVim
         x = nxt
       end
 
-      cls = line[x] =~ /[[:alnum:]_]/ ? :word : :punct
+      keyword_rx = keyword_char_regex(nil, buffer, window)
+      cls = keyword_char?(line[x], keyword_rx) ? :word : :punct
       start_col = x
-      start_col -= 1 while start_col.positive? && same_word_class?(line[start_col - 1], cls)
+      start_col -= 1 while start_col.positive? && same_word_class?(line[start_col - 1], cls, keyword_rx)
       end_col = x + 1
-      end_col += 1 while end_col < line.length && same_word_class?(line[end_col], cls)
+      end_col += 1 while end_col < line.length && same_word_class?(line[end_col], cls, keyword_rx)
 
       if around
         while end_col < line.length && line[end_col] =~ /\s/
@@ -1523,12 +1527,84 @@ module RuVim
       nil
     end
 
-    def same_word_class?(ch, cls)
+    def same_word_class?(ch, cls, keyword_rx = nil)
       return false if ch.nil?
       case cls
-      when :word then ch =~ /[[:alnum:]_]/
-      when :punct then !(ch =~ /[[:alnum:]_\s]/)
+      when :word then keyword_char?(ch, keyword_rx)
+      when :punct then !(keyword_char?(ch, keyword_rx) || ch =~ /\s/)
       else false
+      end
+    end
+
+    def keyword_char?(ch, keyword_rx = nil)
+      return false if ch.nil?
+
+      (keyword_rx || /[[:alnum:]_]/).match?(ch)
+    end
+
+    def keyword_char_regex(editor, buffer, window)
+      win = window || editor&.current_window
+      buf = buffer || editor&.current_buffer
+      raw =
+        if editor
+          editor.effective_option("iskeyword", window: win, buffer: buf).to_s
+        else
+          buf&.options&.fetch("iskeyword", nil).to_s
+        end
+      return /[[:alnum:]_]/ if raw.empty?
+
+      extra = []
+      raw.split(",").each do |tok|
+        t = tok.strip
+        next if t.empty? || t == "@"
+
+        if t.length == 1
+          extra << Regexp.escape(t)
+        elsif t.match?(/\A\d+-\d+\z/)
+          a, b = t.split("-", 2).map(&:to_i)
+          lo, hi = [a, b].minmax
+          next if lo < 0 || hi > 255
+          extra << "#{Regexp.escape(lo.chr)}-#{Regexp.escape(hi.chr)}"
+        end
+      end
+      /[[:alnum:]_#{extra.join}]/
+    rescue RegexpError
+      /[[:alnum:]_]/
+    end
+
+    def move_cursor_horizontally(ctx, direction:, count:)
+      count = [count.to_i, 1].max
+      allow_wrap = whichwrap_allows?(ctx, direction)
+      count.times do
+        line = ctx.buffer.line_at(ctx.window.cursor_y)
+        if direction == :left
+          if ctx.window.cursor_x.positive?
+            ctx.window.cursor_x = RuVim::TextMetrics.previous_grapheme_char_index(line, ctx.window.cursor_x)
+          elsif allow_wrap && ctx.window.cursor_y.positive?
+            ctx.window.cursor_y -= 1
+            ctx.window.cursor_x = ctx.buffer.line_length(ctx.window.cursor_y)
+          end
+        else
+          if ctx.window.cursor_x < line.length
+            ctx.window.cursor_x = RuVim::TextMetrics.next_grapheme_char_index(line, ctx.window.cursor_x)
+          elsif allow_wrap && ctx.window.cursor_y < ctx.buffer.line_count - 1
+            ctx.window.cursor_y += 1
+            ctx.window.cursor_x = 0
+          end
+        end
+      end
+      ctx.window.clamp_to_buffer(ctx.buffer)
+    end
+
+    def whichwrap_allows?(ctx, direction)
+      toks = ctx.editor.effective_option("whichwrap", window: ctx.window, buffer: ctx.buffer).to_s
+               .split(",").map { |s| s.strip.downcase }.reject(&:empty?)
+      return false if toks.empty?
+
+      if direction == :left
+        toks.include?("h") || toks.include?("<") || toks.include?("left")
+      else
+        toks.include?("l") || toks.include?(">") || toks.include?("right")
       end
     end
 

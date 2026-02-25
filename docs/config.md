@@ -61,6 +61,12 @@ setglobal "tabstop=8"
 
 実装の定義元は `lib/ruvim/editor.rb` の `RuVim::Editor::OPTION_DEFS` です。
 
+補足:
+- 実装済み option はこの文書の個別解説より多いです（`cursorline`, `scrolloff`, `incsearch`, `expandtab`,
+  `autoindent`, `smartindent`, `splitbelow`, `splitright`, `list`, `listchars`, `colorcolumn`, `numberwidth`,
+  `whichwrap`, `backspace`, `wildignore`, `wildignorecase` など）
+- 個別解説は利用頻度の高いものから順次追記しています
+
 ### `number`
 
 - 型: `bool`

@@ -12,6 +12,8 @@ module RuVim
       @cmdline_history_index = nil
       @pending_key_deadline = nil
       @pending_ambiguous_invocation = nil
+      @insert_start_location = nil
+      @incsearch_preview = nil
       @needs_redraw = true
       @clean_mode = clean
       @skip_user_config = skip_user_config
@@ -286,10 +288,12 @@ module RuVim
     end
 
     def handle_key(key)
+      mode_before = @editor.mode
       @skip_record_for_current_key = false
       append_dot_change_capture_key(key)
       if key == :ctrl_c
         handle_ctrl_c
+        track_mode_transition(mode_before)
         record_macro_key_if_needed(key)
         return
       end
@@ -304,6 +308,7 @@ module RuVim
       else
         handle_normal_key(key)
       end
+      track_mode_transition(mode_before)
       load_current_ftplugin!
       record_macro_key_if_needed(key)
     end
@@ -484,6 +489,8 @@ module RuVim
         @editor.echo("")
       when :backspace
         clear_insert_completion
+        return unless insert_backspace_allowed?
+
         y, x = @editor.current_buffer.backspace(@editor.current_window.cursor_y, @editor.current_window.cursor_x)
         @editor.current_window.cursor_y = y
         @editor.current_window.cursor_x = x
@@ -636,6 +643,7 @@ module RuVim
       cmd = @editor.command_line
       case key
       when :escape
+        cancel_incsearch_preview_if_any
         @editor.cancel_command_line
       when :enter
         line = cmd.text.dup
@@ -659,6 +667,7 @@ module RuVim
           cmd.insert(key)
         end
       end
+      update_incsearch_preview_if_needed
     end
 
     def arrow_key?(key)
@@ -751,6 +760,7 @@ module RuVim
         @editor.echo("")
       when :command_line
         clear_pending_key_timeout
+        cancel_incsearch_preview_if_any
         @editor.cancel_command_line
       when :visual_char, :visual_line, :visual_block
         @visual_pending = nil
@@ -779,6 +789,7 @@ module RuVim
     end
 
     def handle_command_line_submit(prefix, line)
+      clear_incsearch_preview_state(apply: false) if %w[/ ?].include?(prefix)
       case prefix
       when ":"
         verbose_log(2, "ex: #{line}")
@@ -1249,6 +1260,7 @@ module RuVim
       else
         cmd.replace_text(hist[@cmdline_history_index])
       end
+      update_incsearch_preview_if_needed
     end
 
     def command_line_complete
@@ -1269,6 +1281,7 @@ module RuVim
         cmd.replace_span(ctx[:token_start], ctx[:token_end], prefix) if prefix.length > ctx[:prefix].length
         @editor.echo(matches.join(" "))
       end
+      update_incsearch_preview_if_needed
     end
 
     def common_prefix(strings)
@@ -1374,7 +1387,7 @@ module RuVim
       row = @editor.current_window.cursor_y
       col = @editor.current_window.cursor_x
       line = @editor.current_buffer.line_at(row)
-      prefix = line[0...col].to_s[/[[:alnum:]_]+\z/]
+      prefix = trailing_keyword_fragment(line[0...col].to_s, @editor.current_window, @editor.current_buffer)
       return nil if prefix.nil? || prefix.empty?
 
       start_col = col - prefix.length
@@ -1403,9 +1416,10 @@ module RuVim
     def collect_buffer_word_completions(prefix, current_word:)
       words = []
       seen = {}
+      rx = keyword_scan_regex(@editor.current_window, @editor.current_buffer)
       @editor.buffers.values.each do |buf|
         buf.lines.each do |line|
-          line.scan(/[[:alnum:]_]+/) do |w|
+          line.scan(rx) do |w|
             next unless w.start_with?(prefix)
             next if w == current_word
             next if seen[w]
@@ -1416,6 +1430,147 @@ module RuVim
         end
       end
       words.sort
+    end
+
+    def track_mode_transition(mode_before)
+      mode_after = @editor.mode
+      if mode_before != :insert && mode_after == :insert
+        @insert_start_location = @editor.current_location
+      elsif mode_before == :insert && mode_after != :insert
+        @insert_start_location = nil
+      end
+
+      if mode_before != :command_line && mode_after == :command_line
+        @incsearch_preview = nil
+      elsif mode_before == :command_line && mode_after != :command_line
+        @incsearch_preview = nil
+      end
+    end
+
+    def insert_backspace_allowed?
+      buf = @editor.current_buffer
+      win = @editor.current_window
+      row = win.cursor_y
+      col = win.cursor_x
+      return false if row.zero? && col.zero?
+
+      opt = @editor.effective_option("backspace", window: win, buffer: buf).to_s
+      allow = opt.split(",").map { |s| s.strip.downcase }.reject(&:empty?)
+      allow_all = allow.include?("2")
+
+      if col.zero? && row.positive?
+        return true if allow_all || allow.include?("eol")
+
+        @editor.echo_error("backspace=eol required")
+        return false
+      end
+
+      if @insert_start_location
+        same_buf = @insert_start_location[:buffer_id] == buf.id
+        if same_buf && (row < @insert_start_location[:row] || (row == @insert_start_location[:row] && col <= @insert_start_location[:col]))
+          return true if allow_all || allow.include?("start")
+
+          @editor.echo_error("backspace=start required")
+          return false
+        end
+      end
+
+      true
+    end
+
+    def incsearch_enabled?
+      return false unless @editor.command_line_active?
+      return false unless ["/", "?"].include?(@editor.command_line.prefix)
+
+      !!@editor.effective_option("incsearch")
+    end
+
+    def update_incsearch_preview_if_needed
+      return unless incsearch_enabled?
+
+      cmd = @editor.command_line
+      ensure_incsearch_preview_origin!(direction: (cmd.prefix == "/" ? :forward : :backward))
+      pattern = cmd.text.to_s
+      if pattern.empty?
+        clear_incsearch_preview_state(apply: false)
+        return
+      end
+
+      buf = @editor.current_buffer
+      win = @editor.current_window
+      origin = @incsearch_preview[:origin]
+      tmp_window = RuVim::Window.new(id: -1, buffer_id: buf.id)
+      tmp_window.cursor_y = origin[:row]
+      tmp_window.cursor_x = origin[:col]
+      regex = GlobalCommands.instance.send(:compile_search_regex, pattern, editor: @editor, window: win, buffer: buf)
+      match = GlobalCommands.instance.send(:find_next_match, buf, tmp_window, regex, direction: @incsearch_preview[:direction])
+      if match
+        win.cursor_y = match[:row]
+        win.cursor_x = match[:col]
+        win.clamp_to_buffer(buf)
+      end
+      @incsearch_preview[:active] = true
+    rescue RuVim::CommandError, RegexpError
+      # Keep editing command-line without forcing an error flash on every keystroke.
+    end
+
+    def ensure_incsearch_preview_origin!(direction:)
+      return if @incsearch_preview
+
+      @incsearch_preview = {
+        origin: @editor.current_location,
+        direction: direction,
+        active: false
+      }
+    end
+
+    def cancel_incsearch_preview_if_any
+      clear_incsearch_preview_state(apply: false)
+    end
+
+    def clear_incsearch_preview_state(apply:)
+      return unless @incsearch_preview
+
+      if !apply && @incsearch_preview[:origin]
+        @editor.jump_to_location(@incsearch_preview[:origin])
+      end
+      @incsearch_preview = nil
+    end
+
+    def trailing_keyword_fragment(prefix_text, window, buffer)
+      cls = keyword_char_class(window, buffer)
+      prefix_text.to_s[/[#{cls}]+\z/]
+    rescue RegexpError
+      prefix_text.to_s[/[[:alnum:]_]+\z/]
+    end
+
+    def keyword_scan_regex(window, buffer)
+      cls = keyword_char_class(window, buffer)
+      /[#{cls}]+/
+    rescue RegexpError
+      /[[:alnum:]_]+/
+    end
+
+    def keyword_char_class(window, buffer)
+      raw = @editor.effective_option("iskeyword", window:, buffer:).to_s
+      return "[:alnum:]_" if raw.empty?
+
+      extra = []
+      raw.split(",").each do |tok|
+        t = tok.strip
+        next if t.empty?
+        next if t == "@"
+
+        if t.length == 1
+          extra << Regexp.escape(t)
+        elsif t.match?(/\A\d+-\d+\z/)
+          a, b = t.split("-", 2).map(&:to_i)
+          lo, hi = [a, b].minmax
+          next if lo < 0 || hi > 255
+          extra << "#{Regexp.escape(lo.chr)}-#{Regexp.escape(hi.chr)}"
+        end
+      end
+      "[:alnum:]_#{extra.join}"
     end
 
     def ex_completion_context(cmd)

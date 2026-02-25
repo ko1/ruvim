@@ -120,4 +120,22 @@ class ScreenTest < Minitest::Test
     assert_equal 10, RuVim::DisplayWidth.display_width(visible, tabstop: 2)
     refute_includes out, "\n"
   end
+
+  def test_render_text_line_respects_list_and_listchars_for_tab_trail_and_nbsp
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["\tA \u00A0  "])
+    editor.set_option("list", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("listchars", "tab:>.,trail:~,nbsp:*", scope: :window, window: win, buffer: buf)
+
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    out = screen.send(:render_text_line, buf.line_at(0), editor, buffer_row: 0, window: win, buffer: buf, width: 12)
+    visible = out.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+
+    assert_includes visible, ">."
+    assert_includes visible, "*"
+    assert_includes visible, "~"
+  end
 end

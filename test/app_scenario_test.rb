@@ -99,4 +99,82 @@ class AppScenarioTest < Minitest::Test
 
     assert_equal ["if x {", "  "], @editor.current_buffer.lines
   end
+
+  def test_incsearch_moves_cursor_while_typing_and_escape_restores
+    @editor.set_option("incsearch", true, scope: :global)
+    @editor.current_buffer.replace_all_lines!(["alpha", "beta", "gamma"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("/", "b")
+    assert_equal :command_line, @editor.mode
+    assert_equal 1, @editor.current_window.cursor_y
+    assert_equal 0, @editor.current_window.cursor_x
+
+    feed(:escape)
+    assert_equal :normal, @editor.mode
+    assert_equal 0, @editor.current_window.cursor_y
+    assert_equal 0, @editor.current_window.cursor_x
+  end
+
+  def test_incsearch_submit_stays_on_previewed_match
+    @editor.set_option("incsearch", true, scope: :global)
+    @editor.current_buffer.replace_all_lines!(["foo", "bar", "baz", "bar"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("/", "b", "a", "r", :enter)
+
+    assert_equal :normal, @editor.mode
+    assert_equal 1, @editor.current_window.cursor_y
+    assert_equal 0, @editor.current_window.cursor_x
+  end
+
+  def test_whichwrap_allows_h_and_l_to_cross_lines
+    @editor.set_option("whichwrap", "h,l", scope: :global)
+    @editor.current_buffer.replace_all_lines!(["ab", "cd"])
+    @editor.current_window.cursor_y = 1
+    @editor.current_window.cursor_x = 0
+
+    feed("h")
+    assert_equal [0, 2], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+
+    feed("l")
+    assert_equal [1, 0], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+  end
+
+  def test_iskeyword_affects_word_motion
+    @editor.set_option("iskeyword", "@,-", scope: :buffer)
+    @editor.current_buffer.replace_all_lines!(["foo-bar baz"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("w")
+
+    assert_equal 8, @editor.current_window.cursor_x
+  end
+
+  def test_backspace_start_option_blocks_deleting_before_insert_start
+    @editor.set_option("backspace", "indent,eol", scope: :global)
+    @editor.current_buffer.replace_all_lines!(["ab"])
+    @editor.current_window.cursor_x = 1
+
+    feed("i", :backspace)
+
+    assert_equal ["ab"], @editor.current_buffer.lines
+    assert_equal 1, @editor.current_window.cursor_x
+    assert_equal :insert, @editor.mode
+  end
+
+  def test_backspace_eol_option_blocks_joining_previous_line
+    @editor.set_option("backspace", "start", scope: :global)
+    @editor.current_buffer.replace_all_lines!(["a", "b"])
+    @editor.current_window.cursor_y = 1
+    @editor.current_window.cursor_x = 0
+
+    feed("i", :backspace)
+
+    assert_equal ["a", "b"], @editor.current_buffer.lines
+    assert_equal [1, 0], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+  end
 end

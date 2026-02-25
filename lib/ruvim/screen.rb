@@ -187,9 +187,14 @@ module RuVim
       tabstop = tabstop_for(editor, window, buffer)
       cells, display_col = RuVim::TextMetrics.clip_cells_for_width(text, width, source_col_start: window.col_offset, tabstop:)
       highlighted = +""
+      source_line = buffer.line_at(buffer_row)
       visual = (editor.current_window_id == window.id && editor.visual_active?) ? editor.visual_selection(window) : nil
       search_cols = search_highlight_source_cols(editor, text, source_col_offset: window.col_offset)
       syntax_cols = syntax_highlight_source_cols(editor, window, buffer, text, source_col_offset: window.col_offset)
+      list_enabled = !!editor.effective_option("list", window:, buffer:)
+      listchars = parse_listchars(editor.effective_option("listchars", window:, buffer:))
+      tab_seen = {}
+      trail_from = source_line.rstrip.length
       cursorline = !!editor.effective_option("cursorline", window:, buffer:)
       current_line = (editor.current_window_id == window.id && window.cursor_y == buffer_row)
       cursorline_enabled = cursorline && current_line
@@ -197,7 +202,7 @@ module RuVim
       display_pos = 0
 
       cells.each_with_index do |cell, idx|
-        ch = cell.glyph
+        ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
         buffer_col = cell.source_col
         selected = selected_in_visual?(visual, buffer_row, buffer_col)
         cursor_here = (editor.current_window_id == window.id && window.cursor_y == buffer_row && window.cursor_x == buffer_col)
@@ -240,6 +245,48 @@ module RuVim
         highlighted << (" " * trailing)
       end
       highlighted
+    end
+
+    def display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
+      return cell.glyph unless list_enabled
+
+      src = source_line[cell.source_col]
+      case src
+      when "\t"
+        first = !tab_seen[cell.source_col]
+        tab_seen[cell.source_col] = true
+        first ? listchars[:tab_head] : listchars[:tab_fill]
+      when " "
+        cell.source_col >= trail_from ? listchars[:trail] : cell.glyph
+      when "\u00A0"
+        listchars[:nbsp]
+      else
+        cell.glyph
+      end
+    end
+
+    def parse_listchars(raw)
+      cfg = { tab_head: ">", tab_fill: "-", trail: "-", nbsp: "+" }
+      raw.to_s.split(",").each do |entry|
+        key, val = entry.split(":", 2)
+        next unless key && val
+
+        case key.strip
+        when "tab"
+          chars = val.to_s.each_char.to_a
+          cfg[:tab_head] = chars[0] if chars[0]
+          cfg[:tab_fill] = chars[1] if chars[1]
+        when "trail"
+          ch = val.to_s.each_char.first
+          cfg[:trail] = ch if ch
+        when "nbsp"
+          ch = val.to_s.each_char.first
+          cfg[:nbsp] = ch if ch
+        end
+      end
+      cfg
+    rescue StandardError
+      { tab_head: ">", tab_fill: "-", trail: "-", nbsp: "+" }
     end
 
     def render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
