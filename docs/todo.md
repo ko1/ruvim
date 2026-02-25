@@ -224,10 +224,10 @@
   - golden snapshot テスト（描画, `test/render_snapshot_test.rb` + fixture）
   - 操作シナリオテスト（キーストローク列, `test/app_scenario_test.rb`）
 
-- CI / 開発体験
-  - GitHub Actions 等で test 実行
-  - lint / format 方針
-  - 変更時の docs 整合チェック
+- [DONE] CI / 開発体験
+  - GitHub Actions で `bundle exec rake ci` を実行
+  - lint / format 方針を `README.md` に明文化
+  - `rake docs:check` / `rake ci` を追加（docs 整合チェック）
 
 - 内部座標の整理（byte index / character index / grapheme index）
   - 現状どの API がどの単位かを明文化

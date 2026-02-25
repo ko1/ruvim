@@ -80,7 +80,20 @@ filetype ごとの設定:
 テスト実行:
 
 ```bash
-ruby -Ilib:test -e 'Dir["test/*_test.rb"].sort.each { |f| require_relative f }'
+rake test
+```
+
+CI 相当（test + docs 整合チェック）:
+
+```bash
+rake ci
+```
+
+lint / format 方針（現状）:
+
+- `rubocop` / 自動 formatter は未導入
+- 変更時は `rake test` と必要に応じて `ruby -c` で構文確認
+- docs を触ったときは `rake docs:check`（`rake ci` に含まれる）
 ```
 
 ## 注意（現状）
