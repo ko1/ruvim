@@ -153,6 +153,21 @@ class ScreenTest < Minitest::Test
     refute_includes out, "\n"
   end
 
+  def test_termguicolors_uses_truecolor_sequences_for_search_highlight
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["foo"])
+    editor.set_last_search(pattern: "foo", direction: :forward)
+    editor.set_option("termguicolors", true, scope: :global)
+
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    out = screen.send(:render_text_line, buf.line_at(0), editor, buffer_row: 0, window: win, buffer: buf, width: 6)
+
+    assert_includes out, "\e[48;2;255;215;0m"
+  end
+
   def test_render_text_line_respects_list_and_listchars_for_tab_trail_and_nbsp
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

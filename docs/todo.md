@@ -125,7 +125,7 @@
 - `textwidth`（自動改行幅）
 - `spell`（スペルチェック ON/OFF）
 - `spelllang`（スペルチェック言語）
-- `termguicolors`（true color 前提の配色）
+- `[PARTIAL]` `termguicolors`（検索/`cursorline`/`colorcolumn` 背景色の最小 truecolor 対応）
 
 ## メモ（方針）
 

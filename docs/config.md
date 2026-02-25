@@ -209,6 +209,10 @@ setglobal "tabstop=8"
   - コマンドライン補完候補の一覧表示 UI を有効化します。
   - 現状はメッセージ行への簡易表示です（Vim の下部メニュー UI ではない）。
 
+- `termguicolors` (`bool`, default `false`) [`PARTIAL`]
+  - truecolor ANSI シーケンスを使う描画を有効化します。
+  - 現状は検索ハイライト、`cursorline`、`colorcolumn` の背景色に最小反映されます。
+
 ### Buffer-local options
 
 - `path` (`string`, default `nil`) [`PARTIAL`]

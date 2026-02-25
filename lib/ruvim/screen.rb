@@ -233,11 +233,11 @@ module RuVim
         if selected || cursor_here
           highlighted << "\e[7m#{ch}\e[m"
         elsif search_cols[buffer_col]
-          highlighted << "\e[43m#{ch}\e[m"
+          highlighted << "#{search_bg_seq(editor)}#{ch}\e[m"
         elsif colorcolumn_here
-          highlighted << "\e[48;5;238m#{ch}\e[m"
+          highlighted << "#{colorcolumn_bg_seq(editor)}#{ch}\e[m"
         elsif cursorline_enabled
-          highlighted << "\e[48;5;236m#{ch}\e[m"
+          highlighted << "#{cursorline_bg_seq(editor)}#{ch}\e[m"
         elsif (syntax_color = syntax_cols[buffer_col])
           highlighted << "#{syntax_color}#{ch}\e[m"
         else
@@ -265,9 +265,9 @@ module RuVim
       if trailing.positive? && cursorline_enabled
         trailing.times do
           if colorcolumns[display_pos]
-            highlighted << "\e[48;5;238m \e[m"
+            highlighted << "#{colorcolumn_bg_seq(editor)} \e[m"
           else
-            highlighted << "\e[48;5;236m \e[m"
+            highlighted << "#{cursorline_bg_seq(editor)} \e[m"
           end
           display_pos += 1
         end
@@ -525,6 +525,24 @@ module RuVim
 
     def pad_plain_display(text, width)
       RuVim::TextMetrics.pad_plain_to_screen_width(text, width, tabstop: DEFAULT_TABSTOP)
+    end
+
+    def search_bg_seq(editor)
+      truecolor_enabled?(editor) ? "\e[48;2;255;215;0m" : "\e[43m"
+    end
+
+    def colorcolumn_bg_seq(editor)
+      truecolor_enabled?(editor) ? "\e[48;2;72;72;72m" : "\e[48;5;238m"
+    end
+
+    def cursorline_bg_seq(editor)
+      truecolor_enabled?(editor) ? "\e[48;2;58;58;58m" : "\e[48;5;236m"
+    end
+
+    def truecolor_enabled?(editor)
+      !!editor.effective_option("termguicolors")
+    rescue StandardError
+      false
     end
 
     def status_line(editor, width)

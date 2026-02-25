@@ -37,6 +37,7 @@ module RuVim
       "wildignore" => { default_scope: :global, type: :string, default: "" },
       "wildignorecase" => { default_scope: :global, type: :bool, default: false },
       "wildmenu" => { default_scope: :global, type: :bool, default: false },
+      "termguicolors" => { default_scope: :global, type: :bool, default: false },
       "path" => { default_scope: :buffer, type: :string, default: nil },
       "suffixesadd" => { default_scope: :buffer, type: :string, default: nil },
       "textwidth" => { default_scope: :buffer, type: :int, default: 0 },
