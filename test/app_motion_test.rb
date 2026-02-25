@@ -70,4 +70,21 @@ class AppMotionTest < Minitest::Test
     @app.send(:handle_normal_key, :pageup)
     assert_equal 8, @editor.current_window.cursor_y
   end
+
+  def test_virtualedit_onemore_allows_right_move_past_eol_once
+    b = @editor.current_buffer
+    b.replace_all_lines!(["abc"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 3
+
+    press("l")
+    assert_equal 3, @editor.current_window.cursor_x
+
+    @editor.set_option("virtualedit", "onemore", scope: :global)
+    press("l")
+    assert_equal 4, @editor.current_window.cursor_x
+
+    press("l")
+    assert_equal 4, @editor.current_window.cursor_x
+  end
 end

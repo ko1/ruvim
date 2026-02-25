@@ -1596,6 +1596,7 @@ module RuVim
     def move_cursor_horizontally(ctx, direction:, count:)
       count = [count.to_i, 1].max
       allow_wrap = whichwrap_allows?(ctx, direction)
+      onemore = virtualedit_onemore?(ctx)
       count.times do
         line = ctx.buffer.line_at(ctx.window.cursor_y)
         if direction == :left
@@ -1606,15 +1607,22 @@ module RuVim
             ctx.window.cursor_x = ctx.buffer.line_length(ctx.window.cursor_y)
           end
         else
-          if ctx.window.cursor_x < line.length
-            ctx.window.cursor_x = RuVim::TextMetrics.next_grapheme_char_index(line, ctx.window.cursor_x)
+          max_right = line.length + (onemore ? 1 : 0)
+          if ctx.window.cursor_x < max_right
+            ctx.window.cursor_x =
+              if onemore && ctx.window.cursor_x == line.length
+                line.length + 1
+              else
+                RuVim::TextMetrics.next_grapheme_char_index(line, ctx.window.cursor_x)
+              end
+            ctx.window.cursor_x = [ctx.window.cursor_x, max_right].min
           elsif allow_wrap && ctx.window.cursor_y < ctx.buffer.line_count - 1
             ctx.window.cursor_y += 1
             ctx.window.cursor_x = 0
           end
         end
       end
-      ctx.window.clamp_to_buffer(ctx.buffer)
+      ctx.window.clamp_to_buffer(ctx.buffer, max_extra_col: onemore ? 1 : 0)
     end
 
     def whichwrap_allows?(ctx, direction)
@@ -1627,6 +1635,11 @@ module RuVim
       else
         toks.include?("l") || toks.include?(">") || toks.include?("right")
       end
+    end
+
+    def virtualedit_onemore?(ctx)
+      spec = ctx.editor.effective_option("virtualedit", window: ctx.window, buffer: ctx.buffer).to_s
+      spec.split(",").map { |s| s.strip.downcase }.include?("onemore")
     end
 
     def cursor_to_offset(buffer, row, col)

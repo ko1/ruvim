@@ -95,7 +95,7 @@
 - `[PARTIAL]` `matchtime`（`showmatch` のメッセージ表示時間に反映）
 - `[PARTIAL]` `backspace`（Insert mode での BS 挙動: `start/eol` 最小）
 - `[PARTIAL]` `whichwrap`（左右移動が行をまたぐ条件: `h/l` 最小）
-- `virtualedit`（実文字のない位置へのカーソル）
+- `[PARTIAL]` `virtualedit`（`onemore` の最小: 右移動で行末の1つ先）
 - `[PARTIAL]` `iskeyword`（単語境界の定義: word motion / 補完 / 一部 textobj）
 - `[PARTIAL]` `completeopt`（補完 UI の挙動: `menu/menuone/noselect` の最小）
 - `[PARTIAL]` `pumheight`（補完候補 UI の高さ: メッセージ表示件数に反映）

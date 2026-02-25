@@ -14,9 +14,10 @@ module RuVim
       @options = {}
     end
 
-    def clamp_to_buffer(buffer)
+    def clamp_to_buffer(buffer, max_extra_col: 0)
       @cursor_y = [[@cursor_y, 0].max, buffer.line_count - 1].min
-      @cursor_x = [[@cursor_x, 0].max, buffer.line_length(@cursor_y)].min
+      max_col = buffer.line_length(@cursor_y) + [max_extra_col.to_i, 0].max
+      @cursor_x = [[@cursor_x, 0].max, max_col].min
       self
     end
 
