@@ -762,20 +762,6 @@ module RuVim
       @pending_keys = []
     end
 
-    def current_page_step_lines
-      height = @screen.current_window_view_height(@editor)
-      [height - 1, 1].max
-    rescue StandardError
-      1
-    end
-
-    def current_half_page_step_lines
-      height = @screen.current_window_view_height(@editor)
-      [height / 2, 1].max
-    rescue StandardError
-      1
-    end
-
     def digit_key?(key)
       key.is_a?(String) && key.match?(/\A\d\z/)
     end
