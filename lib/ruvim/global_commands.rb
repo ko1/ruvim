@@ -793,6 +793,8 @@ module RuVim
       raise RuVim::CommandError, "Usage: :ruby <code>" if code.strip.empty?
 
       b = binding
+      # Use local_variable_set for eval locals to avoid "assigned but unused variable"
+      # warnings while still exposing editor/buffer/window in :ruby.
       b.local_variable_set(:editor, ctx.editor)
       b.local_variable_set(:buffer, ctx.buffer)
       b.local_variable_set(:window, ctx.window)
