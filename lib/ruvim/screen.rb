@@ -436,20 +436,24 @@ module RuVim
     end
 
     def number_column_width(editor, window, buffer)
+      sign_w = sign_column_width(editor, window, buffer)
       enabled = editor.effective_option("number", window:, buffer:) || editor.effective_option("relativenumber", window:, buffer:)
-      return 0 unless enabled
+      return sign_w unless enabled
 
       base = [buffer.line_count.to_s.length, 1].max
       minw = editor.effective_option("numberwidth", window:, buffer:).to_i
-      [[base, minw].max, 1].max + 1
+      sign_w + ([[base, minw].max, 1].max + 1)
     end
 
     def line_number_prefix(editor, window, buffer, buffer_row, width)
       return "" if width <= 0
+      sign_w = sign_column_width(editor, window, buffer)
+      sign = " " * sign_w
+      num_width = [width - sign_w, 0].max
       show_abs = editor.effective_option("number", window:, buffer:)
       show_rel = editor.effective_option("relativenumber", window:, buffer:)
-      return " " * width unless show_abs || show_rel
-      return " " * (width - 1) + " " if buffer_row.nil?
+      return sign + (" " * num_width) unless show_abs || show_rel
+      return sign + (" " * num_width) if buffer_row.nil?
 
       num =
         if show_rel && buffer_row != window.cursor_y
@@ -459,7 +463,21 @@ module RuVim
         else
           "0"
         end
-      num.rjust(width - 1) + " "
+      sign + num.rjust([num_width - 1, 0].max) + (num_width.positive? ? " " : "")
+    end
+
+    def sign_column_width(editor, window, buffer)
+      raw = editor.effective_option("signcolumn", window:, buffer:).to_s
+      case raw
+      when "", "auto", "number"
+        0
+      when "no"
+        0
+      else
+        1
+      end
+    rescue StandardError
+      0
     end
 
     def colorcolumn_display_cols(editor, window, buffer)

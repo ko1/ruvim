@@ -78,11 +78,12 @@ module RuVim
 
           key = @input.read_key(
             wakeup_ios: [@signal_r],
-            timeout: pending_key_timeout_seconds,
+            timeout: loop_timeout_seconds,
             esc_timeout: escape_sequence_timeout_seconds
           )
           if key.nil?
             handle_pending_key_timeout if pending_key_timeout_expired?
+            clear_expired_transient_message_if_any
             next
           end
 
@@ -105,6 +106,18 @@ module RuVim
       return nil unless @pending_key_deadline
 
       [@pending_key_deadline - monotonic_now, 0.0].max
+    end
+
+    def loop_timeout_seconds
+      now = monotonic_now
+      timeouts = []
+      if @pending_key_deadline
+        timeouts << [@pending_key_deadline - now, 0.0].max
+      end
+      if (msg_to = @editor.transient_message_timeout_seconds(now:))
+        timeouts << msg_to
+      end
+      timeouts.min
     end
 
     def pending_key_timeout_expired?
@@ -1445,8 +1458,13 @@ module RuVim
       return unless [")", "]", "}"].include?(key)
       return unless @editor.effective_option("showmatch")
 
-      # Minimal implementation: show a short message instead of a timed flash.
-      @editor.echo("match")
+      mt = @editor.effective_option("matchtime").to_i
+      mt = 5 if mt <= 0
+      @editor.echo_temporary("match", duration_seconds: mt * 0.1)
+    end
+
+    def clear_expired_transient_message_if_any
+      @needs_redraw = true if @editor.clear_expired_transient_message!(now: monotonic_now)
     end
 
     def effective_tabstop(window = @editor.current_window, buffer = @editor.current_buffer)

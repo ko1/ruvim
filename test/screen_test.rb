@@ -55,6 +55,22 @@ class ScreenTest < Minitest::Test
     assert_equal " 3 ", screen.send(:line_number_prefix, editor, win, buf, 2, 3) # current line is absolute when both enabled
   end
 
+  def test_signcolumn_yes_reserves_one_column_in_gutter
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    editor.set_option("number", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("signcolumn", "yes", scope: :window, window: win, buffer: buf)
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    w = screen.send(:number_column_width, editor, win, buf)
+    prefix = screen.send(:line_number_prefix, editor, win, buf, 0, w)
+
+    assert_equal 6, w # sign(1) + default numberwidth(4) + trailing space
+    assert_equal "    1 ", prefix
+  end
+
   def test_render_shows_error_message_on_command_line_row_with_highlight
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

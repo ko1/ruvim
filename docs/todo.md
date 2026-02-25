@@ -89,10 +89,10 @@
 - `[DONE]` `listchars`（不可視文字の表示内容、`tab/trail/nbsp` 最小）
 - `[PARTIAL]` `showbreak`（折り返し行の先頭表示）
 - `[DONE]` `colorcolumn`（桁ガイド）
-- `signcolumn`（サイン列の表示）
+- `[PARTIAL]` `signcolumn`（サイン列の表示: `yes` の幅予約のみ）
 - `[DONE]` `numberwidth`（行番号列の幅）
 - `[DONE]` `showmatch`（対応括弧を一時強調、最小）
-- `matchtime`（`showmatch` の表示時間）
+- `[PARTIAL]` `matchtime`（`showmatch` のメッセージ表示時間に反映）
 - `[PARTIAL]` `backspace`（Insert mode での BS 挙動: `start/eol` 最小）
 - `[PARTIAL]` `whichwrap`（左右移動が行をまたぐ条件: `h/l` 最小）
 - `virtualedit`（実文字のない位置へのカーソル）

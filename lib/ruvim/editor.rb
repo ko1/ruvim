@@ -69,6 +69,7 @@ module RuVim
       @window_layout = :single
       @message = ""
       @message_kind = :info
+      @message_deadline = nil
       @pending_count = nil
       @restricted_mode = false
       @running = true
@@ -845,20 +846,57 @@ module RuVim
     def echo(msg)
       @message_kind = :info
       @message = msg.to_s
+      @message_deadline = nil
+    end
+
+    def echo_temporary(msg, duration_seconds:)
+      @message_kind = :info
+      @message = msg.to_s
+      dur = duration_seconds.to_f
+      @message_deadline = dur.positive? ? (Process.clock_gettime(Process::CLOCK_MONOTONIC) + dur) : nil
+    rescue StandardError
+      @message_deadline = nil
     end
 
     def echo_error(msg)
       @message_kind = :error
       @message = msg.to_s
+      @message_deadline = nil
     end
 
     def clear_message
       @message_kind = :info
       @message = ""
+      @message_deadline = nil
     end
 
     def message_error?
       !@message.to_s.empty? && @message_kind == :error
+    end
+
+    def transient_message_timeout_seconds(now: nil)
+      return nil unless @message_deadline
+      return nil if message_error?
+      return nil if command_line_active?
+
+      now ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      [@message_deadline - now, 0.0].max
+    rescue StandardError
+      nil
+    end
+
+    def clear_expired_transient_message!(now: nil)
+      return false unless @message_deadline
+      return false if message_error?
+      return false if command_line_active?
+
+      now ||= Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      return false if now < @message_deadline
+
+      clear_message
+      true
+    rescue StandardError
+      false
     end
 
     def text_viewport_size(rows:, cols:)

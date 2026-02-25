@@ -199,4 +199,17 @@ class AppScenarioTest < Minitest::Test
       assert_equal "puts :ok", @editor.current_buffer.line_at(0)
     end
   end
+
+  def test_showmatch_message_respects_matchtime_and_clears
+    @editor.set_option("showmatch", true, scope: :global)
+    @editor.set_option("matchtime", 1, scope: :global) # 0.1 sec
+    @editor.current_buffer.replace_all_lines!([""])
+
+    feed("i", ")")
+    assert_equal "match", @editor.message
+
+    sleep 0.12
+    @app.send(:clear_expired_transient_message_if_any)
+    assert_equal "", @editor.message
+  end
 end
