@@ -1,9 +1,11 @@
 module RuVim
   class Screen
     DEFAULT_TABSTOP = 2
+    SYNTAX_CACHE_LIMIT = 2048
     def initialize(terminal:)
       @terminal = terminal
       @last_frame = nil
+      @syntax_color_cache = {}
     end
 
     def invalidate_cache!
@@ -421,7 +423,7 @@ module RuVim
 
     def syntax_highlight_source_cols(editor, window, buffer, source_line_text, source_col_offset:)
       filetype = editor.effective_option("filetype", buffer:, window:)
-      rel = RuVim::Highlighter.color_columns(filetype, source_line_text)
+      rel = cached_syntax_color_columns(filetype, source_line_text)
       return {} if rel.empty?
 
       rel.each_with_object({}) do |(idx, color), h|
@@ -429,6 +431,18 @@ module RuVim
       end
     rescue StandardError
       {}
+    end
+
+    def cached_syntax_color_columns(filetype, source_line_text)
+      key = [filetype.to_s, source_line_text.to_s]
+      if (cached = @syntax_color_cache[key])
+        return cached
+      end
+
+      cols = RuVim::Highlighter.color_columns(filetype, source_line_text)
+      @syntax_color_cache[key] = cols
+      @syntax_color_cache.shift while @syntax_color_cache.length > SYNTAX_CACHE_LIMIT
+      cols
     end
   end
 end

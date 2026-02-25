@@ -212,7 +212,9 @@
   - [DONE] 表示幅ベースの水平スクロール
     - `Window#ensure_visible` を screen column ベース化済み（`TextMetrics` 利用）
     - 全角文字を含む行の横スクロールを `test/window_test.rb` で確認済み
-  - 大きいファイルでの redraw 最適化
+  - [DONE] 大きいファイルでの redraw 最適化
+    - 既存の差分描画に加え、`Screen` で syntax highlight 結果をキャッシュ
+    - 同一 `filetype + line text` の再描画時に regex スキャンを再利用
   - rope/piece-table などのバッファ構造検討
 
 - テスト基盤の拡張

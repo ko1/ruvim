@@ -68,4 +68,35 @@ class ScreenTest < Minitest::Test
     assert_includes out, "\e[97;41m"
     assert_includes out, "boom"
   end
+
+  def test_render_reuses_syntax_highlight_cache_for_same_line
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(['def x; "hi"; end'])
+    editor.set_option("filetype", "ruby", scope: :buffer, buffer: buf, window: win)
+
+    term = TerminalStub.new([6, 40])
+    screen = RuVim::Screen.new(terminal: term)
+
+    calls = 0
+    mod = RuVim::Highlighter.singleton_class
+    verbose, $VERBOSE = $VERBOSE, nil
+    mod.alias_method(:__orig_color_columns_for_screen_test, :color_columns)
+    mod.define_method(:color_columns) do |*args, **kwargs|
+      calls += 1
+      __orig_color_columns_for_screen_test(*args, **kwargs)
+    end
+
+    begin
+      screen.render(editor)
+      screen.render(editor)
+    ensure
+      mod.alias_method(:color_columns, :__orig_color_columns_for_screen_test)
+      mod.remove_method(:__orig_color_columns_for_screen_test) rescue nil
+      $VERBOSE = verbose
+    end
+
+    assert_equal 1, calls
+  end
 end
