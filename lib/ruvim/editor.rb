@@ -28,7 +28,7 @@ module RuVim
       @mode = :normal
       @window_layout = :single
       @message = ""
-      @pending_bell = false
+      @message_kind = :info
       @pending_count = nil
       @restricted_mode = false
       @running = true
@@ -696,31 +696,35 @@ module RuVim
     end
 
     def echo(msg)
+      @message_kind = :info
       @message = msg.to_s
     end
 
     def echo_error(msg)
-      @pending_bell = true
-      echo(msg)
+      @message_kind = :error
+      @message = msg.to_s
     end
 
     def clear_message
+      @message_kind = :info
       @message = ""
     end
 
-    def take_pending_bell!
-      flag = @pending_bell
-      @pending_bell = false
-      !!flag
+    def message_error?
+      !@message.to_s.empty? && @message_kind == :error
     end
 
     def text_viewport_size(rows:, cols:)
-      text_rows = command_line_active? ? rows - 2 : rows - 1
+      text_rows = command_area_active? ? rows - 2 : rows - 1
       [text_rows, cols]
     end
 
     def command_line_active?
       @mode == :command_line
+    end
+
+    def command_area_active?
+      command_line_active? || message_error?
     end
 
     private

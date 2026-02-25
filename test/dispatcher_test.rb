@@ -87,11 +87,10 @@ class DispatcherTest < Minitest::Test
     refute @editor.running?
   end
 
-  def test_dispatch_ex_error_sets_bell
+  def test_dispatch_ex_error_marks_message_as_error
     @dispatcher.dispatch_ex(@editor, "no_such_command")
 
     assert_match(/Error:/, @editor.message)
-    assert_equal true, @editor.take_pending_bell!
-    assert_equal false, @editor.take_pending_bell!
+    assert_equal true, @editor.message_error?
   end
 end

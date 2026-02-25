@@ -55,7 +55,7 @@ class ScreenTest < Minitest::Test
     assert_equal " 3 ", screen.send(:line_number_prefix, editor, win, buf, 2, 3) # current line is absolute when both enabled
   end
 
-  def test_render_emits_bell_once_for_pending_error
+  def test_render_shows_error_message_on_command_line_row_with_highlight
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer
     editor.add_window(buffer_id: buf.id)
@@ -64,9 +64,8 @@ class ScreenTest < Minitest::Test
 
     editor.echo_error("boom")
     screen.render(editor)
-    assert_includes term.writes.last, "\a"
-
-    screen.render(editor)
-    refute_includes term.writes.last, "\a"
+    out = term.writes.last
+    assert_includes out, "\e[97;41m"
+    assert_includes out, "boom"
   end
 end

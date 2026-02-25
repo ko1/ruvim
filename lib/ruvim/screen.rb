@@ -37,7 +37,6 @@ module RuVim
             else
               render_full(frame)
             end
-      out << "\a" if editor.take_pending_bell!
       cursor_row, cursor_col = cursor_screen_position(editor, text_rows, rects)
       out << "\e[#{cursor_row};#{cursor_col}H"
       out << "\e[?25h"
@@ -68,6 +67,8 @@ module RuVim
       if editor.command_line_active?
         cmd = editor.command_line
         lines[status_row + 1] = truncate("#{cmd.prefix}#{cmd.text}", cols)
+      elsif editor.message_error?
+        lines[status_row + 1] = error_message_line(editor.message.to_s, cols)
       end
 
       {
@@ -274,7 +275,7 @@ module RuVim
       ft = editor.effective_option("filetype", buffer:, window:) || File.extname(buffer.path.to_s).delete_prefix(".")
       ft = "-" if ft.empty?
       mod = buffer.modified? ? " [+]" : ""
-      msg = editor.message.to_s
+      msg = editor.message_error? ? "" : editor.message.to_s
       win_idx = (editor.window_order.index(editor.current_window_id) || 0) + 1
       win_total = editor.window_order.length
       tab_info = "t#{editor.current_tabpage_number}/#{editor.tabpage_count}"
@@ -300,6 +301,10 @@ module RuVim
 
     def truncate(str, width)
       str.to_s.ljust(width)[0, width]
+    end
+
+    def error_message_line(msg, cols)
+      "\e[97;41m#{truncate(msg, cols)}\e[m"
     end
 
     def cursor_screen_position(editor, text_rows, rects)
