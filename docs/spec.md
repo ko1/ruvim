@@ -286,7 +286,8 @@ RuVim::ExCommandRegistry.instance.register(
 補足:
 
 - `:q` は未保存変更があると拒否
-- `:q!` は強制終了
+- `:q` は Vim 寄りに、複数 window 時は current window を閉じる（window が1つで tab が複数なら current tab を閉じる）
+- `:q!` は強制的に window / tab / app を閉じる
 - `:e` は未保存変更があると拒否（`!` で破棄可）
 - `:e!`（引数なし）は現在ファイルの再読込（undo/redo クリア）
 - `:buffer!`, `:bnext!`, `:bprev!` は未保存変更があっても切替

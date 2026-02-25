@@ -69,6 +69,7 @@
 - `g*` / `g#` : カーソル下の単語を部分一致検索（前/後）
 - `Esc` : メッセージ/保留入力のクリア
 - `矢印キー` : 移動
+- `PageUp` / `PageDown` : 画面単位で移動（概ね表示高さ - 1 行）
 
 ### count 対応（現状）
 
@@ -85,10 +86,12 @@
 - `Esc` : Normal mode に戻る
 - `Ctrl-c` : Normal mode に戻る
 - `矢印キー` : 移動
+- `PageUp` / `PageDown` : 画面単位で移動
 
 ## Visual mode（characterwise / linewise）
 
 - `h/j/k/l`, `w/b/e`, `0/$/^`, `gg/G`, `矢印キー` : 範囲を伸縮
+- `PageUp` / `PageDown` : 範囲を画面単位で伸縮
 - `v` : characterwise Visual の開始/終了
 - `V` : linewise Visual の開始/切替
 - `y` : 選択範囲を yank

@@ -97,6 +97,8 @@ module RuVim
       register_internal_unless(cmd, "cursor.right", call: :cursor_right, desc: "Move cursor right")
       register_internal_unless(cmd, "cursor.up", call: :cursor_up, desc: "Move cursor up")
       register_internal_unless(cmd, "cursor.down", call: :cursor_down, desc: "Move cursor down")
+      register_internal_unless(cmd, "cursor.page_up", call: :cursor_page_up, desc: "Move one page up")
+      register_internal_unless(cmd, "cursor.page_down", call: :cursor_page_down, desc: "Move one page down")
       register_internal_unless(cmd, "cursor.line_start", call: :cursor_line_start, desc: "Move to column 1")
       register_internal_unless(cmd, "cursor.line_end", call: :cursor_line_end, desc: "Move to end of line")
       register_internal_unless(cmd, "cursor.first_nonblank", call: :cursor_first_nonblank, desc: "Move to first nonblank")
@@ -246,6 +248,11 @@ module RuVim
     def handle_normal_key(key)
       if arrow_key?(key)
         invoke_arrow(key)
+        return
+      end
+
+      if paging_key?(key)
+        invoke_page_key(key)
         return
       end
 
@@ -431,6 +438,9 @@ module RuVim
       when :down
         clear_insert_completion
         @editor.current_window.move_down(@editor.current_buffer, 1)
+      when :pageup, :pagedown
+        clear_insert_completion
+        invoke_page_key(key)
       else
         return unless key.is_a?(String)
 
@@ -443,6 +453,11 @@ module RuVim
     def handle_visual_key(key)
       if arrow_key?(key)
         invoke_arrow(key)
+        return
+      end
+
+      if paging_key?(key)
+        invoke_page_key(key)
         return
       end
 
@@ -561,6 +576,10 @@ module RuVim
       %i[left right up down].include?(key)
     end
 
+    def paging_key?(key)
+      %i[pageup pagedown].include?(key)
+    end
+
     def invoke_arrow(key)
       id = {
         left: "cursor.left",
@@ -572,6 +591,25 @@ module RuVim
       @dispatcher.dispatch(@editor, inv)
       @editor.pending_count = nil
       @pending_keys = []
+    end
+
+    def invoke_page_key(key)
+      id = (key == :pageup ? "cursor.page_up" : "cursor.page_down")
+      inv = CommandInvocation.new(
+        id: id,
+        count: @editor.pending_count || 1,
+        kwargs: { page_lines: current_page_step_lines }
+      )
+      @dispatcher.dispatch(@editor, inv)
+      @editor.pending_count = nil
+      @pending_keys = []
+    end
+
+    def current_page_step_lines
+      height = @screen.current_window_view_height(@editor)
+      [height - 1, 1].max
+    rescue StandardError
+      1
     end
 
     def digit_key?(key)
@@ -595,6 +633,8 @@ module RuVim
       when :ctrl_w then "<C-w>"
       when :home then "<Home>"
       when :end then "<End>"
+      when :pageup then "<PageUp>"
+      when :pagedown then "<PageDown>"
       else nil
       end
     end

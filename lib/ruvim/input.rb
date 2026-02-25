@@ -55,6 +55,8 @@ module RuVim
       when "[B" then :down
       when "[C" then :right
       when "[D" then :left
+      when "[5~" then :pageup
+      when "[6~" then :pagedown
       else
         [:escape_sequence, extra]
       end

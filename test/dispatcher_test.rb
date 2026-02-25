@@ -54,4 +54,36 @@ class DispatcherTest < Minitest::Test
     assert_equal 8, @editor.global_options["tabstop"]
     assert_equal 4, @editor.effective_option("tabstop")
   end
+
+  def test_q_closes_current_window_when_multiple_windows_exist
+    @editor.split_current_window(layout: :horizontal)
+    assert_equal 2, @editor.window_count
+
+    @dispatcher.dispatch_ex(@editor, "q")
+
+    assert_equal 1, @editor.window_count
+    assert @editor.running?
+    assert_equal "closed window", @editor.message
+  end
+
+  def test_q_closes_current_tab_when_multiple_tabs_exist
+    @editor.tabnew
+    assert_equal 2, @editor.tabpage_count
+    assert_equal 1, @editor.window_count
+
+    @dispatcher.dispatch_ex(@editor, "q")
+
+    assert_equal 1, @editor.tabpage_count
+    assert @editor.running?
+    assert_equal "closed tab", @editor.message
+  end
+
+  def test_q_exits_app_when_last_window
+    assert_equal 1, @editor.window_count
+    assert_equal 1, @editor.tabpage_count
+
+    @dispatcher.dispatch_ex(@editor, "q")
+
+    refute @editor.running?
+  end
 end

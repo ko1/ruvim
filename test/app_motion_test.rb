@@ -50,4 +50,24 @@ class AppMotionTest < Minitest::Test
     press("%")
     assert_equal 1, @editor.current_window.cursor_x
   end
+
+  def test_pageup_and_pagedown_move_by_visible_page_height
+    b = @editor.current_buffer
+    b.replace_all_lines!((1..20).map { |i| "line#{i}" })
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    screen = @app.instance_variable_get(:@screen)
+    screen.define_singleton_method(:current_window_view_height) { |_editor| 5 }
+
+    @app.send(:handle_normal_key, :pagedown)
+    assert_equal 4, @editor.current_window.cursor_y
+
+    @editor.pending_count = 2
+    @app.send(:handle_normal_key, :pagedown)
+    assert_equal 12, @editor.current_window.cursor_y
+
+    @app.send(:handle_normal_key, :pageup)
+    assert_equal 8, @editor.current_window.cursor_y
+  end
 end

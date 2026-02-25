@@ -27,6 +27,16 @@ module RuVim
       ctx.window.move_down(ctx.buffer, count)
     end
 
+    def cursor_page_up(ctx, kwargs:, count:, **)
+      page_lines = [(kwargs[:page_lines] || kwargs["page_lines"] || 1).to_i, 1].max
+      ctx.window.move_up(ctx.buffer, page_lines * [count.to_i, 1].max)
+    end
+
+    def cursor_page_down(ctx, kwargs:, count:, **)
+      page_lines = [(kwargs[:page_lines] || kwargs["page_lines"] || 1).to_i, 1].max
+      ctx.window.move_down(ctx.buffer, page_lines * [count.to_i, 1].max)
+    end
+
     def cursor_line_start(ctx, **)
       ctx.window.cursor_x = 0
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -509,6 +519,18 @@ module RuVim
     end
 
     def app_quit(ctx, bang:, **)
+      if ctx.editor.window_count > 1
+        ctx.editor.close_current_window
+        ctx.editor.echo("closed window")
+        return
+      end
+
+      if ctx.editor.tabpage_count > 1
+        ctx.editor.close_current_tabpage
+        ctx.editor.echo("closed tab")
+        return
+      end
+
       if ctx.buffer.modified? && !bang
         ctx.editor.echo("No write since last change (add ! to override)")
         return
@@ -520,8 +542,7 @@ module RuVim
     def file_write_quit(ctx, argv:, bang:, **)
       file_write(ctx, argv:, bang:)
       return unless ctx.editor.running?
-
-      ctx.editor.request_quit!
+      app_quit(ctx, bang: true)
     end
 
     def file_edit(ctx, argv:, bang:, **)

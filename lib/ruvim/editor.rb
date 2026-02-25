@@ -458,6 +458,33 @@ module RuVim
       win
     end
 
+    def close_current_window
+      return nil if @window_order.empty?
+      return nil if @window_order.length <= 1
+
+      save_current_tabpage_state! unless @suspend_tab_autosave
+      idx = @window_order.index(@current_window_id) || 0
+      removed_id = @current_window_id
+      @windows.delete(removed_id)
+      @window_order.delete(removed_id)
+      @current_window_id = @window_order[[idx, @window_order.length - 1].min]
+      @window_layout = :single if @window_order.length <= 1
+      save_current_tabpage_state! unless @suspend_tab_autosave
+      current_window
+    end
+
+    def close_current_tabpage
+      ensure_initial_tabpage!
+      return nil if @tabpages.length <= 1
+
+      save_current_tabpage_state!
+      removed = @tabpages.delete_at(@current_tabpage_index)
+      Array(removed && removed[:window_order]).each { |wid| @windows.delete(wid) }
+      @current_tabpage_index = [@current_tabpage_index, @tabpages.length - 1].min
+      load_tabpage_state!(@tabpages[@current_tabpage_index])
+      current_window
+    end
+
     def focus_window(id)
       return nil unless @windows.key?(id)
 
@@ -609,6 +636,10 @@ module RuVim
 
     def tabpage_count
       @tabpages.length
+    end
+
+    def window_count
+      @window_order.length
     end
 
     def tabnew(path: nil)

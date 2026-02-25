@@ -31,13 +31,15 @@
 ### `:q` / `:quit`
 
 - 形式: `:q`, `:q!`
-- エディタ終了
-- 未保存変更がある場合、`!` なしでは拒否
+- 複数 window があるとき: current window を閉じる
+- window が1つで tab が複数あるとき: current tab を閉じる
+- 最後の window / tab のとき: エディタ終了
+- 最後の window / tab で未保存変更がある場合、`!` なしでは拒否
 
 ### `:wq`
 
 - 形式: `:wq`, `:wq!`, `:wq [path]`
-- 保存して終了
+- 保存して `:q` 相当（window / tab / app を閉じる）
 
 ### `:e` / `:edit`
 

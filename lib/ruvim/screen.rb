@@ -44,6 +44,17 @@ module RuVim
       @terminal.write(out)
     end
 
+    def current_window_view_height(editor)
+      rows, cols = @terminal.winsize
+      text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+      text_rows = [text_rows, 1].max
+      text_cols = [text_cols, 1].max
+      rect = window_rects(editor, text_rows:, text_cols:)[editor.current_window_id]
+      [rect ? rect[:height].to_i : text_rows, 1].max
+    rescue StandardError
+      1
+    end
+
     private
 
     def build_frame(editor, rows:, cols:, text_rows:, text_cols:, rects:)
