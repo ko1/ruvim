@@ -215,7 +215,9 @@
   - [DONE] 大きいファイルでの redraw 最適化
     - 既存の差分描画に加え、`Screen` で syntax highlight 結果をキャッシュ
     - 同一 `filetype + line text` の再描画時に regex スキャンを再利用
-  - rope/piece-table などのバッファ構造検討
+  - [DONE] rope/piece-table などのバッファ構造検討
+    - `docs/spec.md` に現状（行配列）/ `piece table` / `rope` の比較メモを追加
+    - `永続 undo` 実装タイミングで `piece table` 再評価、という方針で整理
 
 - テスト基盤の拡張
   - terminal/input/screen の結合テスト
