@@ -86,6 +86,7 @@
   - `--clean`
   - `-u {path|NONE}`
   - `-R`, `-M`, `-Z`, `-n`（`-n` は現状 no-op）
+  - `-d`（placeholder: 未実装メッセージ）
   - `-o[N]`, `-O[N]`, `-p[N]`（基礎）
   - `-V[N]`, `--verbose[=N]`（簡易）
   - `--startuptime FILE`（簡易）
@@ -93,7 +94,7 @@
   - `-c {cmd}`
   - `+{cmd}`, `+{line}`, `+`
 - 未実装（Vim で定番だが RuVim は未対応）
-  - `-S`, `-q`, `-d` など
+  - `-S`, `-q` など（`-d` は placeholder のみ）
 - 複数ファイル引数は `-o/-O/-p` 時のみ対応（通常起動の arglist 相当は未実装）
 
 ## option（設定）の違い

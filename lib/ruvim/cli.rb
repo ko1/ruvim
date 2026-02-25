@@ -8,6 +8,7 @@ module RuVim
       :skip_user_config,
       :config_path,
       :readonly,
+      :diff_mode,
       :no_swap,
       :nomodifiable,
       :restricted_mode,
@@ -54,6 +55,7 @@ module RuVim
         skip_user_config: opts.skip_user_config,
         config_path: opts.config_path,
         readonly: opts.readonly,
+        diff_mode: opts.diff_mode,
         nomodifiable: opts.nomodifiable,
         restricted: opts.restricted_mode,
         verbose_level: opts.verbose_level,
@@ -80,6 +82,7 @@ module RuVim
         skip_user_config: false,
         config_path: nil,
         readonly: false,
+        diff_mode: false,
         no_swap: false,
         nomodifiable: false,
         restricted_mode: false,
@@ -126,6 +129,8 @@ module RuVim
           opts.clean = true
         when "-R"
           opts.readonly = true
+        when "-d"
+          opts.diff_mode = true
         when "-n"
           opts.no_swap = true
         when "-M"
@@ -210,6 +215,7 @@ module RuVim
           -v, --version     Show version
           --clean           Start without user config and ftplugin
           -R                Open file readonly (disallow :w on current buffer)
+          -d                Diff mode requested (compat placeholder; not implemented yet)
           -M                Open file unmodifiable (disallow editing; also readonly)
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
           -V[N], --verbose[=N]

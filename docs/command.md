@@ -4,6 +4,7 @@
 
 - `--help`, `--version`
 - `--clean`
+- `-d`（diff mode placeholder, 未実装メッセージ表示）
 - `-R`
 - `-M`
 - `-Z`

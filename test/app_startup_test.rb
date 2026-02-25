@@ -48,6 +48,13 @@ class AppStartupTest < Minitest::Test
     end
   end
 
+  def test_startup_diff_mode_placeholder_emits_message
+    app = RuVim::App.new(clean: true, diff_mode: true)
+    editor = app.instance_variable_get(:@editor)
+
+    assert_match(/diff mode .*not implemented/i, editor.message)
+  end
+
   def test_startup_nomodifiable_marks_opened_buffer_unmodifiable_and_readonly
     Tempfile.create(["ruvim-startup", ".txt"]) do |f|
       f.write("hello\n")

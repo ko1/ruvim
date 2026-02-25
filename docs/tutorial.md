@@ -21,6 +21,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 
 - `--help`, `--version`
 - `--clean`（ユーザー設定と ftplugin を読まない）
+- `-d`（diff mode placeholder。現状は未実装メッセージのみ）
 - `-R`（readonly で開く。現在バッファの `:w` を拒否）
 - `-M`（modifiable off 相当。編集操作を拒否し、あわせて readonly）
 - `-Z`（restricted mode。config/ftplugin を読まず、`:ruby` を無効化）

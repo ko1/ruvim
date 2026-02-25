@@ -128,6 +128,8 @@ RuVim::ExCommandRegistry.instance.register(
   - user config と ftplugin の読み込みを抑止
 - `-R`
   - 起動時に開いた current buffer を readonly にする（現状は保存禁止の意味）
+- `-d`
+  - diff mode 互換 placeholder（現状は通常起動 + 未実装メッセージ表示）
 - `-M`
   - 起動時に開いた file buffer を `modifiable=false` + `readonly=true` にする
 - `-Z`

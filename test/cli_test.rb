@@ -47,6 +47,13 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_diff_mode_option
+    opts = RuVim::CLI.parse(["-d", "file.txt"])
+
+    assert_equal true, opts.diff_mode
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_parse_nomodifiable_option
     opts = RuVim::CLI.parse(["-M", "file.txt"])
 
@@ -115,6 +122,7 @@ class CLITest < Minitest::Test
     assert_equal 0, code
     assert_match(/Usage: ruvim/, out.string)
     assert_match(/-R\s+Open file readonly/, out.string)
+    assert_match(/-d\s+Diff mode requested/, out.string)
     assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-Z\s+Restricted mode/, out.string)
     assert_match(/-V\[N\], --verbose/, out.string)

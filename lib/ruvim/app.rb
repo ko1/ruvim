@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -15,6 +15,7 @@ module RuVim
       @skip_user_config = skip_user_config
       @config_path = config_path
       @startup_readonly = readonly
+      @startup_diff_mode = diff_mode
       @startup_nomodifiable = nomodifiable
       @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
@@ -52,6 +53,7 @@ module RuVim
       verbose_log(1, "startup: load_current_ftplugin")
       load_current_ftplugin!
       startup_mark("ftplugin.loaded")
+      apply_startup_compat_mode_messages!
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
@@ -1415,6 +1417,13 @@ module RuVim
       buf.modifiable = false
       buf.readonly = true
       @editor.echo("nomodifiable: #{buf.display_name}")
+    end
+
+    def apply_startup_compat_mode_messages!
+      return unless @startup_diff_mode
+
+      verbose_log(1, "startup: -d requested (diff mode placeholder)")
+      @editor.echo("diff mode (-d) is not implemented yet")
     end
 
     def open_startup_paths!(paths)

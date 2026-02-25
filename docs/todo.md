@@ -452,11 +452,13 @@
 
 ### P2: 互換性として名前だけ先に確保してもよいもの
 
-- `-d`（diff mode）
+- [DONE] `-d`（diff mode）
   - 効果: 中（将来 diff UI で効く）
   - コスト: 高
   - 依存:
     - diff 表示/アルゴリズム/UI
+  - メモ:
+    - 現状は CLI 互換 placeholder として受理し、起動時に未実装メッセージを表示
 
 - `-q {errorfile}`（quickfix 読み込み起動）
   - 効果: 中
