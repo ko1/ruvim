@@ -673,6 +673,8 @@ module RuVim
     end
 
     def ex_ruby(ctx, argv:, **)
+      raise RuVim::CommandError, "Restricted mode: :ruby is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+
       code = argv.join(" ")
       raise RuVim::CommandError, "Usage: :ruby <code>" if code.strip.empty?
 

@@ -23,6 +23,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 - `--clean`（ユーザー設定と ftplugin を読まない）
 - `-R`（readonly で開く。現在バッファの `:w` を拒否）
 - `-M`（modifiable off 相当。編集操作を拒否し、あわせて readonly）
+- `-Z`（restricted mode。config/ftplugin を読まず、`:ruby` を無効化）
 - `-n`（現状 no-op。将来の swap/永続機能向け互換フラグ）
 - `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
 - `-u path/to/init.rb`（設定ファイルを指定）

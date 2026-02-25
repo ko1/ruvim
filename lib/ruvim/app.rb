@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -16,8 +16,10 @@ module RuVim
       @config_path = config_path
       @startup_readonly = readonly
       @startup_nomodifiable = nomodifiable
+      @restricted_mode = restricted
       @startup_open_layout = startup_open_layout
       @startup_open_count = startup_open_count
+      @editor.restricted_mode = @restricted_mode
 
       register_builtins!
       bind_default_keys!
@@ -1303,7 +1305,7 @@ module RuVim
     end
 
     def load_user_config!
-      return if @clean_mode
+      return if @clean_mode || @restricted_mode
       return if @skip_user_config
 
       if @config_path
@@ -1316,7 +1318,7 @@ module RuVim
     end
 
     def load_current_ftplugin!
-      return if @clean_mode
+      return if @clean_mode || @restricted_mode
       return unless @config_loader
 
       @config_loader.load_ftplugin!(@editor, @editor.current_buffer)

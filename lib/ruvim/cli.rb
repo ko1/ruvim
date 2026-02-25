@@ -9,6 +9,7 @@ module RuVim
       :readonly,
       :no_swap,
       :nomodifiable,
+      :restricted_mode,
       :startup_open_layout,
       :startup_open_count,
       :show_help,
@@ -50,6 +51,7 @@ module RuVim
         config_path: opts.config_path,
         readonly: opts.readonly,
         nomodifiable: opts.nomodifiable,
+        restricted: opts.restricted_mode,
         startup_open_layout: opts.startup_open_layout,
         startup_open_count: opts.startup_open_count
       )
@@ -72,6 +74,7 @@ module RuVim
         readonly: false,
         no_swap: false,
         nomodifiable: false,
+        restricted_mode: false,
         startup_open_layout: nil,
         startup_open_count: nil,
         show_help: false,
@@ -103,6 +106,8 @@ module RuVim
           opts.no_swap = true
         when "-M"
           opts.nomodifiable = true
+        when "-Z"
+          opts.restricted_mode = true
         when "-o", "-O", "-p"
           apply_layout_option(opts, arg, nil)
         when /\A-(o|O|p)(\d+)\z/
@@ -178,6 +183,7 @@ module RuVim
           --clean           Start without user config and ftplugin
           -R                Open file readonly (disallow :w on current buffer)
           -M                Open file unmodifiable (disallow editing; also readonly)
+          -Z                Restricted mode (skip config/ftplugin, disable :ruby)
           -n                No-op (reserved for swap/persistent features compatibility)
           -o[N]             Open files in horizontal splits
           -O[N]             Open files in vertical splits

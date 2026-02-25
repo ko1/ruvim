@@ -422,13 +422,13 @@
   - 依存:
     - option/buffer 属性との接続整理
 
-- `-Z`（restricted mode 相当の簡易版）
+- [DONE] `-Z`（restricted mode 相当の簡易版）
   - 効果: 低〜中
   - コスト: 中
   - 依存:
     - `:ruby`, `:!`（将来）, config 実行などの制限設計
   - メモ:
-    - RuVim では「Ruby eval/設定を無効化する safe mode」の方が実用的かも
+    - RuVim では「Ruby eval/設定を無効化する safe mode」の方が実用的かも（DONE: `:ruby` と config/ftplugin を抑止）
 
 ### P2: デバッグ・開発向け（あると嬉しい）
 

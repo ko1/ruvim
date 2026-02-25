@@ -6,6 +6,7 @@
 - `--clean`
 - `-R`
 - `-M`
+- `-Z`
 - `-n`（現状 no-op）
 - `-o[N]`, `-O[N]`, `-p[N]`
 - `-u {path|NONE}`

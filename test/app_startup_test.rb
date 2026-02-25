@@ -60,6 +60,13 @@ class AppStartupTest < Minitest::Test
     end
   end
 
+  def test_startup_restricted_mode_sets_editor_flag
+    app = RuVim::App.new(clean: true, restricted: true)
+    editor = app.instance_variable_get(:@editor)
+
+    assert_equal true, editor.restricted_mode?
+  end
+
   def test_startup_horizontal_split_opens_multiple_files
     Tempfile.create(["ruvim-a", ".txt"]) do |a|
       Tempfile.create(["ruvim-b", ".txt"]) do |b|
@@ -90,5 +97,15 @@ class AppStartupTest < Minitest::Test
         assert_equal 2, editor.tabpage_count
       end
     end
+  end
+
+  def test_restricted_mode_disables_ex_ruby
+    app = RuVim::App.new(clean: true, restricted: true)
+    editor = app.instance_variable_get(:@editor)
+    dispatcher = app.instance_variable_get(:@dispatcher)
+
+    dispatcher.dispatch_ex(editor, "ruby 1+1")
+
+    assert_match(/Restricted mode/, editor.message)
   end
 end
