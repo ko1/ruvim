@@ -246,10 +246,9 @@
   - `test/app_unicode_behavior_test.rb` で `w/b/e`・Visual yank・`p/P` を日本語行で検証
   - `p/P` 後のカーソル位置が全角文字の途中にならないことを確認
 
-- 描画回帰テストの追加（Unicode / wide char）
-  - 日本語を含む行でのスクロール・カーソル移動の snapshot テスト
-  - 行番号表示（`number`）ON/OFF での描画テスト
-  - ANSI 色付き行（cursor/search/highlight）での折り返し回避テスト
+- [DONE] 描画回帰テストの追加（Unicode / wide char）
+  - snapshot テスト追加（`number` ON/OFF、日本語行 + スクロール）
+  - `render_text_line` の ANSI ハイライト併用時に表示幅が崩れないことをテスト
 
 - [DONE] `.`（直前変更の repeat）
   - 効果: 高（Vim の編集テンポに直結）

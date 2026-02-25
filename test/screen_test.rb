@@ -99,4 +99,25 @@ class ScreenTest < Minitest::Test
 
     assert_equal 1, calls
   end
+
+  def test_render_text_line_with_cursor_search_and_syntax_highlights_fits_width
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(['def x; "日本語"; end'])
+    editor.set_option("filetype", "ruby", scope: :buffer, buffer: buf, window: win)
+    editor.set_last_search(pattern: "日本", direction: :forward)
+    win.cursor_y = 0
+    win.cursor_x = 8 # around string body
+
+    term = TerminalStub.new([6, 18])
+    screen = RuVim::Screen.new(terminal: term)
+    line = buf.line_at(0)
+
+    out = screen.send(:render_text_line, line, editor, buffer_row: 0, window: win, buffer: buf, width: 10)
+    visible = out.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+
+    assert_equal 10, RuVim::DisplayWidth.display_width(visible, tabstop: 2)
+    refute_includes out, "\n"
+  end
 end
