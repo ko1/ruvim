@@ -165,6 +165,11 @@ setglobal "tabstop=8"
   - 未保存バッファを残したまま別バッファへ移動できるようにします。
   - 現状は `:e`, `:buffer`, `:bnext`, `:bprev`, `:tabnew`, `gf` の主要経路で参照します。
 
+- `autowrite` (`bool`, default `false`) [`PARTIAL`]
+  - 一部のバッファ切替/ファイル移動コマンドの前に、変更済みファイルバッファを自動保存します。
+  - 現状は `:buffer`, `:bnext`, `:bprev`, `:e {file}`, `:tabnew`, `gf` の主要経路で最小対応です。
+  - 無名バッファや特殊バッファは自動保存しません。
+
 - `clipboard` (`string`, default `""`) [`PARTIAL`]
   - unnamed register を `*` / `+` に連携する方針を指定します。
   - 現状は `unnamed`, `unnamedplus` の基本連携のみ対応です。

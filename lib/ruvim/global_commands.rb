@@ -218,8 +218,10 @@ module RuVim
     def tab_new(ctx, argv:, **)
       path = argv[0]
       if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
-        ctx.editor.echo_error("Unsaved changes (use :w or :q!)")
-        return
+        unless maybe_autowrite_before_switch(ctx)
+          ctx.editor.echo_error("Unsaved changes (use :w or :q!)")
+          return
+        end
       end
       tab = ctx.editor.tabnew(path: path)
       if path && !path.empty?
@@ -594,6 +596,8 @@ module RuVim
       if ctx.buffer.modified? && !bang
         if ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
           # hidden permits abandoning a modified buffer without forcing write.
+        elsif maybe_autowrite_before_switch(ctx)
+          # autowrite handled
         else
           ctx.editor.echo_error("Unsaved changes (use :e! to discard and open)")
           return
@@ -619,8 +623,10 @@ module RuVim
       end
 
       if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
-        ctx.editor.echo_error("Unsaved changes (set hidden or :w)")
-        return
+        unless maybe_autowrite_before_switch(ctx)
+          ctx.editor.echo_error("Unsaved changes (set hidden or :w)")
+          return
+        end
       end
 
       ctx.editor.open_path(path)
@@ -1010,8 +1016,10 @@ module RuVim
       end
 
       if ctx.buffer.modified? && ctx.buffer.id != buffer_id && !bang && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
-        ctx.editor.echo_error("Unsaved changes (use :w or :buffer! / :bnext! / :bprev!)")
-        return
+        unless maybe_autowrite_before_switch(ctx)
+          ctx.editor.echo_error("Unsaved changes (use :w or :buffer! / :bnext! / :bprev!)")
+          return
+        end
       end
 
       record_jump(ctx)
@@ -1778,6 +1786,17 @@ module RuVim
     def materialize_intro_buffer_if_needed(ctx)
       ctx.editor.materialize_intro_buffer!
       nil
+    end
+
+    def maybe_autowrite_before_switch(ctx)
+      return false unless ctx.editor.effective_option("autowrite", window: ctx.window, buffer: ctx.buffer)
+      return false unless ctx.buffer.file_buffer?
+      return false unless ctx.buffer.path && !ctx.buffer.path.empty?
+
+      ctx.buffer.write_to(ctx.buffer.path)
+      true
+    rescue StandardError
+      false
     end
 
     def file_token_under_cursor(buffer, window)

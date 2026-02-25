@@ -115,7 +115,7 @@
 - `backup`（バックアップ保存）
 - `writebackup`（書き込み時バックアップ）
 - `autoread`（外部更新の再読込）
-- `autowrite`（特定コマンド時の自動保存）
+- `[PARTIAL]` `autowrite`（特定コマンド時の自動保存: buffer切替/`:e`/`gf`/`:tabnew` の最小）
 - `confirm`（確認ダイアログ相当の確認フロー）
 - `grepprg`（外部 grep コマンド）
 - `grepformat`（grep 結果のパース形式）

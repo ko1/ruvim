@@ -26,6 +26,7 @@ module RuVim
       "splitbelow" => { default_scope: :global, type: :bool, default: false },
       "splitright" => { default_scope: :global, type: :bool, default: false },
       "hidden" => { default_scope: :global, type: :bool, default: false },
+      "autowrite" => { default_scope: :global, type: :bool, default: false },
       "clipboard" => { default_scope: :global, type: :string, default: "" },
       "timeoutlen" => { default_scope: :global, type: :int, default: 1000 },
       "ttimeoutlen" => { default_scope: :global, type: :int, default: 50 },

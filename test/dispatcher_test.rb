@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "tmpdir"
 
 class DispatcherTest < Minitest::Test
   def setup
@@ -133,6 +134,24 @@ class DispatcherTest < Minitest::Test
 
     assert_equal other.id, @editor.current_buffer.id
     refute @editor.message_error?
+  end
+
+  def test_autowrite_saves_current_buffer_before_buffer_switch
+    Dir.mktmpdir("ruvim-autowrite") do |dir|
+      path = File.join(dir, "a.txt")
+      File.write(path, "old\n")
+      @editor.materialize_intro_buffer!
+      @editor.current_buffer.path = path
+      @editor.current_buffer.replace_all_lines!(["new"])
+      @editor.current_buffer.modified = true
+      other = @editor.add_empty_buffer(path: "other.txt")
+      @editor.set_option("autowrite", true, scope: :global)
+
+      @dispatcher.dispatch_ex(@editor, "buffer #{other.id}")
+
+      assert_equal other.id, @editor.current_buffer.id
+      assert_equal "new", File.read(path).strip
+    end
   end
 
   def test_splitbelow_and_splitright_change_insertion_side
