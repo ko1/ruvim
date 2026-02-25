@@ -209,7 +209,9 @@
   - session file（開いている buffer / cursor 位置）
 
 - パフォーマンス改善
-  - 表示幅ベースの水平スクロール
+  - [DONE] 表示幅ベースの水平スクロール
+    - `Window#ensure_visible` を screen column ベース化済み（`TextMetrics` 利用）
+    - 全角文字を含む行の横スクロールを `test/window_test.rb` で確認済み
   - 大きいファイルでの redraw 最適化
   - rope/piece-table などのバッファ構造検討
 
