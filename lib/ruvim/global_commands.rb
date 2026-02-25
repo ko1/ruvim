@@ -1069,27 +1069,33 @@ module RuVim
     end
 
     def search_current_word(ctx, exact:, direction:)
-      word = current_word_under_cursor(ctx.buffer, ctx.window)
+      keyword_rx = keyword_char_regex(ctx.editor, ctx.buffer, ctx.window)
+      word = current_word_under_cursor(ctx.buffer, ctx.window, keyword_rx:)
       if word.nil? || word.empty?
         ctx.editor.echo("No word under cursor")
         return
       end
 
-      pattern = exact ? "\\b#{Regexp.escape(word)}\\b" : Regexp.escape(word)
+      pattern =
+        if exact
+          "(?<!#{keyword_rx.source})#{Regexp.escape(word)}(?!#{keyword_rx.source})"
+        else
+          Regexp.escape(word)
+        end
       ctx.editor.set_last_search(pattern:, direction:)
       move_to_search(ctx, pattern:, direction:, count: 1)
     end
 
-    def current_word_under_cursor(buffer, window)
+    def current_word_under_cursor(buffer, window, keyword_rx: /[[:alnum:]_]/)
       line = buffer.line_at(window.cursor_y)
       return nil if line.empty?
 
       x = [window.cursor_x, line.length - 1].min
       return nil if x.negative?
 
-      if line[x] !~ /[[:alnum:]_]/
+      if !keyword_char?(line[x], keyword_rx)
         left = x - 1
-        if left >= 0 && line[left] =~ /[[:alnum:]_]/
+        if left >= 0 && keyword_char?(line[left], keyword_rx)
           x = left
         else
           return nil
@@ -1097,9 +1103,9 @@ module RuVim
       end
 
       s = x
-      s -= 1 while s.positive? && line[s - 1] =~ /[[:alnum:]_]/
+      s -= 1 while s.positive? && keyword_char?(line[s - 1], keyword_rx)
       e = x + 1
-      e += 1 while e < line.length && line[e] =~ /[[:alnum:]_]/
+      e += 1 while e < line.length && keyword_char?(line[e], keyword_rx)
       line[s...e]
     end
 

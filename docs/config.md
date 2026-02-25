@@ -245,7 +245,7 @@ setglobal "tabstop=8"
 
 - `iskeyword` (`string`, default `nil`) [`PARTIAL`]
   - 単語境界の定義を指定します。
-  - 現状は `w/b/e`、一部 text object、Insert 補完の単語抽出に反映します。
+  - 現状は `w/b/e`、`*` / `#`、一部 text object、Insert 補完の単語抽出に反映します。
 
 - `tabstop` (`int`, default `2`) [`DONE`]
   - タブの表示幅です。

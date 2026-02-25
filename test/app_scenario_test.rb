@@ -267,4 +267,17 @@ class AppScenarioTest < Minitest::Test
     assert_equal :insert, @editor.mode
     assert_equal [0, 2], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
   end
+
+  def test_star_search_uses_iskeyword
+    @editor.set_option("iskeyword", "@,-", scope: :buffer)
+    @editor.current_buffer.replace_all_lines!(["foo-bar x", "foo y", "foo-bar z"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 1
+
+    feed("*")
+
+    assert_equal 2, @editor.current_window.cursor_y
+    assert_equal 0, @editor.current_window.cursor_x
+    assert_includes @editor.last_search[:pattern], "foo\\-bar"
+  end
 end
