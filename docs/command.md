@@ -94,6 +94,7 @@
 - 形式: `:ruby <code>`
 - 形式: `:rb <code>`
 - Ruby コードを評価し、返り値をステータスに表示
+- `stdout` / `stderr` に出力があった場合は `[Ruby Output]` 仮想バッファに表示（返り値も末尾に表示）
 - 利用可能: `ctx`, `editor`, `buffer`, `window`
 
 ### `:ls` / `:buffers`

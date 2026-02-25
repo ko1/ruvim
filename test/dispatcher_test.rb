@@ -44,6 +44,20 @@ class DispatcherTest < Minitest::Test
     assert_equal "ruby: 3", @editor.message
   end
 
+  def test_dispatch_ex_ruby_captures_stdout_and_stderr_into_virtual_buffer
+    @dispatcher.dispatch_ex(@editor, "ruby STDOUT.puts(%q[out]); STDERR.puts(%q[err]); 42")
+
+    assert_equal "[Ruby Output]", @editor.message
+    assert_equal :help, @editor.current_buffer.kind
+    body = @editor.current_buffer.lines.join("\n")
+    assert_includes body, "[stdout]"
+    assert_includes body, "out"
+    assert_includes body, "[stderr]"
+    assert_includes body, "err"
+    assert_includes body, "[result]"
+    assert_includes body, "42"
+  end
+
   def test_dispatch_ex_set_commands
     @dispatcher.dispatch_ex(@editor, "set number")
     assert_equal true, @editor.current_window.options["number"]

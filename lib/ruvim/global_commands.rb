@@ -1,3 +1,5 @@
+require "tempfile"
+
 module RuVim
   class GlobalCommands
     include Singleton
@@ -771,10 +773,61 @@ module RuVim
       b.local_variable_set(:editor, ctx.editor)
       b.local_variable_set(:buffer, ctx.buffer)
       b.local_variable_set(:window, ctx.window)
-      result = eval(code, b) # rubocop:disable Security/Eval
-      ctx.editor.echo(result.nil? ? "ruby: nil" : "ruby: #{result.inspect}")
+      saved_stdout = STDOUT.dup
+      saved_stderr = STDERR.dup
+      original_g_stdout = $stdout
+      original_g_stderr = $stderr
+      result = nil
+      stdout_text = ""
+      stderr_text = ""
+      Tempfile.create("ruvim-ruby-stdout") do |outf|
+        Tempfile.create("ruvim-ruby-stderr") do |errf|
+          STDOUT.reopen(outf)
+          STDERR.reopen(errf)
+          $stdout = STDOUT
+          $stderr = STDERR
+          result = eval(code, b) # rubocop:disable Security/Eval
+          STDOUT.flush
+          STDERR.flush
+          outf.flush
+          errf.flush
+          outf.rewind
+          errf.rewind
+          stdout_text = outf.read.to_s
+          stderr_text = errf.read.to_s
+        end
+      end
+      if !stdout_text.empty? || !stderr_text.empty?
+        lines = ["Ruby output", ""]
+        unless stdout_text.empty?
+          lines << "[stdout]"
+          lines.concat(stdout_text.lines(chomp: true))
+          lines << ""
+        end
+        unless stderr_text.empty?
+          lines << "[stderr]"
+          lines.concat(stderr_text.lines(chomp: true))
+          lines << ""
+        end
+        lines << "[result]"
+        lines << (result.nil? ? "nil" : result.inspect)
+        ctx.editor.show_help_buffer!(title: "[Ruby Output]", lines:, filetype: "ruby")
+      else
+        ctx.editor.echo(result.nil? ? "ruby: nil" : "ruby: #{result.inspect}")
+      end
     rescue StandardError => e
       raise RuVim::CommandError, "Ruby error: #{e.class}: #{e.message}"
+    ensure
+      if defined?(saved_stdout) && saved_stdout
+        STDOUT.reopen(saved_stdout)
+        saved_stdout.close unless saved_stdout.closed?
+      end
+      if defined?(saved_stderr) && saved_stderr
+        STDERR.reopen(saved_stderr)
+        saved_stderr.close unless saved_stderr.closed?
+      end
+      $stdout = (defined?(original_g_stdout) && original_g_stdout) ? original_g_stdout : STDOUT
+      $stderr = (defined?(original_g_stderr) && original_g_stderr) ? original_g_stderr : STDERR
     end
 
     def ex_commands(ctx, **)
