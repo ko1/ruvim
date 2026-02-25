@@ -354,6 +354,10 @@ module RuVim
         return
       end
 
+      if special_ctrl_key?(key) && try_special_ctrl_keymap_override(key)
+        return
+      end
+
       if ctrl_paging_key?(key)
         invoke_ctrl_paging_key(key)
         return
@@ -740,6 +744,10 @@ module RuVim
       %i[ctrl_e ctrl_y].include?(key)
     end
 
+    def special_ctrl_key?(key)
+      ctrl_paging_key?(key) || ctrl_scroll_line_key?(key)
+    end
+
     def invoke_arrow(key)
       id = {
         left: "cursor.left",
@@ -803,6 +811,19 @@ module RuVim
       @dispatcher.dispatch(@editor, inv)
       @editor.pending_count = nil
       @pending_keys = []
+    end
+
+    def try_special_ctrl_keymap_override(key)
+      token = normalize_key_token(key)
+      return false unless token
+
+      probe = @keymaps.resolve_with_context(:normal, [token], editor: @editor)
+      return false if probe.status == :none
+
+      @pending_keys ||= []
+      @pending_keys << token
+      resolve_normal_key_sequence
+      true
     end
 
     def current_page_step_lines

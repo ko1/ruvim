@@ -126,4 +126,5 @@
 - `d` は keymap の固定列ではなく operator-pending 状態機械で解釈
 - keymap 解決順（現状実装）: `filetype-local -> buffer-local -> mode-local -> global`
 - `~/.config/ruvim/init.rb`（または `$XDG_CONFIG_HOME/ruvim/init.rb`）の `nmap` / `imap` / `map_global` で上書き・追加可能
+- `Ctrl-d/u/f/b/e/y` も、現在は「既定挙動の前に keymap override を試す」ため `nmap "<C-d>", ...` のように上書き可能
 - `~/.config/ruvim/ftplugin/<filetype>.rb`（または `$XDG_CONFIG_HOME/ruvim/ftplugin/<filetype>.rb`）では `nmap` / `imap` が filetype-local として登録される
