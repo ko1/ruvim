@@ -50,6 +50,17 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_verbose_options
+    v1 = RuVim::CLI.parse(["-V", "file.txt"])
+    assert_equal 1, v1.verbose_level
+
+    v2 = RuVim::CLI.parse(["-V2", "file.txt"])
+    assert_equal 2, v2.verbose_level
+
+    v3 = RuVim::CLI.parse(["--verbose=3", "file.txt"])
+    assert_equal 3, v3.verbose_level
+  end
+
   def test_parse_n_option_as_accepted_no_op
     opts = RuVim::CLI.parse(["-n", "file.txt"])
 
@@ -88,6 +99,7 @@ class CLITest < Minitest::Test
     assert_match(/-R\s+Open file readonly/, out.string)
     assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-Z\s+Restricted mode/, out.string)
+    assert_match(/-V\[N\], --verbose/, out.string)
     assert_match(/-n\s+No-op/, out.string)
     assert_match(/-o\[N\]/, out.string)
     assert_match(/-O\[N\]/, out.string)

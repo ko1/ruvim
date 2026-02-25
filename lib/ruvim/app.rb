@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -17,6 +17,8 @@ module RuVim
       @startup_readonly = readonly
       @startup_nomodifiable = nomodifiable
       @restricted_mode = restricted
+      @verbose_level = verbose_level.to_i
+      @verbose_io = verbose_io
       @startup_open_layout = startup_open_layout
       @startup_open_count = startup_open_count
       @editor.restricted_mode = @restricted_mode
@@ -24,17 +26,22 @@ module RuVim
       register_builtins!
       bind_default_keys!
       init_config_loader!
+      verbose_log(1, "startup: load_user_config")
       load_user_config!
       install_signal_handlers
 
       @editor.ensure_bootstrap_buffer!
       startup_paths = Array(paths || path).compact
       if startup_paths.empty?
+        verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
       else
+        verbose_log(1, "startup: open_paths #{startup_paths.inspect} layout=#{@startup_open_layout || :single}")
         open_startup_paths!(startup_paths)
       end
+      verbose_log(1, "startup: load_current_ftplugin")
       load_current_ftplugin!
+      verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
     end
 
@@ -622,10 +629,13 @@ module RuVim
     def handle_command_line_submit(prefix, line)
       case prefix
       when ":"
+        verbose_log(2, "ex: #{line}")
         @dispatcher.dispatch_ex(@editor, line)
       when "/"
+        verbose_log(2, "search(/): #{line}")
         submit_search(line, direction: :forward)
       when "?"
+        verbose_log(2, "search(?): #{line}")
         submit_search(line, direction: :backward)
       else
         @editor.echo("Unknown command-line prefix: #{prefix}")
@@ -1329,12 +1339,25 @@ module RuVim
     def run_startup_action!(action)
       case action[:type]
       when :ex
+        verbose_log(2, "startup ex: #{action[:value]}")
         @dispatcher.dispatch_ex(@editor, action[:value].to_s)
       when :line
+        verbose_log(2, "startup line: #{action[:value]}")
         move_cursor_to_line(action[:value].to_i)
       when :line_end
+        verbose_log(2, "startup line_end")
         move_cursor_to_line(@editor.current_buffer.line_count)
       end
+    end
+
+    def verbose_log(level, message)
+      return if @verbose_level.to_i < level.to_i
+      return unless @verbose_io
+
+      @verbose_io.puts("[ruvim:v#{@verbose_level}] #{message}")
+      @verbose_io.flush if @verbose_io.respond_to?(:flush)
+    rescue StandardError
+      nil
     end
 
     def apply_startup_readonly!

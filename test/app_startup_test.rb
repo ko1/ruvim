@@ -1,5 +1,6 @@
 require_relative "test_helper"
 require "tempfile"
+require "stringio"
 
 class AppStartupTest < Minitest::Test
   def test_startup_ex_command_runs_after_boot
@@ -107,5 +108,22 @@ class AppStartupTest < Minitest::Test
     dispatcher.dispatch_ex(editor, "ruby 1+1")
 
     assert_match(/Restricted mode/, editor.message)
+  end
+
+  def test_verbose_logs_startup_and_startup_ex_actions
+    log = StringIO.new
+    app = RuVim::App.new(
+      clean: true,
+      verbose_level: 2,
+      verbose_io: log,
+      startup_actions: [{ type: :ex, value: "set number" }]
+    )
+    editor = app.instance_variable_get(:@editor)
+    assert_equal true, editor.effective_option("number")
+
+    text = log.string
+    assert_match(/startup: load_user_config/, text)
+    assert_match(/startup: run_startup_actions/, text)
+    assert_match(/startup ex: set number/, text)
   end
 end

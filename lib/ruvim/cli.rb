@@ -10,6 +10,7 @@ module RuVim
       :no_swap,
       :nomodifiable,
       :restricted_mode,
+      :verbose_level,
       :startup_open_layout,
       :startup_open_count,
       :show_help,
@@ -52,6 +53,8 @@ module RuVim
         readonly: opts.readonly,
         nomodifiable: opts.nomodifiable,
         restricted: opts.restricted_mode,
+        verbose_level: opts.verbose_level,
+        verbose_io: stderr,
         startup_open_layout: opts.startup_open_layout,
         startup_open_count: opts.startup_open_count
       )
@@ -75,6 +78,7 @@ module RuVim
         no_swap: false,
         nomodifiable: false,
         restricted_mode: false,
+        verbose_level: 0,
         startup_open_layout: nil,
         startup_open_count: nil,
         show_help: false,
@@ -98,6 +102,10 @@ module RuVim
           opts.show_help = true
         when "--version", "-v"
           opts.show_version = true
+        when "--verbose"
+          opts.verbose_level = [opts.verbose_level.to_i, 1].max
+        when /\A--verbose=(\d+)\z/
+          opts.verbose_level = Regexp.last_match(1).to_i
         when "--clean"
           opts.clean = true
         when "-R"
@@ -108,6 +116,10 @@ module RuVim
           opts.nomodifiable = true
         when "-Z"
           opts.restricted_mode = true
+        when "-V"
+          opts.verbose_level = [opts.verbose_level.to_i, 1].max
+        when /\A-V(\d+)\z/
+          opts.verbose_level = Regexp.last_match(1).to_i
         when "-o", "-O", "-p"
           apply_layout_option(opts, arg, nil)
         when /\A-(o|O|p)(\d+)\z/
@@ -184,6 +196,8 @@ module RuVim
           -R                Open file readonly (disallow :w on current buffer)
           -M                Open file unmodifiable (disallow editing; also readonly)
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
+          -V[N], --verbose[=N]
+                            Verbose startup/config/command logs to stderr
           -n                No-op (reserved for swap/persistent features compatibility)
           -o[N]             Open files in horizontal splits
           -O[N]             Open files in vertical splits

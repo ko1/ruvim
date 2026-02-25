@@ -139,6 +139,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `-o[N]`, `-O[N]`, `-p[N]`
   - 複数ファイルを水平 split / 垂直 split / tab で開く
   - `N` は現状受理するがレイアウト数の厳密制御には未使用（将来拡張用）
+- `-V[N]`, `--verbose[=N]`
+  - verbose ログを `stderr` に出力（現状は startup / config / startup actions / Ex submit の簡易ログ）
 - `-u {path|NONE}`
   - `path`: 指定ファイルを設定として読み込む
   - `NONE`: user config のみ無効化（ftplugin は有効）
