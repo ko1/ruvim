@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -15,6 +15,8 @@ module RuVim
       @skip_user_config = skip_user_config
       @config_path = config_path
       @startup_readonly = readonly
+      @startup_open_layout = startup_open_layout
+      @startup_open_count = startup_open_count
 
       register_builtins!
       bind_default_keys!
@@ -23,9 +25,12 @@ module RuVim
       install_signal_handlers
 
       @editor.ensure_bootstrap_buffer!
-      @editor.open_path(path) if path
-      @editor.show_intro_buffer_if_applicable! unless path
-      apply_startup_readonly! if path
+      startup_paths = Array(paths || path).compact
+      if startup_paths.empty?
+        @editor.show_intro_buffer_if_applicable!
+      else
+        open_startup_paths!(startup_paths)
+      end
       load_current_ftplugin!
       run_startup_actions!(startup_actions)
     end
@@ -1335,6 +1340,38 @@ module RuVim
 
       buf.readonly = true
       @editor.echo("readonly: #{buf.display_name}")
+    end
+
+    def open_startup_paths!(paths)
+      list = Array(paths).compact
+      return if list.empty?
+
+      first, *rest = list
+      @editor.open_path(first)
+      apply_startup_readonly! if @startup_readonly
+
+      case @startup_open_layout
+      when :horizontal
+        rest.each { |p| open_path_in_split!(p, layout: :horizontal) }
+      when :vertical
+        rest.each { |p| open_path_in_split!(p, layout: :vertical) }
+      when :tab
+        rest.each { |p| open_path_in_tab!(p) }
+      else
+        # No multi-file layout mode yet; ignore extras if called directly.
+      end
+    end
+
+    def open_path_in_split!(path, layout:)
+      @editor.split_current_window(layout:)
+      buf = @editor.add_buffer_from_file(path)
+      @editor.switch_to_buffer(buf.id)
+      apply_startup_readonly! if @startup_readonly
+    end
+
+    def open_path_in_tab!(path)
+      @editor.tabnew(path:)
+      apply_startup_readonly! if @startup_readonly
     end
 
     def move_cursor_to_line(line_number)

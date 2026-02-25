@@ -23,6 +23,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 - `--clean`（ユーザー設定と ftplugin を読まない）
 - `-R`（readonly で開く。現在バッファの `:w` を拒否）
 - `-n`（現状 no-op。将来の swap/永続機能向け互換フラグ）
+- `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
 - `-u path/to/init.rb`（設定ファイルを指定）
 - `-u NONE`（ユーザー設定を読まない）
 - `-c 'set number'`（起動後に Ex 実行）
@@ -36,6 +37,9 @@ ruby -Ilib exe/ruvim --clean file.txt
 ruby -Ilib exe/ruvim -R file.txt
 ruby -Ilib exe/ruvim -u /tmp/minimal_init.rb -c 'set number' file.txt
 ruby -Ilib exe/ruvim +10 file.txt
+ruby -Ilib exe/ruvim -o a.rb b.rb
+ruby -Ilib exe/ruvim -O a.rb b.rb
+ruby -Ilib exe/ruvim -p a.rb b.rb
 ```
 
 ## 基本操作

@@ -8,6 +8,8 @@ module RuVim
       :config_path,
       :readonly,
       :no_swap,
+      :startup_open_layout,
+      :startup_open_count,
       :show_help,
       :show_version,
       keyword_init: true
@@ -28,7 +30,7 @@ module RuVim
         return 0
       end
 
-      if opts.files.length > 1
+      if opts.files.length > 1 && opts.startup_open_layout.nil?
         raise ParseError, "multiple files are not supported yet"
       end
 
@@ -38,13 +40,16 @@ module RuVim
 
       app = RuVim::App.new(
         path: opts.files.first,
+        paths: opts.files,
         stdin: stdin,
         stdout: stdout,
         startup_actions: opts.startup_actions,
         clean: opts.clean,
         skip_user_config: opts.skip_user_config,
         config_path: opts.config_path,
-        readonly: opts.readonly
+        readonly: opts.readonly,
+        startup_open_layout: opts.startup_open_layout,
+        startup_open_count: opts.startup_open_count
       )
       app.run
       0
@@ -64,6 +69,8 @@ module RuVim
         config_path: nil,
         readonly: false,
         no_swap: false,
+        startup_open_layout: nil,
+        startup_open_count: nil,
         show_help: false,
         show_version: false
       )
@@ -91,6 +98,10 @@ module RuVim
           opts.readonly = true
         when "-n"
           opts.no_swap = true
+        when "-o", "-O", "-p"
+          apply_layout_option(opts, arg, nil)
+        when /\A-(o|O|p)(\d+)\z/
+          apply_layout_option(opts, Regexp.last_match(1), Regexp.last_match(2).to_i)
         when "-u"
           i += 1
           raise ParseError, "-u requires an argument" if i >= args.length
@@ -138,6 +149,20 @@ module RuVim
     end
     private_class_method :apply_plus_option
 
+    def self.apply_layout_option(opts, token, count)
+      layout =
+        case token
+        when "-o", "o" then :horizontal
+        when "-O", "O" then :vertical
+        when "-p", "p" then :tab
+        else
+          raise ParseError, "unknown layout option: #{token}"
+        end
+      opts.startup_open_layout = layout
+      opts.startup_open_count = count
+    end
+    private_class_method :apply_layout_option
+
     def self.help_text
       <<~TXT
         Usage: ruvim [options] [file]
@@ -148,6 +173,9 @@ module RuVim
           --clean           Start without user config and ftplugin
           -R                Open file readonly (disallow :w on current buffer)
           -n                No-op (reserved for swap/persistent features compatibility)
+          -o[N]             Open files in horizontal splits
+          -O[N]             Open files in vertical splits
+          -p[N]             Open files in tabs
           -u {path|NONE}    Use config file path, or disable user config with NONE
           -c {cmd}          Execute Ex command after startup
           +{cmd}            Execute Ex command after startup

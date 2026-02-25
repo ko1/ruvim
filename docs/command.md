@@ -6,6 +6,7 @@
 - `--clean`
 - `-R`
 - `-n`（現状 no-op）
+- `-o[N]`, `-O[N]`, `-p[N]`
 - `-u {path|NONE}`
 - `-c {cmd}`
 - `+{cmd}`, `+{line}`, `+`

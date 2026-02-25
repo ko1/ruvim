@@ -130,6 +130,9 @@ RuVim::ExCommandRegistry.instance.register(
   - 起動時に開いた current buffer を readonly にする（現状は保存禁止の意味）
 - `-n`
   - 現状は no-op（将来の swap / 永続 undo / session 互換の先行予約）
+- `-o[N]`, `-O[N]`, `-p[N]`
+  - 複数ファイルを水平 split / 垂直 split / tab で開く
+  - `N` は現状受理するがレイアウト数の厳密制御には未使用（将来拡張用）
 - `-u {path|NONE}`
   - `path`: 指定ファイルを設定として読み込む
   - `NONE`: user config のみ無効化（ftplugin は有効）

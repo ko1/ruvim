@@ -43,6 +43,20 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_split_and_tab_layout_options
+    o = RuVim::CLI.parse(["-o", "a", "b"])
+    assert_equal :horizontal, o.startup_open_layout
+    assert_nil o.startup_open_count
+
+    ov = RuVim::CLI.parse(["-O3", "a", "b"])
+    assert_equal :vertical, ov.startup_open_layout
+    assert_equal 3, ov.startup_open_count
+
+    p = RuVim::CLI.parse(["-p2", "a", "b"])
+    assert_equal :tab, p.startup_open_layout
+    assert_equal 2, p.startup_open_count
+  end
+
   def test_help_and_version_return_without_starting_ui
     out = StringIO.new
     err = StringIO.new
@@ -59,6 +73,9 @@ class CLITest < Minitest::Test
     assert_match(/Usage: ruvim/, out.string)
     assert_match(/-R\s+Open file readonly/, out.string)
     assert_match(/-n\s+No-op/, out.string)
+    assert_match(/-o\[N\]/, out.string)
+    assert_match(/-O\[N\]/, out.string)
+    assert_match(/-p\[N\]/, out.string)
     assert_equal "", err.string
   end
 

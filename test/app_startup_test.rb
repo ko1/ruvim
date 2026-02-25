@@ -46,4 +46,36 @@ class AppStartupTest < Minitest::Test
       assert_equal true, editor.current_buffer.readonly?
     end
   end
+
+  def test_startup_horizontal_split_opens_multiple_files
+    Tempfile.create(["ruvim-a", ".txt"]) do |a|
+      Tempfile.create(["ruvim-b", ".txt"]) do |b|
+        a.write("a\n"); a.flush
+        b.write("b\n"); b.flush
+
+        app = RuVim::App.new(paths: [a.path, b.path], clean: true, startup_open_layout: :horizontal)
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal :horizontal, editor.window_layout
+        assert_equal 2, editor.window_order.length
+        names = editor.window_order.map { |id| editor.buffers[editor.windows[id].buffer_id].path }
+        assert_includes names, a.path
+        assert_includes names, b.path
+      end
+    end
+  end
+
+  def test_startup_tab_layout_opens_multiple_tabs
+    Tempfile.create(["ruvim-a", ".txt"]) do |a|
+      Tempfile.create(["ruvim-b", ".txt"]) do |b|
+        a.write("a\n"); a.flush
+        b.write("b\n"); b.flush
+
+        app = RuVim::App.new(paths: [a.path, b.path], clean: true, startup_open_layout: :tab)
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal 2, editor.tabpage_count
+      end
+    end
+  end
 end
