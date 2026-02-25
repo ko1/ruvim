@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -16,6 +16,7 @@ module RuVim
       @config_path = config_path
       @startup_readonly = readonly
       @startup_diff_mode = diff_mode
+      @startup_quickfix_errorfile = quickfix_errorfile
       @startup_nomodifiable = nomodifiable
       @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
@@ -1420,10 +1421,15 @@ module RuVim
     end
 
     def apply_startup_compat_mode_messages!
-      return unless @startup_diff_mode
+      if @startup_diff_mode
+        verbose_log(1, "startup: -d requested (diff mode placeholder)")
+        @editor.echo("diff mode (-d) is not implemented yet")
+      end
 
-      verbose_log(1, "startup: -d requested (diff mode placeholder)")
-      @editor.echo("diff mode (-d) is not implemented yet")
+      return unless @startup_quickfix_errorfile
+
+      verbose_log(1, "startup: -q #{@startup_quickfix_errorfile} requested (quickfix placeholder)")
+      @editor.echo("quickfix startup (-q #{@startup_quickfix_errorfile}) is not implemented yet")
     end
 
     def open_startup_paths!(paths)

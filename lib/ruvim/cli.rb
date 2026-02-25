@@ -9,6 +9,7 @@ module RuVim
       :config_path,
       :readonly,
       :diff_mode,
+      :quickfix_errorfile,
       :no_swap,
       :nomodifiable,
       :restricted_mode,
@@ -56,6 +57,7 @@ module RuVim
         config_path: opts.config_path,
         readonly: opts.readonly,
         diff_mode: opts.diff_mode,
+        quickfix_errorfile: opts.quickfix_errorfile,
         nomodifiable: opts.nomodifiable,
         restricted: opts.restricted_mode,
         verbose_level: opts.verbose_level,
@@ -83,6 +85,7 @@ module RuVim
         config_path: nil,
         readonly: false,
         diff_mode: false,
+        quickfix_errorfile: nil,
         no_swap: false,
         nomodifiable: false,
         restricted_mode: false,
@@ -131,6 +134,10 @@ module RuVim
           opts.readonly = true
         when "-d"
           opts.diff_mode = true
+        when "-q"
+          i += 1
+          raise ParseError, "-q requires an errorfile path" if i >= args.length
+          opts.quickfix_errorfile = args[i]
         when "-n"
           opts.no_swap = true
         when "-M"
@@ -216,6 +223,7 @@ module RuVim
           --clean           Start without user config and ftplugin
           -R                Open file readonly (disallow :w on current buffer)
           -d                Diff mode requested (compat placeholder; not implemented yet)
+          -q {errorfile}    Quickfix startup placeholder (not implemented yet)
           -M                Open file unmodifiable (disallow editing; also readonly)
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
           -V[N], --verbose[=N]

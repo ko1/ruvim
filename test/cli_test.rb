@@ -54,6 +54,13 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_quickfix_option
+    opts = RuVim::CLI.parse(["-q", "errors.log", "file.txt"])
+
+    assert_equal "errors.log", opts.quickfix_errorfile
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_parse_nomodifiable_option
     opts = RuVim::CLI.parse(["-M", "file.txt"])
 
@@ -123,6 +130,7 @@ class CLITest < Minitest::Test
     assert_match(/Usage: ruvim/, out.string)
     assert_match(/-R\s+Open file readonly/, out.string)
     assert_match(/-d\s+Diff mode requested/, out.string)
+    assert_match(/-q \{errorfile\}\s+Quickfix startup placeholder/, out.string)
     assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-Z\s+Restricted mode/, out.string)
     assert_match(/-V\[N\], --verbose/, out.string)
