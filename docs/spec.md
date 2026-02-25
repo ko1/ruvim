@@ -429,6 +429,14 @@ ANSI エスケープシーケンスによる再描画です。
 - variation selector / ZWJ は幅0扱い
 - 一部 emoji range を幅2として扱う
 
+描画の幅処理（現状）:
+
+- 本文行の clipping/padding は `RuVim::TextMetrics.clip_cells_for_width` を共通利用
+  - tab 展開
+  - `source_col` 保持（cursor/search/syntax highlight の重ね合わせ用）
+- 横スクロール可視判定と cursor 列計算は `char index <-> screen column` 変換で揃える
+- ステータス/エラー行は「プレーン文字列を先に切り詰めてから SGR を付ける」方針で ANSI 切断を避ける
+
 制約:
 
 - 左右移動（`h/l`・矢印左右）は grapheme cluster を考慮するが、他の移動は未統一

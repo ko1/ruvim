@@ -237,14 +237,14 @@
   - `docs/spec.md` に decode/save の現状方針（UTF-8 / `default_external` / `scrub`）を明記
   - `test/buffer_test.rb` に不正バイト列 decode と UTF-8 保存のテスト追加
 
-- 表示幅ベース描画の共通化
-  - 文字列の切り詰め/パディングを ANSI 付きでも安全に扱う helper を整理
-  - tabstop を表示幅計算 helper 全体で一貫利用
-  - number / syntax highlight / search highlight 併用時の幅ズレ確認
+- [DONE] 表示幅ベース描画の共通化
+  - 本文行の clipping/padding を `TextMetrics.clip_cells_for_width` 中心に統一
+  - tabstop を `Window#ensure_visible` / `Screen` / `TextMetrics` で一貫利用
+  - ステータス/エラー行は「切り詰め後に SGR 付与」で ANSI 切断を回避（方針を `docs/spec.md` に明記）
 
-- 日本語/全角を含む操作の整合性確認
-  - `w`, `b`, `e` / search / visual selection / replace の挙動を多バイト文字で検証
-  - `p`, `P` 後のカーソル位置を全角文字行で確認
+- [DONE] 日本語/全角を含む操作の整合性確認
+  - `test/app_unicode_behavior_test.rb` で `w/b/e`・Visual yank・`p/P` を日本語行で検証
+  - `p/P` 後のカーソル位置が全角文字の途中にならないことを確認
 
 - 描画回帰テストの追加（Unicode / wide char）
   - 日本語を含む行でのスクロール・カーソル移動の snapshot テスト
