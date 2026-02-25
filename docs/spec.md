@@ -189,7 +189,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `-Z`
   - restricted mode（現状）
   - user config / ftplugin を読み込まない
-  - `:ruby` を禁止する
+  - `:ruby` / `:rb` を禁止する
+  - `:!` を禁止する
 - `-n`
   - 現状は no-op（将来の swap / 永続 undo / session 互換の先行予約）
 - `-o[N]`, `-O[N]`, `-p[N]`
@@ -308,15 +309,20 @@ RuVim::ExCommandRegistry.instance.register(
 - `:commands`
 - `:command[!] <Name> <ex-body>`
 - `:ruby <code>` / `:rb <code>`
+- `:!<command>`
 - `:ls` / `:buffers`
 - `:bnext` / `:bn`
 - `:bprev` / `:bp`
 - `:buffer <id|name|#>` / `:b <id|name|#>`
+- `:bdelete[!] [id|name|#]` / `:bd[!] [id|name|#]`
 - `:split`
 - `:vsplit`
 - `:tabnew [path]`
 - `:tabnext` / `:tabn`
 - `:tabprev` / `:tabp`
+- `:vimgrep`, `:lvimgrep`
+- `:copen`, `:cclose`, `:cnext` / `:cn`, `:cprev` / `:cp`
+- `:lopen`, `:lclose`, `:lnext` / `:ln`, `:lprev` / `:lp`
 
 ## 検索仕様（現状）
 
@@ -362,7 +368,15 @@ RuVim::ExCommandRegistry.instance.register(
   - `editor`
   - `buffer`
   - `window`
-- 返り値はステータスラインに表示（`inspect`）
+- `stdout` / `stderr` に出力があれば `[Ruby Output]` 仮想バッファに表示（返り値も表示）
+- 出力がない場合、返り値をステータスラインに表示（`inspect`）
+
+### `:!`（shell 実行, 最小）
+
+- `:!<command>` で shell コマンドを同期実行
+- `stdout` / `stderr` があれば `[Shell Output]` 仮想バッファに表示（終了ステータスを含む）
+- 出力がない場合は `shell exit N` をステータス表示
+- restricted mode（`-Z`）では禁止
 
 ### バッファ管理 Ex コマンド（現状仕様）
 
@@ -373,6 +387,7 @@ RuVim::ExCommandRegistry.instance.register(
   - 数値ID
   - パス名 / basename
   - `#`（alternate buffer）
+- `:bdelete` / `:bd` : バッファ削除（未保存は `!` 必須）
 
 ### alternate buffer（`#`）
 
@@ -387,8 +402,10 @@ ANSI エスケープシーケンスによる再描画です。
 - 代替スクリーン (`?1049h / ?1049l`)
 - カーソル非表示/表示 (`?25l / ?25h`)
 - 行キャッシュによる簡易差分描画（同サイズ時）
-- 最下段: status line
-- Command-line mode 時は最下段を command-line、1つ上を status line
+- フッターは 2 行固定:
+  - 最下段: command line / error message 用
+  - 1つ上: status line
+- Command-line mode 時も status line は維持し、最下段だけを入力行として使う
 - ファイル未指定起動時は Vim 風 intro screen を表示（RuVim では intro 用の read-only 特殊バッファ）
 - カーソル位置の文字を反転表示（見やすさ向上）
 
@@ -573,12 +590,12 @@ Vim 完全互換ではなく、まずは扱いやすい粒度を優先した仕�
   - `:set`
   - `:setlocal`
   - `:setglobal`
-- 実装済み option:
-  - `number`（window-local, bool）
-  - `relativenumber`（window-local, bool）
-  - `ignorecase` / `smartcase` / `hlsearch`（global, bool）
-  - `tabstop`（buffer-local, int）
-- `Screen` は `number` / `relativenumber` / `tabstop` を描画に反映する
+- 実装済み option は `RuVim::Editor::OPTION_DEFS` に定義（現状 `49` 個）
+- 代表例:
+  - window-local: `number`, `relativenumber`, `wrap`, `linebreak`, `breakindent`, `cursorline`, `scrolloff`, `sidescrolloff`
+  - global: `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, `splitbelow`, `splitright`, `hidden`, `clipboard`, `timeoutlen`
+  - buffer-local: `tabstop`, `expandtab`, `shiftwidth`, `softtabstop`, `autoindent`, `smartindent`, `filetype`
+- 詳細な一覧・実装状況は `docs/config.md` を参照
 
 ## Filetype / ftplugin（現状の基礎）
 
@@ -641,15 +658,15 @@ Vim 完全互換ではなく、まずは扱いやすい粒度を優先した仕�
   - `test/dispatcher_test.rb`
   - `test/keymap_manager_test.rb`
 
-## 既知の未実装 / 今後の仕様候補
+## 既知の未実装 / 今後の仕様候補（現状）
 
-- Undo / Redo
-- 複数 window split
-- Tabpage
-- レジスタ（yank/delete）
-- 検索 (`/`, `?`)
-- operator-pending（`d` + motion）
-- 差分描画
-- filetype / buffer-local keymap
-- user-defined Ex command DSL（`:command`）
-- `:ruby`（Ruby 式評価）
+- 永続 undo（`undofile` / `undodir` 相当）
+- session 保存/復元（`-S` / `:mksession` 相当の実体）
+- `:grep` / `:make` / `:cfile` / `:lgrep` / `:lfile` など quickfix 入口
+- Ex range/address（`:1,10d`, `:.,$s/.../.../` など）
+- `:substitute` フラグ拡張（`c`, `i`, `I`, `n`, `e` など）
+- arglist（複数ファイル起動 + `:args`, `:next`, `:prev` 等）
+- `Ctrl-w` resize / close-others / equalize など window 操作拡張
+- `:set` 高度構文（`+=`, `-=`, `:set all`, 短縮名）
+- tag jump / folds / `:global` / `:normal`
+- LSP / diagnostics / fuzzy finder など中長期機能
