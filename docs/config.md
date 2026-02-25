@@ -75,7 +75,7 @@ setglobal "tabstop=8"
   - 相対行番号を表示します。
   - `number` 併用時は current line を絶対行番号で表示します。
 
-- `wrap` (`bool`, default `false`) [`PARTIAL`]
+- `wrap` (`bool`, default `true`) [`PARTIAL`]
   - 長い行を画面幅で折り返して表示します。
   - 最小実装として描画ベースで折り返します。Vim のスクロール/カーソル互換は未完成です。
 

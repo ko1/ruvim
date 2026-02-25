@@ -3,7 +3,7 @@ module RuVim
     OPTION_DEFS = {
       "number" => { default_scope: :window, type: :bool, default: false },
       "relativenumber" => { default_scope: :window, type: :bool, default: false },
-      "wrap" => { default_scope: :window, type: :bool, default: false },
+      "wrap" => { default_scope: :window, type: :bool, default: true },
       "linebreak" => { default_scope: :window, type: :bool, default: false },
       "breakindent" => { default_scope: :window, type: :bool, default: false },
       "cursorline" => { default_scope: :window, type: :bool, default: false },
