@@ -11,6 +11,7 @@ module RuVim
       :nomodifiable,
       :restricted_mode,
       :verbose_level,
+      :startup_time_path,
       :startup_open_layout,
       :startup_open_count,
       :show_help,
@@ -55,6 +56,7 @@ module RuVim
         restricted: opts.restricted_mode,
         verbose_level: opts.verbose_level,
         verbose_io: stderr,
+        startup_time_path: opts.startup_time_path,
         startup_open_layout: opts.startup_open_layout,
         startup_open_count: opts.startup_open_count
       )
@@ -79,6 +81,7 @@ module RuVim
         nomodifiable: false,
         restricted_mode: false,
         verbose_level: 0,
+        startup_time_path: nil,
         startup_open_layout: nil,
         startup_open_count: nil,
         show_help: false,
@@ -106,6 +109,10 @@ module RuVim
           opts.verbose_level = [opts.verbose_level.to_i, 1].max
         when /\A--verbose=(\d+)\z/
           opts.verbose_level = Regexp.last_match(1).to_i
+        when "--startuptime"
+          i += 1
+          raise ParseError, "--startuptime requires a file path" if i >= args.length
+          opts.startup_time_path = args[i]
         when "--clean"
           opts.clean = true
         when "-R"
@@ -198,6 +205,8 @@ module RuVim
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
           -V[N], --verbose[=N]
                             Verbose startup/config/command logs to stderr
+          --startuptime FILE
+                            Write startup timing log
           -n                No-op (reserved for swap/persistent features compatibility)
           -o[N]             Open files in horizontal splits
           -O[N]             Open files in vertical splits

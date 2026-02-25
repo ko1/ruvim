@@ -141,6 +141,9 @@ RuVim::ExCommandRegistry.instance.register(
   - `N` は現状受理するがレイアウト数の厳密制御には未使用（将来拡張用）
 - `-V[N]`, `--verbose[=N]`
   - verbose ログを `stderr` に出力（現状は startup / config / startup actions / Ex submit の簡易ログ）
+- `--startuptime FILE`
+  - 起動フェーズ時刻の簡易ログをファイルへ出力
+  - 現状は `init.start`, `config.loaded`, `signals.installed`, `buffers.opened`, `ftplugin.loaded`, `startup_actions.done`
 - `-u {path|NONE}`
   - `path`: 指定ファイルを設定として読み込む
   - `NONE`: user config のみ無効化（ftplugin は有効）

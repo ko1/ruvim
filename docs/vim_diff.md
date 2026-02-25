@@ -88,6 +88,7 @@
   - `-R`, `-M`, `-Z`, `-n`（`-n` は現状 no-op）
   - `-o[N]`, `-O[N]`, `-p[N]`（基礎）
   - `-V[N]`, `--verbose[=N]`（簡易）
+  - `--startuptime FILE`（簡易）
   - `-c {cmd}`
   - `+{cmd}`, `+{line}`, `+`
 - 未実装（Vim で定番だが RuVim は未対応）

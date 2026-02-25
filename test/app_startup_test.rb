@@ -126,4 +126,18 @@ class AppStartupTest < Minitest::Test
     assert_match(/startup: run_startup_actions/, text)
     assert_match(/startup ex: set number/, text)
   end
+
+  def test_startuptime_writes_startup_phase_log
+    Tempfile.create(["ruvim-startuptime", ".log"]) do |f|
+      path = f.path
+      f.close
+
+      RuVim::App.new(clean: true, startup_time_path: path)
+
+      text = File.read(path)
+      assert_match(/init\.start/, text)
+      assert_match(/buffers\.opened/, text)
+      assert_match(/startup_actions\.done/, text)
+    end
+  end
 end

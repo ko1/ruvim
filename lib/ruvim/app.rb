@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -19,16 +19,22 @@ module RuVim
       @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
+      @startup_time_path = startup_time_path
+      @startup_time_origin = monotonic_now
+      @startup_timeline = []
       @startup_open_layout = startup_open_layout
       @startup_open_count = startup_open_count
       @editor.restricted_mode = @restricted_mode
 
+      startup_mark("init.start")
       register_builtins!
       bind_default_keys!
       init_config_loader!
       verbose_log(1, "startup: load_user_config")
       load_user_config!
+      startup_mark("config.loaded")
       install_signal_handlers
+      startup_mark("signals.installed")
 
       @editor.ensure_bootstrap_buffer!
       startup_paths = Array(paths || path).compact
@@ -39,10 +45,14 @@ module RuVim
         verbose_log(1, "startup: open_paths #{startup_paths.inspect} layout=#{@startup_open_layout || :single}")
         open_startup_paths!(startup_paths)
       end
+      startup_mark("buffers.opened")
       verbose_log(1, "startup: load_current_ftplugin")
       load_current_ftplugin!
+      startup_mark("ftplugin.loaded")
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
+      startup_mark("startup_actions.done")
+      write_startuptime_log!
     end
 
     def run
@@ -1358,6 +1368,33 @@ module RuVim
       @verbose_io.flush if @verbose_io.respond_to?(:flush)
     rescue StandardError
       nil
+    end
+
+    def startup_mark(label)
+      return unless @startup_time_path
+
+      @startup_timeline << [label.to_s, monotonic_now]
+    end
+
+    def write_startuptime_log!
+      return unless @startup_time_path
+
+      prev = @startup_time_origin
+      lines = @startup_timeline.map do |label, t|
+        total_ms = ((t - @startup_time_origin) * 1000.0)
+        delta_ms = ((t - prev) * 1000.0)
+        prev = t
+        format("%9.3f %9.3f %s", total_ms, delta_ms, label)
+      end
+      File.write(@startup_time_path, lines.join("\n") + "\n")
+    rescue StandardError => e
+      verbose_log(1, "startuptime write error: #{e.message}")
+    end
+
+    def monotonic_now
+      Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    rescue StandardError
+      Time.now.to_f
     end
 
     def apply_startup_readonly!

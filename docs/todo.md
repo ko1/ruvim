@@ -438,7 +438,7 @@
   - 依存:
     - logger / trace 出力先
 
-- `--startuptime {file}`（起動時間計測ログ）
+- [DONE] `--startuptime {file}`（起動時間計測ログ）
   - 効果: 低〜中（最適化時に有用）
   - コスト: 低〜中
   - 依存:

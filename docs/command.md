@@ -10,6 +10,7 @@
 - `-n`（現状 no-op）
 - `-o[N]`, `-O[N]`, `-p[N]`
 - `-V[N]`, `--verbose[=N]`
+- `--startuptime FILE`
 - `-u {path|NONE}`
 - `-c {cmd}`
 - `+{cmd}`, `+{line}`, `+`

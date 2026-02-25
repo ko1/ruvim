@@ -61,6 +61,13 @@ class CLITest < Minitest::Test
     assert_equal 3, v3.verbose_level
   end
 
+  def test_parse_startuptime_option
+    opts = RuVim::CLI.parse(["--startuptime", "/tmp/ruvim-startup.log", "file.txt"])
+
+    assert_equal "/tmp/ruvim-startup.log", opts.startup_time_path
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_parse_n_option_as_accepted_no_op
     opts = RuVim::CLI.parse(["-n", "file.txt"])
 
@@ -100,6 +107,7 @@ class CLITest < Minitest::Test
     assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-Z\s+Restricted mode/, out.string)
     assert_match(/-V\[N\], --verbose/, out.string)
+    assert_match(/--startuptime FILE/, out.string)
     assert_match(/-n\s+No-op/, out.string)
     assert_match(/-o\[N\]/, out.string)
     assert_match(/-O\[N\]/, out.string)

@@ -27,6 +27,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 - `-n`（現状 no-op。将来の swap/永続機能向け互換フラグ）
 - `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
 - `-V[N]` / `--verbose[=N]`（起動/設定/Ex のログを stderr に出す）
+- `--startuptime file.log`（起動フェーズの簡易 timing log を書く）
 - `-u path/to/init.rb`（設定ファイルを指定）
 - `-u NONE`（ユーザー設定を読まない）
 - `-c 'set number'`（起動後に Ex 実行）
