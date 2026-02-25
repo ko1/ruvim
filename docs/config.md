@@ -109,7 +109,7 @@ setglobal "tabstop=8"
 
 - `signcolumn` (`string`, default `"auto"`) [`PARTIAL`]
   - サイン列の表示方針を指定します。
-  - 現状は `yes` のときに 1 列分を予約する最小実装です（サイン自体の描画は未実装）。
+  - 現状は `yes` / `yes:N` の幅予約に対応する最小実装です（サイン自体の描画は未実装）。
 
 - `list` (`bool`, default `false`) [`PARTIAL`]
   - 不可視文字を可視化します。

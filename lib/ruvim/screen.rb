@@ -493,7 +493,13 @@ module RuVim
       when "no"
         0
       else
-        1
+        if (m = /\Ayes(?::(\d+))?\z/.match(raw))
+          n = m[1].to_i
+          n = 1 if n <= 0
+          n
+        else
+          1
+        end
       end
     rescue StandardError
       0

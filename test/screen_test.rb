@@ -71,6 +71,22 @@ class ScreenTest < Minitest::Test
     assert_equal "    1 ", prefix
   end
 
+  def test_signcolumn_yes_with_width_reserves_multiple_columns
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    editor.set_option("number", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("signcolumn", "yes:2", scope: :window, window: win, buffer: buf)
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    w = screen.send(:number_column_width, editor, win, buf)
+    prefix = screen.send(:line_number_prefix, editor, win, buf, 0, w)
+
+    assert_equal 7, w # sign(2) + default numberwidth(4) + trailing space
+    assert_equal "     1 ", prefix
+  end
+
   def test_render_shows_error_message_on_command_line_row_with_highlight
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer
