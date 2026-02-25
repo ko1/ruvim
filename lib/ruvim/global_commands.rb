@@ -175,6 +175,11 @@ module RuVim
       ctx.editor.echo("-- VISUAL LINE --")
     end
 
+    def enter_visual_block_mode(ctx, **)
+      ctx.editor.enter_visual(:visual_block)
+      ctx.editor.echo("-- VISUAL BLOCK --")
+    end
+
     def window_split(ctx, **)
       ctx.editor.split_current_window(layout: :horizontal)
       ctx.editor.echo("split")
@@ -456,6 +461,10 @@ module RuVim
         count = sel[:end_row] - sel[:start_row] + 1
         text = ctx.buffer.line_block_text(sel[:start_row], count)
         store_yank_register(ctx, text:, type: :linewise)
+      elsif sel[:mode] == :blockwise
+        text = blockwise_selection_text(ctx.buffer, sel)
+        # Blockwise register/paste semantics are not implemented yet; store text payload.
+        store_yank_register(ctx, text:, type: :charwise)
       else
         text = ctx.buffer.span_text(sel[:start_row], sel[:start_col], sel[:end_row], sel[:end_col])
         store_yank_register(ctx, text:, type: :charwise)
@@ -478,6 +487,21 @@ module RuVim
         store_delete_register(ctx, text:, type: :linewise)
         ctx.window.cursor_y = [sel[:start_row], ctx.buffer.line_count - 1].min
         ctx.window.cursor_x = 0
+      elsif sel[:mode] == :blockwise
+        text = blockwise_selection_text(ctx.buffer, sel)
+        ctx.buffer.begin_change_group
+        (sel[:start_row]..sel[:end_row]).each do |row|
+          line = ctx.buffer.line_at(row)
+          s_col = [sel[:start_col], line.length].min
+          e_col = [sel[:end_col], line.length].min
+          next if e_col <= s_col
+
+          ctx.buffer.delete_span(row, s_col, row, e_col)
+        end
+        ctx.buffer.end_change_group
+        store_delete_register(ctx, text:, type: :charwise)
+        ctx.window.cursor_y = sel[:start_row]
+        ctx.window.cursor_x = sel[:start_col]
       else
         text = ctx.buffer.span_text(sel[:start_row], sel[:start_col], sel[:end_row], sel[:end_col])
         ctx.buffer.begin_change_group
@@ -982,6 +1006,15 @@ module RuVim
         path = b.path.to_s
         path == token || File.basename(path) == token
       end
+    end
+
+    def blockwise_selection_text(buffer, sel)
+      (sel[:start_row]..sel[:end_row]).map do |row|
+        line = buffer.line_at(row)
+        s_col = [sel[:start_col], line.length].min
+        e_col = [sel[:end_col], line.length].min
+        line[s_col...e_col].to_s
+      end.join("\n")
     end
 
     def search_current_word(ctx, exact:, direction:)

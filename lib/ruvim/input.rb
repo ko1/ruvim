@@ -21,6 +21,7 @@ module RuVim
       return :ctrl_o if ch == "\u000f"
       return :ctrl_p if ch == "\u0010"
       return :ctrl_r if ch == "\u0012"
+      return :ctrl_v if ch == "\u0016"
       return :ctrl_w if ch == "\u0017"
       return :enter if ch == "\r" || ch == "\n"
       return :backspace if ch == "\u007f" || ch == "\b"

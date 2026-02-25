@@ -244,9 +244,11 @@
 
 ## Visual mode
 
-- `v` / `V` で characterwise / linewise Visual mode
+- `v` / `V` / `Ctrl-v` で characterwise / linewise / blockwise Visual mode
 - `buffer.visual_yank`
 - `buffer.visual_delete`
+- blockwise は最小実装（矩形選択 + `y/d`）
+- blockwise の text object 選択 / paste の Vim 互換挙動は未対応
 
 ## repeat（Normal mode）
 

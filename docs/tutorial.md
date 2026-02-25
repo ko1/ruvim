@@ -83,7 +83,7 @@ ruby -Ilib exe/ruvim -p a.rb b.rb
 - `yy`, `yw` yank
 - `p`, `P` paste
 - `r<char>` 1文字置換（例: `rx`）
-- `v`, `V` Visual mode
+- `v`, `V`, `Ctrl-v` Visual mode（char / line / block）
 - `c` + motion / `cc` change（削除して Insert mode）
 - `u` undo
 - `Ctrl-r` redo
@@ -250,11 +250,15 @@ register prefix を付けると register を指定できます。
 
 - `v` : characterwise Visual
 - `V` : linewise Visual
+- `Ctrl-v` : blockwise Visual（最小）
 - 移動して範囲を選択
 - `y` : yank
 - `d` : delete
 - `i` / `a` + object : text object を選択（例: `vi"`, `va)`, `viw`, `vip`, `vi]`, ``vi` ``）
 - `Esc` / `Ctrl-c` : キャンセル（Normal mode に戻る）
+- 制限（現状）:
+  - blockwise の text object 選択は未対応
+  - blockwise paste の Vim 互換挙動は未対応（yank/delete は対応）
 
 ## ユーザー定義 Ex コマンド（`:command`）
 

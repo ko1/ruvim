@@ -36,9 +36,11 @@
 
 ## モード / 編集操作の違い
 
-- Normal / Insert / Command-line / Visual（charwise, linewise）は実装済み
+- Normal / Insert / Command-line / Visual（charwise, linewise, blockwise 最小）は実装済み
 - Visual mode は最小実装
   - `y`, `d` 中心
+  - `Ctrl-v` blockwise は矩形選択 + `y/d` の最小対応
+  - blockwise text object / paste の Vim 互換挙動は未実装
   - Vim の細かい選択挙動や text object は一部未実装
 - operator-pending は `d`, `y`, `c` の一部を実装
   - text object は `iw/aw`, `ip/ap`, `i"/a"`, ``i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}` を実装（簡易）

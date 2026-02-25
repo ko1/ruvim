@@ -116,6 +116,7 @@ module RuVim
       register_internal_unless(cmd, "mode.open_above", call: :open_line_above, desc: "Open line above")
       register_internal_unless(cmd, "mode.visual_char", call: :enter_visual_char_mode, desc: "Enter visual char mode")
       register_internal_unless(cmd, "mode.visual_line", call: :enter_visual_line_mode, desc: "Enter visual line mode")
+      register_internal_unless(cmd, "mode.visual_block", call: :enter_visual_block_mode, desc: "Enter visual block mode")
       register_internal_unless(cmd, "window.split", call: :window_split, desc: "Horizontal split")
       register_internal_unless(cmd, "window.vsplit", call: :window_vsplit, desc: "Vertical split")
       register_internal_unless(cmd, "window.focus_next", call: :window_focus_next, desc: "Next window")
@@ -209,6 +210,7 @@ module RuVim
       @keymaps.bind(:normal, "O", "mode.open_above")
       @keymaps.bind(:normal, "v", "mode.visual_char")
       @keymaps.bind(:normal, "V", "mode.visual_line")
+      @keymaps.bind(:normal, ["<C-v>"], "mode.visual_block")
       @keymaps.bind(:normal, ["<C-w>", "w"], "window.focus_next")
       @keymaps.bind(:normal, ["<C-w>", "h"], "window.focus_left")
       @keymaps.bind(:normal, ["<C-w>", "j"], "window.focus_down")
@@ -246,7 +248,7 @@ module RuVim
         handle_insert_key(key)
       when :command_line
         handle_command_line_key(key)
-      when :visual_char, :visual_line
+      when :visual_char, :visual_line, :visual_block
         handle_visual_key(key)
       else
         handle_normal_key(key)
@@ -491,6 +493,12 @@ module RuVim
         else
           @editor.enter_visual(:visual_line)
         end
+      when "<C-v>"
+        if @editor.mode == :visual_block
+          @editor.enter_normal_mode
+        else
+          @editor.enter_visual(:visual_block)
+        end
       when "y"
         @dispatcher.dispatch(@editor, CommandInvocation.new(id: "buffer.visual_yank"))
       when "d"
@@ -506,6 +514,11 @@ module RuVim
           return
         end
         if @visual_pending
+          if @editor.mode == :visual_block
+            @visual_pending = nil
+            @editor.echo_error("text object in Visual block not supported yet")
+            return
+          end
           motion = "#{@visual_pending}#{token}"
           @visual_pending = nil
           inv = CommandInvocation.new(id: "buffer.visual_select_text_object", kwargs: { motion: motion })
@@ -638,6 +651,7 @@ module RuVim
       when String then key
       when :escape then "\e"
       when :ctrl_r then "<C-r>"
+      when :ctrl_v then "<C-v>"
       when :ctrl_i then "<C-i>"
       when :ctrl_o then "<C-o>"
       when :ctrl_w then "<C-w>"
@@ -669,7 +683,7 @@ module RuVim
         @editor.echo("")
       when :command_line
         @editor.cancel_command_line
-      when :visual_char, :visual_line
+      when :visual_char, :visual_line, :visual_block
         @visual_pending = nil
         @register_pending = false
         @mark_pending = false

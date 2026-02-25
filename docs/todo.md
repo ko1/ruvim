@@ -320,7 +320,7 @@
     - UI 表示/移動コマンド
     - `:grep` / diagnostics 連携（将来）
 
-- Visual block（`Ctrl-v`）
+- [DONE] Visual block（`Ctrl-v`）
   - 効果: 中〜高（Vim ユーザーの期待値が高い）
   - コスト: 高
   - 依存:

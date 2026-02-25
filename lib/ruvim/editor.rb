@@ -387,7 +387,8 @@ module RuVim
       ax = @visual_state[:anchor_x]
       cy = window.cursor_y
       cx = window.cursor_x
-      if @visual_state[:mode] == :visual_line
+      case @visual_state[:mode]
+      when :visual_line
         start_row, end_row = [ay, cy].minmax
         {
           mode: :linewise,
@@ -395,6 +396,16 @@ module RuVim
           start_col: 0,
           end_row: end_row,
           end_col: current_buffer.line_length(end_row)
+        }
+      when :visual_block
+        start_row, end_row = [ay, cy].minmax
+        start_col, end_col = [ax, cx].minmax
+        {
+          mode: :blockwise,
+          start_row: start_row,
+          start_col: start_col,
+          end_row: end_row,
+          end_col: end_col + 1
         }
       else
         if ay < cy || (ay == cy && ax <= cx)

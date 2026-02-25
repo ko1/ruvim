@@ -270,6 +270,7 @@ module RuVim
              when :command_line then "-- COMMAND --"
              when :visual_char then "-- VISUAL --"
              when :visual_line then "-- VISUAL LINE --"
+             when :visual_block then "-- VISUAL BLOCK --"
              else "-- NORMAL --"
              end
 
@@ -376,6 +377,9 @@ module RuVim
 
       if visual[:mode] == :linewise
         row >= visual[:start_row] && row <= visual[:end_row]
+      elsif visual[:mode] == :blockwise
+        row >= visual[:start_row] && row <= visual[:end_row] &&
+          col >= visual[:start_col] && col < visual[:end_col]
       else
         return false if row < visual[:start_row] || row > visual[:end_row]
         if visual[:start_row] == visual[:end_row]

@@ -254,6 +254,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `c` + motion / `cc`: change（削除して Insert mode）
 - `v`: Visual (characterwise)
 - `V`: Visual (linewise)
+- `Ctrl-v`: Visual (blockwise, 最小)
 - `u`: Undo
 - `Ctrl-r`: Redo
 - `.`: 直前変更の repeat（初版。`x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
@@ -276,11 +277,13 @@ RuVim::ExCommandRegistry.instance.register(
 
 - `v`: characterwise Visual の開始 / 終了
 - `V`: linewise Visual の開始 / 切替
+- `Ctrl-v`: blockwise Visual の開始 / 切替（最小）
 - 移動キー: `h/j/k/l`, `w/b/e`, `0/$/^`, `gg/G`, 矢印キー
 - `y`: 選択範囲を yank
 - `d`: 選択範囲を delete
 - `i`/`a` + object: text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c`: Normal mode に戻る
+- blockwise の text object 選択 / paste の Vim 互換挙動は未対応
 
 ### Command-line mode
 
