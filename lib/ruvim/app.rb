@@ -207,6 +207,7 @@ module RuVim
       register_internal_unless(cmd, "editor.buffer_next", call: :buffer_next, desc: "Next buffer")
       register_internal_unless(cmd, "editor.buffer_prev", call: :buffer_prev, desc: "Previous buffer")
       register_internal_unless(cmd, "buffer.replace_char", call: :replace_char, desc: "Replace single char")
+      register_internal_unless(cmd, "file.goto_under_cursor", call: :file_goto_under_cursor, desc: "Open file under cursor")
       register_internal_unless(cmd, "ui.clear_message", call: :clear_message, desc: "Clear message")
 
       register_ex_unless(ex, "w", call: :file_write, aliases: %w[write], desc: "Write current buffer", nargs: :maybe_one, bang: true)
@@ -285,6 +286,7 @@ module RuVim
       @keymaps.bind(:normal, "#", "search.word_backward")
       @keymaps.bind(:normal, "g*", "search.word_forward_partial")
       @keymaps.bind(:normal, "g#", "search.word_backward_partial")
+      @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
       @keymaps.bind(:normal, "\e", "ui.clear_message")
     end
 
@@ -334,6 +336,12 @@ module RuVim
 
       token = normalize_key_token(key)
       return if token.nil?
+
+      if @pending_keys && !@pending_keys.empty?
+        @pending_keys << token
+        resolve_normal_key_sequence
+        return
+      end
 
       if @operator_pending
         handle_operator_pending_key(token)
@@ -451,7 +459,10 @@ module RuVim
 
       @pending_keys ||= []
       @pending_keys << token
+      resolve_normal_key_sequence
+    end
 
+    def resolve_normal_key_sequence
       match = @keymaps.resolve_with_context(:normal, @pending_keys, editor: @editor)
       case match.status
       when :pending, :ambiguous

@@ -1,4 +1,6 @@
 require_relative "test_helper"
+require "fileutils"
+require "tmpdir"
 
 class AppScenarioTest < Minitest::Test
   def setup
@@ -176,5 +178,25 @@ class AppScenarioTest < Minitest::Test
 
     assert_equal ["a", "b"], @editor.current_buffer.lines
     assert_equal [1, 0], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+  end
+
+  def test_gf_uses_path_and_suffixesadd
+    Dir.mktmpdir("ruvim-gf") do |dir|
+      FileUtils.mkdir_p(File.join(dir, "lib"))
+      target = File.join(dir, "lib", "foo.rb")
+      File.write(target, "puts :ok\n")
+      @editor.current_buffer.path = File.join(dir, "main.txt")
+      @editor.current_buffer.replace_all_lines!(["foo"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 0
+      @editor.set_option("hidden", true, scope: :global)
+      @editor.set_option("path", "lib", scope: :buffer)
+      @editor.set_option("suffixesadd", ".rb", scope: :buffer)
+
+      feed("g", "f")
+
+      assert_equal File.expand_path(target), File.expand_path(@editor.current_buffer.path)
+      assert_equal "puts :ok", @editor.current_buffer.line_at(0)
+    end
   end
 end

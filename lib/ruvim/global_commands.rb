@@ -605,6 +605,27 @@ module RuVim
       ctx.editor.echo(File.exist?(path) ? "\"#{path}\" #{new_buffer.line_count}L" : "\"#{path}\" [New File]")
     end
 
+    def file_goto_under_cursor(ctx, **)
+      token = file_token_under_cursor(ctx.buffer, ctx.window)
+      if token.nil? || token.empty?
+        ctx.editor.echo_error("No file under cursor")
+        return
+      end
+
+      path = resolve_gf_path(ctx, token)
+      unless path
+        ctx.editor.echo_error("File not found: #{token}")
+        return
+      end
+
+      if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
+        ctx.editor.echo_error("Unsaved changes (set hidden or :w)")
+        return
+      end
+
+      ctx.editor.open_path(path)
+    end
+
     def buffer_list(ctx, **)
       current_id = ctx.buffer.id
       alt_id = ctx.editor.alternate_buffer_id
@@ -1716,6 +1737,82 @@ module RuVim
     def materialize_intro_buffer_if_needed(ctx)
       ctx.editor.materialize_intro_buffer!
       nil
+    end
+
+    def file_token_under_cursor(buffer, window)
+      line = buffer.line_at(window.cursor_y)
+      return nil if line.empty?
+
+      x = [[window.cursor_x, 0].max, [line.length - 1, 0].max].min
+      file_char = /[[:alnum:]_\.\/~-]/
+      if line[x] !~ file_char
+        left = x - 1
+        right = x + 1
+        if left >= 0 && line[left] =~ file_char
+          x = left
+        elsif right < line.length && line[right] =~ file_char
+          x = right
+        else
+          return nil
+        end
+      end
+
+      s = x
+      e = x + 1
+      s -= 1 while s.positive? && line[s - 1] =~ file_char
+      e += 1 while e < line.length && line[e] =~ file_char
+      line[s...e]
+    end
+
+    def resolve_gf_path(ctx, token)
+      candidates = gf_candidate_paths(ctx, token.to_s)
+      candidates.find { |p| File.file?(p) || File.directory?(p) }
+    end
+
+    def gf_candidate_paths(ctx, token)
+      suffixes = gf_suffixes(ctx)
+      names = [token]
+      if File.extname(token).empty?
+        suffixes.each { |suf| names << "#{token}#{suf}" }
+      end
+      names.uniq!
+
+      if token.start_with?("/", "~/")
+        return names.map { |n| File.expand_path(n) }.uniq
+      end
+
+      base_dirs = gf_search_dirs(ctx)
+      base_dirs.product(names).map { |dir, name| File.expand_path(name, dir) }.uniq
+    end
+
+    def gf_search_dirs(ctx)
+      current_dir = if ctx.buffer.path && !ctx.buffer.path.empty?
+                      File.dirname(File.expand_path(ctx.buffer.path))
+                    else
+                      Dir.pwd
+                    end
+      raw = ctx.editor.effective_option("path", window: ctx.window, buffer: ctx.buffer).to_s
+      dirs = raw.split(",").map(&:strip).reject(&:empty?)
+      dirs = ["."] if dirs.empty?
+      dirs.map do |dir|
+        case dir
+        when "."
+          current_dir
+        when ""
+          current_dir
+        else
+          File.expand_path(dir, current_dir)
+        end
+      end.uniq
+    rescue StandardError
+      [Dir.pwd]
+    end
+
+    def gf_suffixes(ctx)
+      raw = ctx.editor.effective_option("suffixesadd", window: ctx.window, buffer: ctx.buffer).to_s
+      raw.split(",").map(&:strip).reject(&:empty?).map do |s|
+        s.start_with?(".") ? s : ".#{s}"
+      end
     end
 
     def ex_set_common(ctx, argv, scope:)

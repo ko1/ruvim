@@ -103,8 +103,8 @@
 - `[DONE]` `wildignore`（補完から除外するパターン）
 - `[DONE]` `wildignorecase`（補完の大文字小文字）
 - `[PARTIAL]` `wildmenu`（コマンドライン補完 UI: メッセージ行ベースの簡易表示）
-- `path`（`gf` / 検索系のパス探索）
-- `suffixesadd`（補完/検索時の拡張子補完）
+- `[PARTIAL]` `path`（`gf` の最小パス探索）
+- `[PARTIAL]` `suffixesadd`（`gf` の拡張子補完）
 
 ### P2: 実用性は高いが依存が増えやすい / 実装範囲が広い
 
