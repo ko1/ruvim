@@ -119,6 +119,23 @@ class AppScenarioTest < Minitest::Test
     assert_equal 0, @editor.current_window.cursor_x
   end
 
+  def test_search_command_line_backspace_on_empty_cancels
+    @editor.current_buffer.replace_all_lines!(["alpha", "beta"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("/")
+    assert_equal :command_line, @editor.mode
+    assert_equal "/", @editor.command_line.prefix
+    assert_equal "", @editor.command_line.text
+
+    feed(:backspace)
+
+    assert_equal :normal, @editor.mode
+    assert_equal 0, @editor.current_window.cursor_y
+    assert_equal 0, @editor.current_window.cursor_x
+  end
+
   def test_incsearch_submit_stays_on_previewed_match
     @editor.set_option("incsearch", true, scope: :global)
     @editor.current_buffer.replace_all_lines!(["foo", "bar", "baz", "bar"])

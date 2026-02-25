@@ -703,6 +703,11 @@ module RuVim
         handle_command_line_submit(cmd.prefix, line)
       when :backspace
         clear_command_line_completion
+        if cmd.text.empty? && cmd.cursor.zero?
+          cancel_incsearch_preview_if_any
+          @editor.cancel_command_line
+          return
+        end
         cmd.backspace
       when :up
         clear_command_line_completion
