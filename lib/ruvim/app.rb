@@ -10,6 +10,7 @@ module RuVim
       @signal_r, @signal_w = IO.pipe
       @cmdline_history = Hash.new { |h, k| h[k] = [] }
       @cmdline_history_index = nil
+      @cmdline_completion = nil
       @pending_key_deadline = nil
       @pending_ambiguous_invocation = nil
       @insert_start_location = nil
@@ -643,26 +644,34 @@ module RuVim
       cmd = @editor.command_line
       case key
       when :escape
+        clear_command_line_completion
         cancel_incsearch_preview_if_any
         @editor.cancel_command_line
       when :enter
+        clear_command_line_completion
         line = cmd.text.dup
         push_command_line_history(cmd.prefix, line)
         handle_command_line_submit(cmd.prefix, line)
       when :backspace
+        clear_command_line_completion
         cmd.backspace
       when :up
+        clear_command_line_completion
         command_line_history_move(-1)
       when :down
+        clear_command_line_completion
         command_line_history_move(1)
       when :left
+        clear_command_line_completion
         cmd.move_left
       when :right
+        clear_command_line_completion
         cmd.move_right
       else
         if key == :ctrl_i
           command_line_complete
         elsif key.is_a?(String)
+          clear_command_line_completion
           @cmdline_history_index = nil
           cmd.insert(key)
         end
@@ -1273,15 +1282,94 @@ module RuVim
       matches = ex_completion_candidates(ctx)
       case matches.length
       when 0
+        clear_command_line_completion
         @editor.echo("No completion")
       when 1
+        clear_command_line_completion
         cmd.replace_span(ctx[:token_start], ctx[:token_end], matches.first)
       else
-        prefix = common_prefix(matches)
-        cmd.replace_span(ctx[:token_start], ctx[:token_end], prefix) if prefix.length > ctx[:prefix].length
-        @editor.echo(matches.join(" "))
+        apply_wildmode_completion(cmd, ctx, matches)
       end
       update_incsearch_preview_if_needed
+    end
+
+    def clear_command_line_completion
+      @cmdline_completion = nil
+    end
+
+    def apply_wildmode_completion(cmd, ctx, matches)
+      mode_steps = wildmode_steps
+      mode_steps = [:full] if mode_steps.empty?
+      state = @cmdline_completion
+      before_text = cmd.text[0...ctx[:token_start]].to_s
+      after_text = cmd.text[ctx[:token_end]..].to_s
+      same = state &&
+             state[:prefix] == cmd.prefix &&
+             state[:kind] == ctx[:kind] &&
+             state[:command] == ctx[:command] &&
+             state[:arg_index] == ctx[:arg_index] &&
+             state[:token_start] == ctx[:token_start] &&
+             state[:before_text] == before_text &&
+             state[:after_text] == after_text &&
+             state[:matches] == matches
+      unless same
+        state = {
+          prefix: cmd.prefix,
+          kind: ctx[:kind],
+          command: ctx[:command],
+          arg_index: ctx[:arg_index],
+          token_start: ctx[:token_start],
+          before_text: before_text,
+          after_text: after_text,
+          matches: matches.dup,
+          step_index: -1,
+          full_index: nil
+        }
+      end
+
+      state[:step_index] += 1
+      step = mode_steps[state[:step_index] % mode_steps.length]
+      case step
+      when :longest
+        pref = common_prefix(matches)
+        cmd.replace_span(ctx[:token_start], ctx[:token_end], pref) if pref.length > ctx[:prefix].length
+      when :list
+        show_command_line_completion_menu(matches, selected: state[:full_index], force: true)
+      when :full
+        state[:full_index] = state[:full_index] ? (state[:full_index] + 1) % matches.length : 0
+        cmd.replace_span(ctx[:token_start], ctx[:token_end], matches[state[:full_index]])
+        show_command_line_completion_menu(matches, selected: state[:full_index], force: false)
+      else
+        pref = common_prefix(matches)
+        cmd.replace_span(ctx[:token_start], ctx[:token_end], pref) if pref.length > ctx[:prefix].length
+      end
+
+      @cmdline_completion = state
+    end
+
+    def wildmode_steps
+      raw = @editor.effective_option("wildmode").to_s
+      return [:full] if raw.empty?
+
+      raw.split(",").map do |tok|
+        case tok.strip.downcase
+        when "longest" then :longest
+        when "list", "list:full" then :list
+        when "full" then :full
+        end
+      end.compact
+    end
+
+    def show_command_line_completion_menu(matches, selected:, force:)
+      return unless force || @editor.effective_option("wildmenu")
+
+      limit = [@editor.effective_option("pumheight").to_i, 1].max
+      items = matches.first(limit).each_with_index.map do |m, i|
+        idx = i
+        idx == selected ? "[#{m}]" : m
+      end
+      items << "..." if matches.length > limit
+      @editor.echo(items.join(" "))
     end
 
     def common_prefix(strings)
@@ -1365,7 +1453,14 @@ module RuVim
         return
       end
 
+      if state[:index].nil? && insert_completion_noselect? && matches.length > 1
+        show_insert_completion_menu(matches, selected: nil)
+        state[:index] = :pending_select
+        return
+      end
+
       idx = state[:index]
+      idx = nil if idx == :pending_select
       idx = idx.nil? ? (direction.positive? ? 0 : matches.length - 1) : (idx + direction) % matches.length
       replacement = matches[idx]
 
@@ -1377,10 +1472,40 @@ module RuVim
       @editor.current_window.cursor_x = new_x
       state[:index] = idx
       state[:current_end_col] = start_col + replacement.length
-      @editor.echo(matches.length == 1 ? replacement : "#{replacement} (#{idx + 1}/#{matches.length})")
+      if matches.length == 1
+        @editor.echo(replacement)
+      else
+        show_insert_completion_menu(matches, selected: idx, current: replacement)
+      end
     rescue StandardError => e
       @editor.echo_error("Completion error: #{e.message}")
       clear_insert_completion
+    end
+
+    def insert_completion_noselect?
+      @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }.include?("noselect")
+    end
+
+    def insert_completion_menu_enabled?
+      opts = @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }
+      opts.include?("menu") || opts.include?("menuone")
+    end
+
+    def show_insert_completion_menu(matches, selected:, current: nil)
+      if insert_completion_menu_enabled?
+        limit = [@editor.effective_option("pumheight").to_i, 1].max
+        items = matches.first(limit).each_with_index.map do |m, i|
+          i == selected ? "[#{m}]" : m
+        end
+        items << "..." if matches.length > limit
+        if current
+          @editor.echo("#{current} (#{selected + 1}/#{matches.length}) | #{items.join(' ')}")
+        else
+          @editor.echo(items.join(" "))
+        end
+      elsif current
+        @editor.echo("#{current} (#{selected + 1}/#{matches.length})")
+      end
     end
 
     def ensure_insert_completion_state

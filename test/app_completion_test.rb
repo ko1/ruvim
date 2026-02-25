@@ -50,4 +50,52 @@ class AppCompletionTest < Minitest::Test
       refute_includes matches, File.join(dir, "a.o")
     end
   end
+
+  def test_command_line_completion_respects_wildmode_list_full_and_wildmenu
+    @editor.materialize_intro_buffer!
+    @editor.set_option("wildmode", "list,full", scope: :global)
+    @editor.set_option("wildmenu", true, scope: :global)
+
+    Dir.mktmpdir("ruvim-wild") do |dir|
+      a = File.join(dir, "aa.txt")
+      b = File.join(dir, "ab.txt")
+      File.write(a, "")
+      File.write(b, "")
+
+      @editor.enter_command_line_mode(":")
+      cmd = @editor.command_line
+      cmd.replace_text("e #{File.join(dir, "a")}")
+
+      @app.send(:command_line_complete)
+      first = cmd.text.dup
+      first_msg = @editor.message.dup
+      @app.send(:command_line_complete)
+      second = cmd.text.dup
+      second_msg = @editor.message.dup
+
+      assert_equal "e #{File.join(dir, "a")}", first
+      refute_equal first, second
+      assert_includes first_msg, "aa.txt"
+      assert_includes second_msg, "["
+      assert([a, b].any? { |p| second.end_with?(p) })
+    end
+  end
+
+  def test_insert_completion_respects_completeopt_noselect_and_pumheight
+    @editor.materialize_intro_buffer!
+    @editor.set_option("completeopt", "menu,menuone,noselect", scope: :global)
+    @editor.set_option("pumheight", 1, scope: :global)
+    b = @editor.current_buffer
+    b.replace_all_lines!(["fo", "foobar", "fookey"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 2
+    @editor.enter_insert_mode
+
+    @app.send(:handle_insert_key, :ctrl_n)
+    assert_equal "fo", b.line_at(0)
+    assert_includes @editor.message, "..."
+
+    @app.send(:handle_insert_key, :ctrl_n)
+    assert_equal "foobar", b.line_at(0)
+  end
 end

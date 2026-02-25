@@ -64,7 +64,8 @@ setglobal "tabstop=8"
 補足:
 - 実装済み option はこの文書の個別解説より多いです（`cursorline`, `scrolloff`, `incsearch`, `expandtab`,
   `autoindent`, `smartindent`, `splitbelow`, `splitright`, `list`, `listchars`, `colorcolumn`, `numberwidth`,
-  `whichwrap`, `backspace`, `wildignore`, `wildignorecase` など）
+  `whichwrap`, `backspace`, `wildignore`, `wildignorecase`, `wildmode`, `wildmenu`, `completeopt`, `pumheight`
+  など）
 - 個別解説は利用頻度の高いものから順次追記しています
 
 ### `number`

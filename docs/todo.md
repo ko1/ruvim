@@ -97,12 +97,12 @@
 - `[PARTIAL]` `whichwrap`（左右移動が行をまたぐ条件: `h/l` 最小）
 - `virtualedit`（実文字のない位置へのカーソル）
 - `[PARTIAL]` `iskeyword`（単語境界の定義: word motion / 補完 / 一部 textobj）
-- `completeopt`（補完 UI の挙動）
-- `pumheight`（補完候補 UI の高さ）
-- `wildmode`（コマンドライン補完の挙動）
+- `[PARTIAL]` `completeopt`（補完 UI の挙動: `menu/menuone/noselect` の最小）
+- `[PARTIAL]` `pumheight`（補完候補 UI の高さ: メッセージ表示件数に反映）
+- `[PARTIAL]` `wildmode`（コマンドライン補完の挙動: `list/full/longest` の最小）
 - `[DONE]` `wildignore`（補完から除外するパターン）
 - `[DONE]` `wildignorecase`（補完の大文字小文字）
-- `wildmenu`（コマンドライン補完 UI）
+- `[PARTIAL]` `wildmenu`（コマンドライン補完 UI: メッセージ行ベースの簡易表示）
 - `path`（`gf` / 検索系のパス探索）
 - `suffixesadd`（補完/検索時の拡張子補完）
 
