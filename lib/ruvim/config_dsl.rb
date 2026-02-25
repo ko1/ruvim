@@ -7,9 +7,13 @@ module RuVim
       @command_host = command_host
       @editor = editor
       @filetype = filetype&.to_s
+      @inline_map_command_seq = 0
     end
 
-    def nmap(seq, command_id, **opts)
+    def nmap(seq, command_id = nil, desc: "user keymap", **opts, &block)
+      command_id = inline_map_command_id(:normal, seq, desc:, &block) if block
+      raise ::ArgumentError, "command_id or block required" if command_id.nil?
+
       if @filetype && !@filetype.empty?
         @keymaps.bind_filetype(@filetype, seq, command_id.to_s, mode: :normal, **opts)
       else
@@ -17,7 +21,10 @@ module RuVim
       end
     end
 
-    def imap(seq, command_id, **opts)
+    def imap(seq, command_id = nil, desc: "user keymap", **opts, &block)
+      command_id = inline_map_command_id(:insert, seq, desc:, &block) if block
+      raise ::ArgumentError, "command_id or block required" if command_id.nil?
+
       if @filetype && !@filetype.empty?
         @keymaps.bind_filetype(@filetype, seq, command_id.to_s, mode: :insert, **opts)
       else
@@ -25,7 +32,10 @@ module RuVim
       end
     end
 
-    def map_global(seq, command_id, mode: :normal, **opts)
+    def map_global(seq, command_id = nil, mode: :normal, desc: "user keymap", **opts, &block)
+      command_id = inline_map_command_id(mode || :global, seq, desc:, &block) if block
+      raise ::ArgumentError, "command_id or block required" if command_id.nil?
+
       if mode
         @keymaps.bind(mode.to_sym, seq, command_id.to_s, **opts)
       else
@@ -67,6 +77,31 @@ module RuVim
     end
 
     private
+
+    def inline_map_command_id(mode, seq, desc:, &block)
+      raise ::ArgumentError, "block required" unless block
+
+      @inline_map_command_seq += 1
+      id = "user.keymap.#{normalize_mode_name(mode)}.#{sanitize_seq_label(seq)}.#{@inline_map_command_seq}"
+      command(id, desc:, &block)
+      id
+    end
+
+    def normalize_mode_name(mode)
+      (mode || :global).to_s
+    end
+
+    def sanitize_seq_label(seq)
+      raw =
+        case seq
+        when ::Array
+          seq.map(&:to_s).join("_")
+        else
+          seq.to_s
+        end
+      s = raw.gsub(/[^A-Za-z0-9]+/, "_").gsub(/\A_+|_+\z/, "")
+      s.empty? ? "anonymous" : s
+    end
 
     def apply_option_expr(expr, scope:)
       raise ::ArgumentError, "editor context required for option DSL" unless @editor

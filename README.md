@@ -72,6 +72,7 @@ filetype ごとの設定:
 - `docs/command.md` - コマンド一覧
 - `docs/binding.md` - キーバインド
 - `docs/config.md` - 設定
+- `docs/plugin.md` - 拡張 / plugin 的な書き方（現状）
 - `docs/vim_diff.md` - Vim との差分
 - `docs/todo.md` - TODO / 次フェーズ案
 
