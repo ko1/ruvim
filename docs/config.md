@@ -62,97 +62,198 @@ setglobal "tabstop=8"
 実装の定義元は `lib/ruvim/editor.rb` の `RuVim::Editor::OPTION_DEFS` です。
 
 補足:
-- 実装済み option はこの文書の個別解説より多いです（`cursorline`, `scrolloff`, `incsearch`, `expandtab`,
-  `autoindent`, `smartindent`, `splitbelow`, `splitright`, `list`, `listchars`, `colorcolumn`, `numberwidth`,
-  `whichwrap`, `backspace`, `wildignore`, `wildignorecase`, `wildmode`, `wildmenu`, `completeopt`, `pumheight`,
-  `wrap`, `linebreak`, `breakindent`, `showbreak`, `signcolumn`, `matchtime`, `virtualedit`（いずれも最小/部分実装を含む）
-  など）
-- 個別解説は利用頻度の高いものから順次追記しています
+- `DONE` / `PARTIAL` / `定義のみ` は、RuVim 内での実装の反映度を示します（Vim 完全互換度ではありません）
+- `PARTIAL` は「主要な場面では効くが、Vim の細部互換までは未実装」の意味です
 
-### `number`
+### Window-local options
 
-- 型: `bool`
-- 既定スコープ: `window-local`
-- デフォルト: `false`
-- 用途:
-  - 行番号表示の ON/OFF
-  - 描画（`Screen`）に反映
-- 例:
-  - `:set number`
-  - `:set nonumber`
-  - `:setlocal number`
+- `number` (`bool`, default `false`) [`DONE`]
+  - 行番号表示を有効化します。
+  - `Screen` の行番号ガター描画に反映されます。
 
-### `relativenumber`
+- `relativenumber` (`bool`, default `false`) [`DONE`]
+  - 相対行番号を表示します。
+  - `number` 併用時は current line を絶対行番号で表示します。
 
-- 型: `bool`
-- 既定スコープ: `window-local`
-- デフォルト: `false`
-- 用途:
-  - 相対行番号表示
-  - `number` 併用時は current line を絶対行番号、それ以外を相対行番号で表示
-- 例:
-  - `:set relativenumber`
-  - `:set norelativenumber`
-  - `:setlocal relativenumber`
+- `wrap` (`bool`, default `false`) [`PARTIAL`]
+  - 長い行を画面幅で折り返して表示します。
+  - 最小実装として描画ベースで折り返します。Vim のスクロール/カーソル互換は未完成です。
 
-### `tabstop`
+- `linebreak` (`bool`, default `false`) [`PARTIAL`]
+  - `wrap` 時に空白位置を優先して折り返します。
+  - 現状は簡易な空白ベース判定です。
 
-- 型: `int`
-- 既定スコープ: `buffer-local`
-- デフォルト: `2`
-- 用途:
-  - タブ展開幅（表示幅計算・描画）
-- 例:
-  - `:set tabstop=4`
-  - `:set tabstop?`
-  - `:setlocal tabstop=2`
-  - `:setglobal tabstop=8`
+- `breakindent` (`bool`, default `false`) [`PARTIAL`]
+  - `wrap` の継続行に元行のインデントを反映します。
+  - 現状は先頭空白の簡易再利用です。
 
-### `filetype`
+- `cursorline` (`bool`, default `false`) [`DONE`]
+  - 現在行の背景ハイライトを有効化します。
+  - 検索/選択/カーソル反転より優先度は低く描画されます。
 
-- 型: `string`
-- 既定スコープ: `buffer-local`
-- デフォルト: `nil`
-- 用途:
-  - filetype-local keymap 解決
-  - ftplugin ロード対象の決定
-- 備考:
-  - 通常は path から自動検出される
-  - 手動で `:set filetype=ruby` も可能
-  - 現状、手動変更時に ftplugin を再適用する仕組みはない
+- `scrolloff` (`int`, default `0`) [`DONE`]
+  - 縦スクロール時にカーソル上下の余白行数を維持します。
+  - `Window#ensure_visible` に反映されます。
 
-### `ignorecase`
+- `sidescrolloff` (`int`, default `0`) [`DONE`]
+  - 横スクロール時にカーソル左右の余白桁数を維持します。
+  - 表示幅ベースで計算されます（全角/タブを考慮）。
 
-- 型: `bool`
-- 既定スコープ: `global`
-- デフォルト: `false`
-- 用途:
-  - 検索・置換で大文字小文字を無視
-- 例:
-  - `:set ignorecase`
-  - `:set noignorecase`
+- `numberwidth` (`int`, default `4`) [`DONE`]
+  - 行番号列の最小幅を指定します。
+  - `number` / `relativenumber` のガター幅計算に反映されます。
 
-### `smartcase`
+- `colorcolumn` (`string`, default `nil`) [`DONE`]
+  - 桁ガイド列を背景色で表示します。
+  - 現状は `80` や `80,100` のような数値列指定のみ対応です。
 
-- 型: `bool`
-- 既定スコープ: `global`
-- デフォルト: `false`
-- 用途:
-  - `ignorecase` 有効時、検索パターンに大文字を含む場合は case-sensitive にする
-- 例:
-  - `:set smartcase`
-  - `:set nosmartcase`
+- `signcolumn` (`string`, default `"auto"`) [`PARTIAL`]
+  - サイン列の表示方針を指定します。
+  - 現状は `yes` のときに 1 列分を予約する最小実装です（サイン自体の描画は未実装）。
 
-### `hlsearch`
+- `list` (`bool`, default `false`) [`PARTIAL`]
+  - 不可視文字を可視化します。
+  - 現状は `listchars` と組み合わせた描画の最小対応です。
 
-- 型: `bool`
-- 既定スコープ: `global`
-- デフォルト: `true`
-- 用途:
-  - 検索マッチの画面ハイライト ON/OFF
-- 例:
-  - `:set hlsearch`
-  - `:set nohlsearch`
+- `listchars` (`string`, default `"tab:>-,trail:-,nbsp:+"`) [`PARTIAL`]
+  - 不可視文字の表示記号を指定します。
+  - 現状は `tab`, `trail`, `nbsp` のみ使用します。
+
+- `showbreak` (`string`, default `">"`) [`PARTIAL`]
+  - `wrap` 継続行の先頭に表示する文字列です。
+  - 現状は描画にのみ反映されます。
+
+### Global options
+
+- `showmatch` (`bool`, default `false`) [`PARTIAL`]
+  - 閉じ括弧入力時に対応括弧のフィードバックを出します。
+  - 現状は Vim の一時ジャンプ/点滅ではなく、`match` メッセージ表示です。
+
+- `matchtime` (`int`, default `5`) [`PARTIAL`]
+  - `showmatch` の一時メッセージ表示時間（0.1秒単位）です。
+  - 現状は `match` メッセージの自動消去時間に反映されます。
+
+- `whichwrap` (`string`, default `""`) [`PARTIAL`]
+  - 左右移動が行をまたぐ条件を指定します。
+  - 現状は `h` / `l`（または `<` / `>`）の最小対応です。
+
+- `virtualedit` (`string`, default `""`) [`PARTIAL`]
+  - 実文字のない位置へのカーソル移動可否を指定します。
+  - 現状は `onemore` の最小対応（行末の 1 つ先まで）です。
+
+- `ignorecase` (`bool`, default `false`) [`DONE`]
+  - 検索/置換の大文字小文字を無視します。
+  - `smartcase` と組み合わせて挙動が変わります。
+
+- `smartcase` (`bool`, default `false`) [`DONE`]
+  - `ignorecase` 有効時に、パターンに大文字を含む場合だけ case-sensitive にします。
+
+- `hlsearch` (`bool`, default `true`) [`DONE`]
+  - 直前検索パターンのマッチを画面上でハイライトします。
+
+- `incsearch` (`bool`, default `false`) [`PARTIAL`]
+  - `/` `?` の入力中に逐次検索プレビューを行います。
+  - 現状はカーソル移動中心の最小実装で、Esc で元位置に戻ります。
+
+- `splitbelow` (`bool`, default `false`) [`DONE`]
+  - `:split` 時に現在 window の下側へ分割を挿入します。
+
+- `splitright` (`bool`, default `false`) [`DONE`]
+  - `:vsplit` 時に現在 window の右側へ分割を挿入します。
+
+- `hidden` (`bool`, default `false`) [`PARTIAL`]
+  - 未保存バッファを残したまま別バッファへ移動できるようにします。
+  - 現状は `:e`, `:buffer`, `:bnext`, `:bprev`, `:tabnew`, `gf` の主要経路で参照します。
+
+- `clipboard` (`string`, default `""`) [`PARTIAL`]
+  - unnamed register を `*` / `+` に連携する方針を指定します。
+  - 現状は `unnamed`, `unnamedplus` の基本連携のみ対応です。
+
+- `timeoutlen` (`int`, default `1000`) [`DONE`]
+  - キーマップの保留入力待ち時間（ms）です。
+  - 曖昧なキーマップ解決のタイムアウトに使います。
+
+- `ttimeoutlen` (`int`, default `50`) [`DONE`]
+  - 端末の ESC シーケンス待ち時間（ms）です。
+  - 矢印キー等の読み取りタイムアウトに使います。
+
+- `backspace` (`string`, default `"indent,eol,start"`) [`PARTIAL`]
+  - Insert mode の Backspace が越えてよい境界を指定します。
+  - 現状は `start`, `eol`, `indent`, `2` の最小判定です（Vim 完全互換ではありません）。
+
+- `completeopt` (`string`, default `"menu,menuone,noselect"`) [`PARTIAL`]
+  - Insert mode 補完 UI/選択挙動を指定します。
+  - 現状は `menu`, `menuone`, `noselect` をメッセージ行ベースの簡易 UI に反映します。
+
+- `pumheight` (`int`, default `10`) [`PARTIAL`]
+  - 補完候補 UI の最大表示件数です。
+  - 現状はメッセージ行ベースの補完候補表示件数に使います。
+
+- `wildmode` (`string`, default `"full"`) [`PARTIAL`]
+  - コマンドライン補完の Tab 挙動を指定します。
+  - 現状は `longest`, `list`, `full` の最小対応です。
+
+- `wildignore` (`string`, default `""`) [`DONE`]
+  - コマンドライン path 補完から除外するパターンを指定します。
+  - `File.fnmatch?` ベースで判定します。
+
+- `wildignorecase` (`bool`, default `false`) [`DONE`]
+  - `wildignore` のパターンマッチを大文字小文字無視にします。
+
+- `wildmenu` (`bool`, default `false`) [`PARTIAL`]
+  - コマンドライン補完候補の一覧表示 UI を有効化します。
+  - 現状はメッセージ行への簡易表示です（Vim の下部メニュー UI ではない）。
+
+### Buffer-local options
+
+- `path` (`string`, default `nil`) [`PARTIAL`]
+  - `gf` などのファイル探索ディレクトリを指定します（`,` 区切り）。
+  - 現状は `gf` の最小探索に利用します。
+
+- `suffixesadd` (`string`, default `nil`) [`PARTIAL`]
+  - `gf` などで補完する拡張子候補を指定します（`,` 区切り）。
+  - 現状は `gf` の最小探索に利用します。
+
+- `textwidth` (`int`, default `0`) [`定義のみ`]
+  - 自動改行幅の指定です。
+  - 現状は値を保持できるだけで、自動整形には未接続です。
+
+- `formatoptions` (`string`, default `nil`) [`定義のみ`]
+  - 自動整形/コメント継続の挙動を指定します。
+  - 現状は値を保持できるだけで、編集処理には未接続です。
+
+- `expandtab` (`bool`, default `false`) [`DONE`]
+  - Insert mode の Tab 入力を空白に変換します。
+  - `softtabstop` / `tabstop` と組み合わせて空白数を決めます。
+
+- `shiftwidth` (`int`, default `2`) [`PARTIAL`]
+  - インデント幅の基準です。
+  - 現状は `smartindent` の追加インデント幅で使用します。
+
+- `softtabstop` (`int`, default `0`) [`PARTIAL`]
+  - Tab 入力/削除時の編集幅を指定します。
+  - 現状は Insert mode の Tab 入力と、`expandtab` 時の空白 Backspace（最小）で使用します。
+
+- `autoindent` (`bool`, default `false`) [`DONE`]
+  - 改行時に前行の先頭インデントを引き継ぎます。
+  - Insert mode `Enter`、`o`/`O` に反映されます。
+
+- `smartindent` (`bool`, default `false`) [`PARTIAL`]
+  - 簡易な自動インデントを行います。
+  - 現状は前行が `{` `[` `(` で終わる場合に `shiftwidth` 分の空白を追加します。
+
+- `iskeyword` (`string`, default `nil`) [`PARTIAL`]
+  - 単語境界の定義を指定します。
+  - 現状は `w/b/e`、一部 text object、Insert 補完の単語抽出に反映します。
+
+- `tabstop` (`int`, default `2`) [`DONE`]
+  - タブの表示幅です。
+  - 表示幅計算、描画、一部編集処理に使います。
+
+- `filetype` (`string`, default `nil`) [`DONE`]
+  - filetype を示します。
+  - ftplugin 読み込み対象、filetype-local keymap、簡易 syntax highlight の判定に使います。
+  - 手動で変更した場合の ftplugin 再適用は現状未対応です。
 
 ## 制限（現状）
 

@@ -180,6 +180,30 @@ class AppScenarioTest < Minitest::Test
     assert_equal [1, 0], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
   end
 
+  def test_backspace_indent_allows_deleting_autoindent_before_insert_start
+    @editor.set_option("backspace", "indent,eol", scope: :global)
+    @editor.current_buffer.replace_all_lines!(["  abc"])
+    @editor.current_window.cursor_x = 2
+
+    feed("i", :backspace)
+
+    assert_equal [" abc"], @editor.current_buffer.lines
+    assert_equal 1, @editor.current_window.cursor_x
+  end
+
+  def test_softtabstop_backspace_deletes_spaces_in_chunks_when_expandtab
+    @editor.set_option("expandtab", true, scope: :buffer)
+    @editor.set_option("tabstop", 4, scope: :buffer)
+    @editor.set_option("softtabstop", 4, scope: :buffer)
+    @editor.current_buffer.replace_all_lines!(["        "])
+    @editor.current_window.cursor_x = 8
+
+    feed("i", :backspace)
+
+    assert_equal ["    "], @editor.current_buffer.lines
+    assert_equal 4, @editor.current_window.cursor_x
+  end
+
   def test_gf_uses_path_and_suffixesadd
     Dir.mktmpdir("ruvim-gf") do |dir|
       FileUtils.mkdir_p(File.join(dir, "lib"))

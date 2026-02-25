@@ -515,10 +515,7 @@ module RuVim
       when :backspace
         clear_insert_completion
         return unless insert_backspace_allowed?
-
-        y, x = @editor.current_buffer.backspace(@editor.current_window.cursor_y, @editor.current_window.cursor_x)
-        @editor.current_window.cursor_y = y
-        @editor.current_window.cursor_x = x
+        insert_backspace_in_insert_mode
       when :ctrl_n
         insert_complete(+1)
       when :ctrl_p
@@ -1611,6 +1608,7 @@ module RuVim
       opt = @editor.effective_option("backspace", window: win, buffer: buf).to_s
       allow = opt.split(",").map { |s| s.strip.downcase }.reject(&:empty?)
       allow_all = allow.include?("2")
+      allow_indent = allow_all || allow.include?("indent")
 
       if col.zero? && row.positive?
         return true if allow_all || allow.include?("eol")
@@ -1622,7 +1620,13 @@ module RuVim
       if @insert_start_location
         same_buf = @insert_start_location[:buffer_id] == buf.id
         if same_buf && (row < @insert_start_location[:row] || (row == @insert_start_location[:row] && col <= @insert_start_location[:col]))
-          return true if allow_all || allow.include?("start")
+          if allow_all || allow.include?("start")
+            return true
+          end
+
+          if allow_indent && same_row_autoindent_backspace?(buf, row, col)
+            return true
+          end
 
           @editor.echo_error("backspace=start required")
           return false
@@ -1630,6 +1634,71 @@ module RuVim
       end
 
       true
+    end
+
+    def insert_backspace_in_insert_mode
+      buf = @editor.current_buffer
+      win = @editor.current_window
+      row = win.cursor_y
+      col = win.cursor_x
+
+      if row >= 0 && col.positive? && try_softtabstop_backspace(buf, win)
+        return
+      end
+
+      y, x = buf.backspace(row, col)
+      win.cursor_y = y
+      win.cursor_x = x
+    end
+
+    def try_softtabstop_backspace(buf, win)
+      row = win.cursor_y
+      col = win.cursor_x
+      line = buf.line_at(row)
+      return false unless line
+      return false unless @editor.effective_option("expandtab", window: win, buffer: buf)
+
+      sts = @editor.effective_option("softtabstop", window: win, buffer: buf).to_i
+      sts = @editor.effective_option("tabstop", window: win, buffer: buf).to_i if sts <= 0
+      return false if sts <= 0
+
+      prefix = line[0...col].to_s
+      m = prefix.match(/ +\z/)
+      return false unless m
+
+      run = m[0].length
+      return false if run <= 1
+
+      tabstop = effective_tabstop(win, buf)
+      cur_screen = RuVim::TextMetrics.screen_col_for_char_index(line, col, tabstop:)
+      target_screen = [cur_screen - sts, 0].max
+      target_col = RuVim::TextMetrics.char_index_for_screen_col(line, target_screen, tabstop:, align: :floor)
+      delete_cols = col - target_col
+      delete_cols = [delete_cols, run, sts].min
+      return false if delete_cols <= 1
+
+      # Only collapse whitespace run; if target lands before the run, clamp to run start.
+      run_start = col - run
+      target_col = [target_col, run_start].max
+      delete_cols = col - target_col
+      return false if delete_cols <= 1
+
+      buf.delete_span(row, target_col, row, col)
+      win.cursor_x = target_col
+      true
+    rescue StandardError
+      false
+    end
+
+    def same_row_autoindent_backspace?(buf, row, col)
+      return false unless @insert_start_location
+      return false unless row == @insert_start_location[:row]
+      return false unless col <= @insert_start_location[:col]
+
+      line = buf.line_at(row)
+      line[0...@insert_start_location[:col]].to_s.match?(/\A[ \t]*\z/)
+    rescue StandardError
+      false
     end
 
     def incsearch_enabled?
