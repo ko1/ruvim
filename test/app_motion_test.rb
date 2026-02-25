@@ -125,6 +125,19 @@ class AppMotionTest < Minitest::Test
     assert_equal 1, @editor.current_window.cursor_y
   end
 
+  def test_pagedown_can_be_overridden_by_normal_keymap
+    b = @editor.current_buffer
+    b.replace_all_lines!((1..40).map { |i| "line#{i}" })
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    keymaps = @app.instance_variable_get(:@keymaps)
+    keymaps.bind(:normal, ["<PageDown>"], "cursor.down")
+
+    @app.send(:handle_normal_key, :pagedown)
+    assert_equal 1, @editor.current_window.cursor_y
+  end
+
   def test_virtualedit_onemore_allows_right_move_past_eol_once
     b = @editor.current_buffer
     b.replace_all_lines!(["abc"])
