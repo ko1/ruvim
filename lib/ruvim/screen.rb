@@ -596,7 +596,7 @@ module RuVim
     end
 
     def truncate(str, width)
-      str.to_s.ljust(width)[0, width]
+      RuVim::TextMetrics.terminal_safe_text(str).ljust(width)[0, width]
     end
 
     def error_message_line(msg, cols)

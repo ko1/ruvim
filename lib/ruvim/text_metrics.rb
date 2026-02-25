@@ -76,6 +76,15 @@ module RuVim
         end
 
         w = RuVim::DisplayWidth.cell_width(ch, col: display_col, tabstop:)
+        if terminal_unsafe_control_char?(ch)
+          w = [w, 1].max
+          break if display_col + w > max_width
+
+          cells << Cell.new(glyph: terminal_safe_placeholder(ch), source_col:, display_width: w)
+          display_col += w
+          source_col += 1
+          next
+        end
         break if display_col + w > max_width
 
         cells << Cell.new(glyph: ch, source_col:, display_width: w)
@@ -91,6 +100,23 @@ module RuVim
       out = cells.map(&:glyph).join
       out << (" " * [width.to_i - used, 0].max)
       out
+    end
+
+    def terminal_safe_text(text)
+      text.to_s.each_char.map { |ch| terminal_unsafe_control_char?(ch) ? terminal_safe_placeholder(ch) : ch }.join
+    end
+
+    def terminal_unsafe_control_char?(ch)
+      return false if ch.nil? || ch.empty? || ch == "\t"
+
+      code = ch.ord
+      (code >= 0x00 && code < 0x20) || code == 0x7F || (0x80..0x9F).cover?(code)
+    rescue StandardError
+      false
+    end
+
+    def terminal_safe_placeholder(_ch)
+      "?"
     end
   end
 end

@@ -1,5 +1,7 @@
 module RuVim
   class ConfigLoader
+    SAFE_FILETYPE_RE = /\A[a-zA-Z0-9_+-]+\z/.freeze
+
     def initialize(command_registry:, ex_registry:, keymaps:, command_host:)
       @command_registry = command_registry
       @ex_registry = ex_registry
@@ -32,6 +34,7 @@ module RuVim
       filetype = buffer.options["filetype"].to_s
       return nil if filetype.empty?
       return nil if buffer.options["__ftplugin_loaded__"] == filetype
+      return nil unless safe_filetype_name?(filetype)
 
       path = ftplugin_path_for(filetype)
       return nil unless path && File.file?(path)
@@ -58,11 +61,22 @@ module RuVim
 
     def xdg_ftplugin_path(filetype)
       base = ::ENV["XDG_CONFIG_HOME"]
-      if base && !base.empty?
-        File.join(base, "ruvim", "ftplugin", "#{filetype}.rb")
-      else
-        File.expand_path("~/.config/ruvim/ftplugin/#{filetype}.rb")
-      end
+      root =
+        if base && !base.empty?
+          File.join(base, "ruvim", "ftplugin")
+        else
+          File.expand_path("~/.config/ruvim/ftplugin")
+        end
+
+      candidate = File.expand_path(File.join(root, "#{filetype}.rb"))
+      root_prefix = File.join(File.expand_path(root), "")
+      return nil unless candidate.start_with?(root_prefix)
+
+      candidate
+    end
+
+    def safe_filetype_name?(filetype)
+      SAFE_FILETYPE_RE.match?(filetype.to_s)
     end
   end
 end

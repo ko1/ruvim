@@ -186,6 +186,24 @@ class ScreenTest < Minitest::Test
     assert_includes visible, "~"
   end
 
+  def test_render_text_line_sanitizes_terminal_escape_controls
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["A\e]52;c;owned\aB"])
+    win.cursor_y = 1 # avoid cursor highlight on the tested row
+
+    term = TerminalStub.new([6, 40])
+    screen = RuVim::Screen.new(terminal: term)
+    out = screen.send(:render_text_line, buf.line_at(0), editor, buffer_row: 0, window: win, buffer: buf, width: 20)
+
+    refute_includes out, "\e]52"
+    visible = out.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    assert_includes visible, "A"
+    assert_includes visible, "B"
+    assert_includes visible, "?"
+  end
+
   def test_wrap_and_showbreak_render_continuation_rows
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer
