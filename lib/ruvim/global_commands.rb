@@ -1,4 +1,5 @@
 require "tempfile"
+require "open3"
 
 module RuVim
   class GlobalCommands
@@ -828,6 +829,38 @@ module RuVim
       end
       $stdout = (defined?(original_g_stdout) && original_g_stdout) ? original_g_stdout : STDOUT
       $stderr = (defined?(original_g_stderr) && original_g_stderr) ? original_g_stderr : STDERR
+    end
+
+    def ex_shell(ctx, command:, **)
+      raise RuVim::CommandError, "Restricted mode: :! is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+
+      cmd = command.to_s
+      raise RuVim::CommandError, "Usage: :!<command>" if cmd.strip.empty?
+
+      shell = ENV["SHELL"].to_s
+      shell = "/bin/sh" if shell.empty?
+      stdout_text, stderr_text, status = Open3.capture3(shell, "-c", cmd)
+
+      if !stdout_text.to_s.empty? || !stderr_text.to_s.empty?
+        lines = ["Shell output", "", "[command]", cmd, ""]
+        unless stdout_text.to_s.empty?
+          lines << "[stdout]"
+          lines.concat(stdout_text.to_s.lines(chomp: true))
+          lines << ""
+        end
+        unless stderr_text.to_s.empty?
+          lines << "[stderr]"
+          lines.concat(stderr_text.to_s.lines(chomp: true))
+          lines << ""
+        end
+        lines << "[status]"
+        lines << "exit #{status.exitstatus}"
+        ctx.editor.show_help_buffer!(title: "[Shell Output]", lines:, filetype: "sh")
+      else
+        ctx.editor.echo("shell exit #{status.exitstatus}")
+      end
+    rescue Errno::ENOENT => e
+      raise RuVim::CommandError, "Shell error: #{e.message}"
     end
 
     def ex_commands(ctx, **)

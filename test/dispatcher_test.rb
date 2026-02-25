@@ -58,6 +58,21 @@ class DispatcherTest < Minitest::Test
     assert_includes body, "42"
   end
 
+  def test_dispatch_ex_shell_captures_stdout_and_stderr_into_virtual_buffer
+    @dispatcher.dispatch_ex(@editor, "!echo out; echo err 1>&2")
+
+    assert_equal "[Shell Output]", @editor.message
+    assert_equal :help, @editor.current_buffer.kind
+    body = @editor.current_buffer.lines.join("\n")
+    assert_includes body, "[command]"
+    assert_includes body, "echo out; echo err 1>&2"
+    assert_includes body, "[stdout]"
+    assert_includes body, "out"
+    assert_includes body, "[stderr]"
+    assert_includes body, "err"
+    assert_includes body, "[status]"
+  end
+
   def test_dispatch_ex_set_commands
     @dispatcher.dispatch_ex(@editor, "set number")
     assert_equal true, @editor.current_window.options["number"]

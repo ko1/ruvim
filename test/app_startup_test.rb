@@ -131,6 +131,16 @@ class AppStartupTest < Minitest::Test
     assert_match(/Restricted mode/, editor.message)
   end
 
+  def test_restricted_mode_disables_ex_shell
+    app = RuVim::App.new(clean: true, restricted: true)
+    editor = app.instance_variable_get(:@editor)
+    dispatcher = app.instance_variable_get(:@dispatcher)
+
+    dispatcher.dispatch_ex(editor, "!echo hi")
+
+    assert_match(/Restricted mode/, editor.message)
+  end
+
   def test_verbose_logs_startup_and_startup_ex_actions
     log = StringIO.new
     app = RuVim::App.new(

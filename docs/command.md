@@ -97,6 +97,14 @@
 - `stdout` / `stderr` に出力があった場合は `[Ruby Output]` 仮想バッファに表示（返り値も末尾に表示）
 - 利用可能: `ctx`, `editor`, `buffer`, `window`
 
+### `:!`（shell 実行, 最小）
+
+- 形式: `:!<command>`
+- shell コマンドを同期実行します
+- `stdout` / `stderr` に出力があった場合は `[Shell Output]` 仮想バッファに表示（終了ステータスも表示）
+- 出力がない場合は `shell exit N` をステータス表示
+- `-Z`（restricted mode）では無効
+
 ### `:ls` / `:buffers`
 
 - 形式: `:ls`

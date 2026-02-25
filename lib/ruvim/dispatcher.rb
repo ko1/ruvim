@@ -19,6 +19,16 @@ module RuVim
     end
 
     def dispatch_ex(editor, line)
+      raw = line.to_s.strip
+      if raw.start_with?("!")
+        command = raw[1..].to_s.strip
+        invocation = CommandInvocation.new(id: "__shell__", argv: [command])
+        ctx = Context.new(editor:, invocation:)
+        @command_host.ex_shell(ctx, command:)
+        editor.enter_normal_mode
+        return
+      end
+
       if (sub = parse_global_substitute(line))
         invocation = CommandInvocation.new(id: "__substitute__", kwargs: sub)
         ctx = Context.new(editor:, invocation:)
