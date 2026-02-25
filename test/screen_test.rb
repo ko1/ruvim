@@ -54,4 +54,19 @@ class ScreenTest < Minitest::Test
     editor.set_option("number", true, scope: :window, window: win, buffer: buf)
     assert_equal " 3 ", screen.send(:line_number_prefix, editor, win, buf, 2, 3) # current line is absolute when both enabled
   end
+
+  def test_render_emits_bell_once_for_pending_error
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    editor.echo_error("boom")
+    screen.render(editor)
+    assert_includes term.writes.last, "\a"
+
+    screen.render(editor)
+    refute_includes term.writes.last, "\a"
+  end
 end

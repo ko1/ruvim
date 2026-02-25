@@ -28,6 +28,7 @@ module RuVim
       @mode = :normal
       @window_layout = :single
       @message = ""
+      @pending_bell = false
       @pending_count = nil
       @restricted_mode = false
       @running = true
@@ -698,8 +699,19 @@ module RuVim
       @message = msg.to_s
     end
 
+    def echo_error(msg)
+      @pending_bell = true
+      echo(msg)
+    end
+
     def clear_message
       @message = ""
+    end
+
+    def take_pending_bell!
+      flag = @pending_bell
+      @pending_bell = false
+      !!flag
     end
 
     def text_viewport_size(rows:, cols:)

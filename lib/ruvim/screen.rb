@@ -37,6 +37,7 @@ module RuVim
             else
               render_full(frame)
             end
+      out << "\a" if editor.take_pending_bell!
       cursor_row, cursor_col = cursor_screen_position(editor, text_rows, rects)
       out << "\e[#{cursor_row};#{cursor_col}H"
       out << "\e[?25h"

@@ -395,7 +395,7 @@ module RuVim
         @dispatcher.dispatch(@editor, invocation)
         maybe_record_simple_dot_change(invocation, matched_keys, repeat_count)
       else
-        @editor.echo("Unknown key: #{@pending_keys.join}")
+        @editor.echo_error("Unknown key: #{@pending_keys.join}")
       end
       @editor.pending_count = nil
       @pending_keys = []
@@ -537,7 +537,7 @@ module RuVim
         count = @editor.pending_count || 1
         @dispatcher.dispatch(@editor, CommandInvocation.new(id:, count: count))
       else
-        @editor.echo("Unknown visual key: #{token}")
+        @editor.echo_error("Unknown visual key: #{token}")
       end
     ensure
       @pending_keys = [] unless token == "g"
@@ -695,7 +695,7 @@ module RuVim
         verbose_log(2, "search(?): #{line}")
         submit_search(line, direction: :backward)
       else
-        @editor.echo("Unknown command-line prefix: #{prefix}")
+        @editor.echo_error("Unknown command-line prefix: #{prefix}")
         @editor.enter_normal_mode
       end
       @cmdline_history_index = nil
@@ -719,7 +719,7 @@ module RuVim
         @editor.set_active_register(token)
         @editor.echo(%("#{token}))
       else
-        @editor.echo("Invalid register")
+        @editor.echo_error("Invalid register")
       end
     end
 
@@ -735,7 +735,7 @@ module RuVim
         return
       end
       unless token.is_a?(String) && token.match?(/\A[A-Za-z]\z/)
-        @editor.echo("Invalid mark")
+        @editor.echo_error("Invalid mark")
         return
       end
 
@@ -764,7 +764,7 @@ module RuVim
       end
 
       unless token.is_a?(String) && token.match?(/\A[A-Za-z]\z/)
-        @editor.echo("Invalid mark")
+        @editor.echo_error("Invalid mark")
         return
       end
 
@@ -784,7 +784,7 @@ module RuVim
         return
       end
       unless token.is_a?(String) && token.match?(/\A[A-Za-z0-9]\z/)
-        @editor.echo("Invalid macro register")
+        @editor.echo_error("Invalid macro register")
         return
       end
 
@@ -820,7 +820,7 @@ module RuVim
           token
         end
       unless name
-        @editor.echo("Invalid macro register")
+        @editor.echo_error("Invalid macro register")
         return
       end
 
@@ -928,7 +928,7 @@ module RuVim
         return
       end
 
-      @editor.echo("Unknown operator")
+      @editor.echo_error("Unknown operator")
     end
 
     def start_replace_pending
@@ -1092,7 +1092,7 @@ module RuVim
       GlobalCommands.instance.submit_search(ctx, pattern: line, direction: direction)
       @editor.enter_normal_mode
     rescue StandardError => e
-      @editor.echo("Error: #{e.message}")
+      @editor.echo_error("Error: #{e.message}")
       @editor.enter_normal_mode
     end
 
@@ -1187,7 +1187,7 @@ module RuVim
       state[:current_end_col] = start_col + replacement.length
       @editor.echo(matches.length == 1 ? replacement : "#{replacement} (#{idx + 1}/#{matches.length})")
     rescue StandardError => e
-      @editor.echo("Completion error: #{e.message}")
+      @editor.echo_error("Completion error: #{e.message}")
       clear_insert_completion
     end
 
@@ -1381,7 +1381,7 @@ module RuVim
         @config_loader.load_default!
       end
     rescue StandardError => e
-      @editor.echo("config error: #{e.message}")
+      @editor.echo_error("config error: #{e.message}")
     end
 
     def load_current_ftplugin!
@@ -1390,7 +1390,7 @@ module RuVim
 
       @config_loader.load_ftplugin!(@editor, @editor.current_buffer)
     rescue StandardError => e
-      @editor.echo("ftplugin error: #{e.message}")
+      @editor.echo_error("ftplugin error: #{e.message}")
     end
 
     def run_startup_action!(action, log_prefix: "startup")

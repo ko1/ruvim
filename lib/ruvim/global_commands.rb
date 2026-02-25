@@ -89,7 +89,7 @@ module RuVim
       line = ctx.buffer.line_at(ctx.window.cursor_y)
       ch = line[ctx.window.cursor_x]
       unless ch
-        ctx.editor.echo("No bracket under cursor")
+        ctx.editor.echo_error("No bracket under cursor")
         return
       end
 
@@ -103,7 +103,7 @@ module RuVim
       }
       pair = pair_map[ch]
       unless pair
-        ctx.editor.echo("No bracket under cursor")
+        ctx.editor.echo_error("No bracket under cursor")
         return
       end
 
@@ -115,7 +115,7 @@ module RuVim
         ctx.window.cursor_x = loc[:col]
         ctx.window.clamp_to_buffer(ctx.buffer)
       else
-        ctx.editor.echo("Match not found")
+        ctx.editor.echo_error("Match not found")
       end
     end
 
@@ -208,7 +208,7 @@ module RuVim
     def tab_new(ctx, argv:, **)
       path = argv[0]
       if ctx.buffer.modified?
-        ctx.editor.echo("Unsaved changes (use :w or :q!)")
+        ctx.editor.echo_error("Unsaved changes (use :w or :q!)")
         return
       end
       tab = ctx.editor.tabnew(path: path)
@@ -532,7 +532,7 @@ module RuVim
       end
 
       if ctx.buffer.modified? && !bang
-        ctx.editor.echo("No write since last change (add ! to override)")
+        ctx.editor.echo_error("No write since last change (add ! to override)")
         return
       end
 
@@ -552,7 +552,7 @@ module RuVim
         raise RuVim::CommandError, "Argument required" if current_path.nil? || current_path.empty?
 
         if ctx.buffer.modified? && !bang
-          ctx.editor.echo("Unsaved changes (use :e! to discard)")
+          ctx.editor.echo_error("Unsaved changes (use :e! to discard)")
           return
         end
 
@@ -563,7 +563,7 @@ module RuVim
       end
 
       if ctx.buffer.modified? && !bang
-        ctx.editor.echo("Unsaved changes (use :e! to discard and open)")
+        ctx.editor.echo_error("Unsaved changes (use :e! to discard and open)")
         return
       end
 
@@ -779,7 +779,7 @@ module RuVim
       end
 
       if ctx.buffer.modified? && ctx.buffer.id != buffer_id && !bang
-        ctx.editor.echo("Unsaved changes (use :w or :buffer! / :bnext! / :bprev!)")
+        ctx.editor.echo_error("Unsaved changes (use :w or :buffer! / :bnext! / :bprev!)")
         return
       end
 

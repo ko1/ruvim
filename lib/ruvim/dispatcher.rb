@@ -15,7 +15,7 @@ module RuVim
       ctx = Context.new(editor:, invocation:)
       @command_host.call(spec.call, ctx, argv: invocation.argv, kwargs: invocation.kwargs, bang: invocation.bang, count: invocation.count)
     rescue StandardError => e
-      editor.echo("Error: #{e.message}")
+      editor.echo_error("Error: #{e.message}")
     end
 
     def dispatch_ex(editor, line)
@@ -36,7 +36,7 @@ module RuVim
       ctx = Context.new(editor:, invocation:)
       @command_host.call(spec.call, ctx, argv: parsed.argv, bang: parsed.bang, count: 1, kwargs: {})
     rescue StandardError => e
-      editor.echo("Error: #{e.message}")
+      editor.echo_error("Error: #{e.message}")
     ensure
       editor.enter_normal_mode
     end
