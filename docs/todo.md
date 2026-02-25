@@ -327,7 +327,7 @@
     - visual selection モデル拡張（矩形）
     - 全角/タブを含む列計算の精度
 
-- `.` repeat の精度向上（operator + text object + macro 連携）
+- [DONE] `.` repeat の精度向上（operator + text object + macro 連携）
   - 効果: 高
   - コスト: 高
   - 依存:

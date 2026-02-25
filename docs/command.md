@@ -252,12 +252,15 @@
 
 ## repeat（Normal mode）
 
-- `.` : 直前変更の repeat（初版）
+- `.` : 直前変更の repeat（拡張版）
 - 現状の対象:
   - `x`
   - `dd`, `d{motion}`
   - `p`, `P`
   - `r<char>`
+  - `i`, `a`, `A`, `I`, `o`, `O`（Insert 入力列）
+  - `cc`, `c{motion}`（text object を含む）
+- macro 記録中に `.` を押した場合、内部で再生されるキーは macro に混ざらない
 
 ## レジスタ（現状）
 

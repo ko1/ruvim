@@ -49,9 +49,10 @@
   - Vim の厳密な単語境界とは一致しない場合がある
 - undo 粒度は簡略化
   - Insert mode は「入ってから出るまで」を 1 undo 単位
-- `.` repeat は初版のみ
-  - 現状は `x`, `dd`, `d{motion}`, `p/P`, `r<char>` を対象
-  - insert/change の完全互換は未実装
+- `.` repeat は拡張済みだが完全互換ではない
+  - `x`, `dd`, `d{motion}`, `p/P`, `r<char>`, `i/a/A/I/o/O`, `cc`, `c{motion}` を対象
+  - macro 記録中の `.` は内部再生キーを macro に混ぜない
+  - Vim の細かい repeat 粒度/カウント互換は未実装
 
 ## レジスタ / yank / paste の違い
 

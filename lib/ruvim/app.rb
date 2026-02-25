@@ -237,6 +237,7 @@ module RuVim
 
     def handle_key(key)
       @skip_record_for_current_key = false
+      append_dot_change_capture_key(key)
       if key == :ctrl_c
         handle_ctrl_c
         record_macro_key_if_needed(key)
@@ -417,6 +418,7 @@ module RuVim
       case key
       when :escape
         finish_insert_change_group
+        finish_dot_change_capture
         clear_insert_completion
         @editor.enter_normal_mode
         @editor.echo("")
@@ -678,6 +680,7 @@ module RuVim
       case @editor.mode
       when :insert
         finish_insert_change_group
+        finish_dot_change_capture
         clear_insert_completion
         @editor.enter_normal_mode
         @editor.echo("")
@@ -883,6 +886,7 @@ module RuVim
       return if @skip_record_for_current_key
       return unless @editor.macro_recording?
       return if (@suspend_macro_recording_depth || 0).positive?
+      return if (@dot_replay_depth || 0).positive?
 
       @editor.record_macro_key(key)
     end
@@ -943,12 +947,14 @@ module RuVim
       if op[:name] == :change && motion == "c"
         inv = CommandInvocation.new(id: "buffer.change_line", count: op[:count])
         @dispatcher.dispatch(@editor, inv)
+        begin_dot_change_capture(count_prefixed_keys(op[:count], ["c", "c"])) if @editor.mode == :insert
         return
       end
 
       if op[:name] == :change
         inv = CommandInvocation.new(id: "buffer.change_motion", count: op[:count], kwargs: { motion: motion })
         @dispatcher.dispatch(@editor, inv)
+        begin_dot_change_capture(count_prefixed_keys(op[:count], ["c", *motion.each_char.to_a])) if @editor.mode == :insert
         return
       end
 
@@ -999,7 +1005,33 @@ module RuVim
       case invocation.id
       when "buffer.delete_char", "buffer.paste_after", "buffer.paste_before"
         record_last_change_keys(count_prefixed_keys(count, matched_keys))
+      when "mode.insert", "mode.append", "mode.append_line_end", "mode.insert_nonblank", "mode.open_below", "mode.open_above"
+        begin_dot_change_capture(count_prefixed_keys(count, matched_keys)) if @editor.mode == :insert
       end
+    end
+
+    def begin_dot_change_capture(prefix_keys)
+      return if (@dot_replay_depth || 0).positive?
+
+      @dot_change_capture_keys = Array(prefix_keys).map { |k| dup_macro_runtime_key(k) }
+      @dot_change_capture_active = true
+    end
+
+    def append_dot_change_capture_key(key)
+      return unless @dot_change_capture_active
+      return if (@dot_replay_depth || 0).positive?
+
+      @dot_change_capture_keys ||= []
+      @dot_change_capture_keys << dup_macro_runtime_key(key)
+    end
+
+    def finish_dot_change_capture
+      return unless @dot_change_capture_active
+
+      keys = Array(@dot_change_capture_keys)
+      @dot_change_capture_active = false
+      @dot_change_capture_keys = nil
+      record_last_change_keys(keys)
     end
 
     def record_last_change_keys(keys)

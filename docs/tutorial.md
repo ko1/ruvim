@@ -87,7 +87,11 @@ ruby -Ilib exe/ruvim -p a.rb b.rb
 - `c` + motion / `cc` change（削除して Insert mode）
 - `u` undo
 - `Ctrl-r` redo
-- `.` 直前変更の繰り返し（現状は `x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
+- `.` 直前変更の繰り返し（拡張版）
+  - `x`, `dd`, `d{motion}`, `p/P`, `r<char>`
+  - `i/a/A/I/o/O` の Insert 入力（`Esc` / `Ctrl-c` まで）
+  - `c{motion}`, `cc`（text object を含む）
+  - macro 記録中でも `.` の内部再生キーは記録しない
 - `n` 検索を次へ
 - `N` 検索を前へ
 - `3j` など count 対応（一部コマンド）

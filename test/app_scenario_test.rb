@@ -47,4 +47,31 @@ class AppScenarioTest < Minitest::Test
     assert_equal 1, @editor.current_window.cursor_x
     assert_equal :normal, @editor.mode
   end
+
+  def test_dot_repeats_insert_change
+    @editor.current_buffer.replace_all_lines!([""])
+    feed("i", "a", "b", :escape)
+    feed(".")
+
+    assert_equal ["abab"], @editor.current_buffer.lines
+  end
+
+  def test_dot_repeats_change_with_text_object
+    @editor.current_buffer.replace_all_lines!(["foo bar"])
+    feed("c", "i", "w", "X", :escape)
+    feed("w")
+    feed(".")
+
+    assert_equal ["X X"], @editor.current_buffer.lines
+  end
+
+  def test_dot_repeat_works_inside_macro
+    @editor.current_buffer.replace_all_lines!(["abc", "abc", "abc"])
+
+    feed("x")
+    feed("j", "0", "q", "a", ".", "j", "q")
+    feed("@", "a")
+
+    assert_equal ["bc", "bc", "bc"], @editor.current_buffer.lines
+  end
 end
