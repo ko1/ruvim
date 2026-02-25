@@ -226,6 +226,8 @@
 - `:set`, `:setlocal`, `:setglobal`
 - 現状の接続済み option:
   - `number`（window-local / 行番号表示）
+  - `relativenumber`（window-local / 相対行番号）
+  - `ignorecase` / `smartcase` / `hlsearch`（global / 検索系）
   - `tabstop`（buffer-local / タブ展開幅）
   - `filetype`（buffer-local / 自動検出 + ftplugin 用）
 

@@ -35,4 +35,23 @@ class ScreenTest < Minitest::Test
     assert_includes frame[:lines][4], "bar"
     assert_includes frame[:lines][5], "baz"
   end
+
+  def test_line_number_prefix_supports_relativenumber
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["aa", "bb", "cc", "dd"])
+    win.cursor_y = 2
+    editor.set_option("relativenumber", true, scope: :window, window: win, buffer: buf)
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    assert_equal " 2 ", screen.send(:line_number_prefix, editor, win, buf, 0, 3)
+    assert_equal " 1 ", screen.send(:line_number_prefix, editor, win, buf, 1, 3)
+    assert_equal " 0 ", screen.send(:line_number_prefix, editor, win, buf, 2, 3)
+
+    editor.set_option("number", true, scope: :window, window: win, buffer: buf)
+    assert_equal " 3 ", screen.send(:line_number_prefix, editor, win, buf, 2, 3) # current line is absolute when both enabled
+  end
 end

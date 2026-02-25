@@ -71,6 +71,7 @@ module RuVim
       register_internal_unless(cmd, "cursor.word_forward", call: :cursor_word_forward, desc: "Move to next word")
       register_internal_unless(cmd, "cursor.word_backward", call: :cursor_word_backward, desc: "Move to previous word")
       register_internal_unless(cmd, "cursor.word_end", call: :cursor_word_end, desc: "Move to end of word")
+      register_internal_unless(cmd, "cursor.match_bracket", call: :cursor_match_bracket, desc: "Jump to matching bracket")
       register_internal_unless(cmd, "mode.insert", call: :enter_insert_mode, desc: "Enter insert mode")
       register_internal_unless(cmd, "mode.append", call: :append_mode, desc: "Append after cursor")
       register_internal_unless(cmd, "mode.append_line_end", call: :append_line_end_mode, desc: "Append at line end")
@@ -153,6 +154,7 @@ module RuVim
       @keymaps.bind(:normal, "w", "cursor.word_forward")
       @keymaps.bind(:normal, "b", "cursor.word_backward")
       @keymaps.bind(:normal, "e", "cursor.word_end")
+      @keymaps.bind(:normal, "%", "cursor.match_bracket")
       @keymaps.bind(:normal, "i", "mode.insert")
       @keymaps.bind(:normal, "a", "mode.append")
       @keymaps.bind(:normal, "A", "mode.append_line_end")
@@ -258,6 +260,11 @@ module RuVim
         return
       end
 
+      if @find_pending
+        finish_find_pending(token)
+        return
+      end
+
       if token == "\""
         start_register_pending
         return
@@ -280,6 +287,21 @@ module RuVim
 
       if token == "r"
         start_replace_pending
+        return
+      end
+
+      if %w[f F t T].include?(token)
+        start_find_pending(token)
+        return
+      end
+
+      if token == ";"
+        repeat_last_find(reverse: false)
+        return
+      end
+
+      if token == ","
+        repeat_last_find(reverse: true)
         return
       end
 
@@ -843,6 +865,102 @@ module RuVim
       else
         @editor.echo("r expects one character")
       end
+    end
+
+    def start_find_pending(token)
+      @find_pending = {
+        direction: (token == "f" || token == "t") ? :forward : :backward,
+        till: (token == "t" || token == "T"),
+        count: (@editor.pending_count || 1)
+      }
+      @editor.pending_count = nil
+      @pending_keys = []
+      @editor.echo(token)
+    end
+
+    def finish_find_pending(token)
+      pending = @find_pending
+      @find_pending = nil
+      if token == "\e"
+        @editor.clear_message
+        return
+      end
+      unless token.is_a?(String) && !token.empty?
+        @editor.echo("find expects one character")
+        return
+      end
+
+      moved = perform_find_on_line(
+        char: token,
+        direction: pending[:direction],
+        till: pending[:till],
+        count: pending[:count]
+      )
+      if moved
+        @editor.set_last_find(char: token, direction: pending[:direction], till: pending[:till])
+      else
+        @editor.echo("Char not found: #{token}")
+      end
+    end
+
+    def repeat_last_find(reverse:)
+      last = @editor.last_find
+      unless last
+        @editor.echo("No previous f/t")
+        return
+      end
+
+      direction =
+        if reverse
+          last[:direction] == :forward ? :backward : :forward
+        else
+          last[:direction]
+        end
+      count = @editor.pending_count || 1
+      @editor.pending_count = nil
+      @pending_keys = []
+      moved = perform_find_on_line(char: last[:char], direction:, till: last[:till], count:)
+      @editor.echo("Char not found: #{last[:char]}") unless moved
+    end
+
+    def perform_find_on_line(char:, direction:, till:, count:)
+      win = @editor.current_window
+      buf = @editor.current_buffer
+      line = buf.line_at(win.cursor_y)
+      pos = win.cursor_x
+      target = nil
+
+      count.times do
+        idx =
+          if direction == :forward
+            line.index(char, pos + 1)
+          else
+            rindex_from(line, char, pos - 1)
+          end
+        return false if idx.nil?
+
+        target = idx
+        pos = idx
+      end
+
+      if till
+        target =
+          if direction == :forward
+            RuVim::TextMetrics.previous_grapheme_char_index(line, target)
+          else
+            RuVim::TextMetrics.next_grapheme_char_index(line, target)
+          end
+      end
+
+      win.cursor_x = target
+      win.clamp_to_buffer(buf)
+      true
+    end
+
+    def rindex_from(line, char, pos)
+      return nil if pos.negative?
+
+      line.rindex(char, pos)
     end
 
     def submit_search(line, direction:)

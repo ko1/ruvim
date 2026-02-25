@@ -255,7 +255,7 @@
   - メモ:
     - まず `x`, `dd`, `p`, `r`, `cw/cc` あたりから対応すると効果が高い
 
-- `f/F/t/T`, `;`, `,`（行内文字移動）
+- [DONE] `f/F/t/T`, `;`, `,`（行内文字移動）
   - 効果: 高（移動効率が一気に上がる）
   - コスト: 低?中
   - 依存:
@@ -264,7 +264,7 @@
   - メモ:
     - 日本語/全角文字での挙動確認が必要
 
-- `%`（対応括弧ジャンプ）
+- [DONE] `%`（対応括弧ジャンプ）
   - 効果: 高（コード編集の基本動作）
   - コスト: 中
   - 依存:
@@ -273,14 +273,14 @@
   - メモ:
     - まず `()[]{}` のみでよい
 
-- `relativenumber`（option）
+- [DONE] `relativenumber`（option）
   - 効果: 中?高（移動 count と相性が良い）
   - コスト: 低
   - 依存:
     - option system (`number` 済み)
     - `Screen#line_number_prefix` 拡張
 
-- 検索 option（`ignorecase`, `smartcase`, `hlsearch`）
+- [DONE] 検索 option（`ignorecase`, `smartcase`, `hlsearch`）
   - 効果: 高（検索 UX 改善）
   - コスト: 中
   - 依存:

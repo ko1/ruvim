@@ -156,6 +156,9 @@ RuVim::ExCommandRegistry.instance.register(
 - `$`: 行末へ移動
 - `^`: 行頭の最初の非空白へ移動
 - `w/b/e`: 単語移動
+- `f/F/t/T` + 文字: 行内文字移動
+- `;`, `,`: 直前の行内文字移動を繰り返し / 逆方向
+- `%`: 対応括弧ジャンプ（`()[]{}`）
 - `gg`: 先頭へ移動
 - `G`: 末尾へ移動
 - `i`: Insert mode
@@ -463,8 +466,10 @@ Vim 完全互換ではなく、まずは扱いやすい粒度を優先した仕�
   - `:setglobal`
 - 実装済み option:
   - `number`（window-local, bool）
+  - `relativenumber`（window-local, bool）
+  - `ignorecase` / `smartcase` / `hlsearch`（global, bool）
   - `tabstop`（buffer-local, int）
-- `Screen` は `number` と `tabstop` を描画に反映する
+- `Screen` は `number` / `relativenumber` / `tabstop` を描画に反映する
 
 ## Filetype / ftplugin（現状の基礎）
 

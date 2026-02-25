@@ -20,7 +20,7 @@
   - `:tabnew`, `:tabnext`, `:tabprev` はある
   - Vim の高度な tab 操作/コマンド群は未実装
 - register は `unnamed` / `named` / `"+` / `"*` の基礎のみ
-- option system は基礎のみ（`:set`, `:setlocal`, `:setglobal`, `number`, `tabstop`, `filetype`）
+- option system は基礎のみ（`:set`, `:setlocal`, `:setglobal`, `number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype`）
 - filetype 検出 / ftplugin は基礎のみ（拡張子中心の簡易判定）
 - Ex コマンドは一部のみ
 
@@ -92,7 +92,7 @@
 
 ## option（設定）の違い
 
-- 現状の実装済み option は少数（`number`, `tabstop`, `filetype`）
+- 現状の実装済み option は少数（`number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype`）
 - Vim の option 名短縮（例: `nu`, `ts`）は未対応
 - `:set` の高度な構文（`+=`, `-=`, `^=`, `&`, `<` など）は未対応
 - `:set all` や詳細な一覧表示は未対応（簡易表示のみ）

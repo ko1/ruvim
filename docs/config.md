@@ -47,6 +47,10 @@
 
 ```ruby
 set "number"
+set "relativenumber"
+set "ignorecase"
+set "smartcase"
+set "hlsearch"
 setlocal "tabstop=4"
 setglobal "tabstop=8"
 ```
@@ -67,6 +71,19 @@ setglobal "tabstop=8"
   - `:set number`
   - `:set nonumber`
   - `:setlocal number`
+
+### `relativenumber`
+
+- 型: `bool`
+- 既定スコープ: `window-local`
+- デフォルト: `false`
+- 用途:
+  - 相対行番号表示
+  - `number` 併用時は current line を絶対行番号、それ以外を相対行番号で表示
+- 例:
+  - `:set relativenumber`
+  - `:set norelativenumber`
+  - `:setlocal relativenumber`
 
 ### `tabstop`
 
@@ -93,6 +110,39 @@ setglobal "tabstop=8"
   - 通常は path から自動検出される
   - 手動で `:set filetype=ruby` も可能
   - 現状、手動変更時に ftplugin を再適用する仕組みはない
+
+### `ignorecase`
+
+- 型: `bool`
+- 既定スコープ: `global`
+- デフォルト: `false`
+- 用途:
+  - 検索・置換で大文字小文字を無視
+- 例:
+  - `:set ignorecase`
+  - `:set noignorecase`
+
+### `smartcase`
+
+- 型: `bool`
+- 既定スコープ: `global`
+- デフォルト: `false`
+- 用途:
+  - `ignorecase` 有効時、検索パターンに大文字を含む場合は case-sensitive にする
+- 例:
+  - `:set smartcase`
+  - `:set nosmartcase`
+
+### `hlsearch`
+
+- 型: `bool`
+- 既定スコープ: `global`
+- デフォルト: `true`
+- 用途:
+  - 検索マッチの画面ハイライト ON/OFF
+- 例:
+  - `:set hlsearch`
+  - `:set nohlsearch`
 
 ## 制限（現状）
 

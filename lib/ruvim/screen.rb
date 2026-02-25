@@ -219,7 +219,7 @@ module RuVim
     end
 
     def number_column_width(editor, window, buffer)
-      enabled = editor.effective_option("number", window:, buffer:)
+      enabled = editor.effective_option("number", window:, buffer:) || editor.effective_option("relativenumber", window:, buffer:)
       return 0 unless enabled
 
       [buffer.line_count.to_s.length, 1].max + 1
@@ -227,10 +227,19 @@ module RuVim
 
     def line_number_prefix(editor, window, buffer, buffer_row, width)
       return "" if width <= 0
-      return " " * width unless editor.effective_option("number", window:, buffer:)
+      show_abs = editor.effective_option("number", window:, buffer:)
+      show_rel = editor.effective_option("relativenumber", window:, buffer:)
+      return " " * width unless show_abs || show_rel
       return " " * (width - 1) + " " if buffer_row.nil?
 
-      num = (buffer_row + 1).to_s
+      num =
+        if show_rel && buffer_row != window.cursor_y
+          (buffer_row - window.cursor_y).abs.to_s
+        elsif show_abs
+          (buffer_row + 1).to_s
+        else
+          "0"
+        end
       num.rjust(width - 1) + " "
     end
 
@@ -365,8 +374,9 @@ module RuVim
     def search_highlight_source_cols(editor, source_line_text, source_col_offset:)
       search = editor.last_search
       return {} unless search && search[:pattern]
+      return {} unless editor.effective_option("hlsearch")
 
-      regex = Regexp.new(search[:pattern])
+      regex = build_screen_search_regex(editor, search[:pattern])
       cols = {}
       offset = 0
       while (m = regex.match(source_line_text, offset))
@@ -379,6 +389,17 @@ module RuVim
       cols
     rescue RegexpError
       {}
+    end
+
+    def build_screen_search_regex(editor, pattern)
+      ignorecase = !!editor.effective_option("ignorecase")
+      smartcase = !!editor.effective_option("smartcase")
+      flags = if ignorecase && !(smartcase && pattern.to_s.match?(/[A-Z]/))
+                Regexp::IGNORECASE
+              else
+                0
+              end
+      Regexp.new(pattern.to_s, flags)
     end
 
     def syntax_highlight_source_cols(editor, window, buffer, source_line_text, source_col_offset:)

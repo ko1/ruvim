@@ -49,6 +49,10 @@ ruby -Ilib exe/ruvim +10 file.txt
 - `w` 次の単語へ
 - `b` 前の単語へ
 - `e` 単語末へ
+- `f<char>`, `F<char>` 行内文字移動
+- `t<char>`, `T<char>` 行内「手前/直後」移動
+- `;`, `,` 直前の `f/F/t/T` を繰り返し / 逆方向
+- `%` 対応括弧ジャンプ（`()[]{}`）
 - `gg` 先頭へ
 - `G` 末尾へ
 - `i` Insert mode
@@ -187,6 +191,10 @@ register prefix を付けると register を指定できます。
 ## Options（`:set`）
 
 - `:set number` / `:set nonumber` : 行番号表示の ON/OFF（window-local）
+- `:set relativenumber` / `:set norelativenumber` : 相対行番号（window-local）
+- `:set ignorecase` / `:set noignorecase` : 検索の大文字小文字を無視（global）
+- `:set smartcase` / `:set nosmartcase` : `ignorecase` 有効時に大文字を含む検索を大文字小文字区別にする（global）
+- `:set hlsearch` / `:set nohlsearch` : 検索ハイライトの ON/OFF（global）
 - `:set tabstop=4` : tab 幅設定（既定スコープは buffer-local）
 - `:setlocal number` : 現在 window のみ変更
 - `:setglobal tabstop=8` : global 値を変更

@@ -2,6 +2,10 @@ module RuVim
   class Editor
     OPTION_DEFS = {
       "number" => { default_scope: :window, type: :bool, default: false },
+      "relativenumber" => { default_scope: :window, type: :bool, default: false },
+      "ignorecase" => { default_scope: :global, type: :bool, default: false },
+      "smartcase" => { default_scope: :global, type: :bool, default: false },
+      "hlsearch" => { default_scope: :global, type: :bool, default: true },
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil }
     }.freeze
@@ -29,6 +33,7 @@ module RuVim
       @global_options = default_global_options
       @command_line = CommandLine.new
       @last_search = nil
+      @last_find = nil
       @registers = {}
       @active_register_name = nil
       @local_marks = Hash.new { |h, k| h[k] = {} }
@@ -64,8 +69,16 @@ module RuVim
       @last_search
     end
 
+    def last_find
+      @last_find
+    end
+
     def set_last_search(pattern:, direction:)
       @last_search = { pattern: pattern.to_s, direction: direction.to_sym }
+    end
+
+    def set_last_find(char:, direction:, till:)
+      @last_find = { char: char.to_s, direction: direction.to_sym, till: !!till }
     end
 
     def current_window

@@ -75,6 +75,40 @@ module RuVim
       move_cursor_word(ctx, count:, kind: :forward_end)
     end
 
+    def cursor_match_bracket(ctx, **)
+      line = ctx.buffer.line_at(ctx.window.cursor_y)
+      ch = line[ctx.window.cursor_x]
+      unless ch
+        ctx.editor.echo("No bracket under cursor")
+        return
+      end
+
+      pair_map = {
+        "(" => [")", :forward],
+        "[" => ["]", :forward],
+        "{" => ["}", :forward],
+        ")" => ["(", :backward],
+        "]" => ["[", :backward],
+        "}" => ["{", :backward]
+      }
+      pair = pair_map[ch]
+      unless pair
+        ctx.editor.echo("No bracket under cursor")
+        return
+      end
+
+      target_char, direction = pair
+      record_jump(ctx)
+      loc = find_matching_bracket(ctx.buffer, ctx.window.cursor_y, ctx.window.cursor_x, ch, target_char, direction)
+      if loc
+        ctx.window.cursor_y = loc[:row]
+        ctx.window.cursor_x = loc[:col]
+        ctx.window.clamp_to_buffer(ctx.buffer)
+      else
+        ctx.editor.echo("Match not found")
+      end
+    end
+
     def enter_insert_mode(ctx, **)
       materialize_intro_buffer_if_needed(ctx)
       ctx.buffer.begin_change_group
@@ -590,12 +624,12 @@ module RuVim
       when "regex", "search"
         "Regex uses Ruby Regexp (not Vim regex). :%s/pat/rep/g is minimal parser + Ruby regex."
       when "options", "set"
-        "Options: use :set/:setlocal/:setglobal. See :help number, :help tabstop, :help filetype"
+        "Options: use :set/:setlocal/:setglobal. See :help number, :help relativenumber, :help ignorecase, :help smartcase, :help hlsearch"
       when "config"
         "Config: XDG Ruby DSL at ~/.config/ruvim/init.rb and ftplugin/<filetype>.rb"
       when "bindings", "keys", "keymap"
         "Bindings: see docs/binding.md. Ex complement: Tab, insert completion: Ctrl-n/Ctrl-p"
-      when "number", "tabstop", "filetype"
+      when "number", "relativenumber", "ignorecase", "smartcase", "hlsearch", "tabstop", "filetype"
         option_help_line(key)
       else
         if (spec = registry.resolve(topic))
@@ -673,7 +707,7 @@ module RuVim
 
     def ex_substitute(ctx, pattern:, replacement:, global: false, **)
       materialize_intro_buffer_if_needed(ctx)
-      regex = compile_search_regex(pattern)
+      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
       changed = 0
       new_lines = ctx.buffer.lines.map do |line|
         if global
@@ -706,7 +740,7 @@ module RuVim
         raise RuVim::CommandError, "No previous search" unless prev
         text = prev[:pattern]
       end
-      compile_search_regex(text)
+      compile_search_regex(text, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
       ctx.editor.set_last_search(pattern: text, direction:)
       record_jump(ctx)
       move_to_search(ctx, pattern: text, direction:, count: 1)
@@ -1228,6 +1262,46 @@ module RuVim
       ctx.editor.push_jump_location(ctx.editor.current_location)
     end
 
+    def find_matching_bracket(buffer, row, col, open_ch, close_ch, direction)
+      depth = 1
+      pos = { row: row, col: col }
+      loop do
+        pos = direction == :forward ? next_buffer_pos(buffer, pos[:row], pos[:col]) : prev_buffer_pos(buffer, pos[:row], pos[:col])
+        return nil unless pos
+
+        ch = buffer.line_at(pos[:row])[pos[:col]]
+        next unless ch
+
+        if ch == open_ch
+          depth += 1
+        elsif ch == close_ch
+          depth -= 1
+          return pos if depth.zero?
+        end
+      end
+    end
+
+    def next_buffer_pos(buffer, row, col)
+      line = buffer.line_at(row)
+      if col + 1 < line.length
+        { row: row, col: col + 1 }
+      elsif row + 1 < buffer.line_count
+        { row: row + 1, col: 0 }
+      end
+    end
+
+    def prev_buffer_pos(buffer, row, col)
+      if col.positive?
+        { row: row, col: col - 1 }
+      elsif row.positive?
+        prev_row = row - 1
+        prev_len = buffer.line_length(prev_row)
+        return { row: prev_row, col: prev_len - 1 } if prev_len.positive?
+
+        { row: prev_row, col: 0 }
+      end
+    end
+
     def materialize_intro_buffer_if_needed(ctx)
       ctx.editor.materialize_intro_buffer!
       nil
@@ -1364,6 +1438,14 @@ module RuVim
         "number (bool, window-local): line numbers. :set number / :set nonumber"
       when "tabstop"
         "tabstop (int, buffer-local): tab display width. ex: :set tabstop=4"
+      when "relativenumber"
+        "relativenumber (bool, window-local): show relative line numbers. ex: :set relativenumber"
+      when "ignorecase"
+        "ignorecase (bool, global): case-insensitive search unless smartcase + uppercase pattern"
+      when "smartcase"
+        "smartcase (bool, global): with ignorecase, uppercase in pattern makes search case-sensitive"
+      when "hlsearch"
+        "hlsearch (bool, global): highlight search matches on screen"
       when "filetype"
         "filetype (string, buffer-local): used for ftplugin and filetype-local keymaps"
       else
@@ -1411,7 +1493,7 @@ module RuVim
 
     def move_to_search(ctx, pattern:, direction:, count:)
       count = 1 if count.to_i <= 0
-      regex = compile_search_regex(pattern)
+      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
       count.times do
         match = find_next_match(ctx.buffer, ctx.window, regex, direction: direction)
         unless match
@@ -1476,10 +1558,27 @@ module RuVim
       idx
     end
 
-    def compile_search_regex(pattern)
-      Regexp.new(pattern.to_s)
+    def compile_search_regex(pattern, editor: nil, window: nil, buffer: nil)
+      flags = search_regexp_flags(pattern.to_s, editor:, window:, buffer:)
+      Regexp.new(pattern.to_s, flags)
     rescue RegexpError => e
       raise RuVim::CommandError, "Invalid regex: #{e.message}"
+    end
+
+    def search_regexp_flags(pattern, editor:, window:, buffer:)
+      return 0 unless editor
+
+      ignorecase = !!editor.effective_option("ignorecase", window:, buffer:)
+      return 0 unless ignorecase
+
+      smartcase = !!editor.effective_option("smartcase", window:, buffer:)
+      if smartcase && pattern.match?(/[A-Z]/)
+        0
+      else
+        Regexp::IGNORECASE
+      end
+    rescue StandardError
+      0
     end
   end
 end
