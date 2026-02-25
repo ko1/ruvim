@@ -305,6 +305,7 @@ module RuVim
 
     def handle_key(key)
       mode_before = @editor.mode
+      clear_stale_message_before_key(key)
       @skip_record_for_current_key = false
       append_dot_change_capture_key(key)
       if key == :ctrl_c
@@ -327,6 +328,17 @@ module RuVim
       track_mode_transition(mode_before)
       load_current_ftplugin!
       record_macro_key_if_needed(key)
+    end
+
+    def clear_stale_message_before_key(key)
+      return if @editor.message.to_s.empty?
+      return if @editor.command_line_active?
+
+      # Keep the error visible while the user is still dismissing/cancelling;
+      # otherwise, the next operation replaces the command-line area naturally.
+      return if key == :ctrl_c
+
+      @editor.clear_message
     end
 
     def handle_normal_key(key)

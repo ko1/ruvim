@@ -280,4 +280,30 @@ class AppScenarioTest < Minitest::Test
     assert_equal 0, @editor.current_window.cursor_x
     assert_includes @editor.last_search[:pattern], "foo\\-bar"
   end
+
+  def test_unknown_key_error_clears_on_next_successful_key
+    @editor.current_buffer.replace_all_lines!(["a", "b"])
+    @editor.current_window.cursor_y = 0
+
+    feed("z")
+    assert @editor.message_error?
+    assert_match(/Unknown key:/, @editor.message)
+
+    feed("j")
+    refute @editor.message_error?
+    assert_equal "", @editor.message
+    assert_equal 1, @editor.current_window.cursor_y
+  end
+
+  def test_normal_message_clears_on_next_key
+    @editor.current_buffer.replace_all_lines!(["a", "b"])
+    @editor.current_window.cursor_y = 0
+    @editor.echo("written")
+
+    feed("j")
+
+    refute @editor.message_error?
+    assert_equal "", @editor.message
+    assert_equal 1, @editor.current_window.cursor_y
+  end
 end
