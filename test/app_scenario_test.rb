@@ -255,4 +255,16 @@ class AppScenarioTest < Minitest::Test
     @app.send(:clear_expired_transient_message_if_any)
     assert_equal "", @editor.message
   end
+
+  def test_insert_arrow_left_respects_whichwrap
+    @editor.set_option("whichwrap", "left,right", scope: :global)
+    @editor.current_buffer.replace_all_lines!(["ab", "cd"])
+    @editor.current_window.cursor_y = 1
+    @editor.current_window.cursor_x = 0
+
+    feed("i", :left)
+
+    assert_equal :insert, @editor.mode
+    assert_equal [0, 2], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+  end
 end

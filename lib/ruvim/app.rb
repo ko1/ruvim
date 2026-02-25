@@ -531,10 +531,10 @@ module RuVim
         @editor.current_window.cursor_x = x
       when :left
         clear_insert_completion
-        @editor.current_window.move_left(@editor.current_buffer, 1)
+        dispatch_insert_cursor_motion("cursor.left")
       when :right
         clear_insert_completion
-        @editor.current_window.move_right(@editor.current_buffer, 1)
+        dispatch_insert_cursor_motion("cursor.right")
       when :up
         clear_insert_completion
         @editor.current_window.move_up(@editor.current_buffer, 1)
@@ -1667,6 +1667,12 @@ module RuVim
       y, x = buf.backspace(row, col)
       win.cursor_y = y
       win.cursor_x = x
+    end
+
+    def dispatch_insert_cursor_motion(id)
+      @dispatcher.dispatch(@editor, CommandInvocation.new(id: id, count: 1))
+    rescue StandardError => e
+      @editor.echo_error("Motion error: #{e.message}")
     end
 
     def try_softtabstop_backspace(buf, win)

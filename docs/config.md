@@ -135,7 +135,7 @@ setglobal "tabstop=8"
 
 - `whichwrap` (`string`, default `""`) [`PARTIAL`]
   - 左右移動が行をまたぐ条件を指定します。
-  - 現状は `h` / `l`（または `<` / `>`）の最小対応です。
+  - 現状は `h` / `l`、左右矢印（`left` / `right`、`<` / `>`）の最小対応です。
 
 - `virtualedit` (`string`, default `""`) [`PARTIAL`]
   - 実文字のない位置へのカーソル移動可否を指定します。
