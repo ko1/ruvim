@@ -219,10 +219,10 @@
     - `docs/spec.md` に現状（行配列）/ `piece table` / `rope` の比較メモを追加
     - `永続 undo` 実装タイミングで `piece table` 再評価、という方針で整理
 
-- テスト基盤の拡張
-  - terminal/input/screen の結合テスト
-  - golden snapshot テスト（描画）
-  - 操作シナリオテスト（キーストローク列）
+- [DONE] テスト基盤の拡張
+  - terminal/input/screen の結合テスト（`test/input_screen_integration_test.rb`）
+  - golden snapshot テスト（描画, `test/render_snapshot_test.rb` + fixture）
+  - 操作シナリオテスト（キーストローク列, `test/app_scenario_test.rb`）
 
 - CI / 開発体験
   - GitHub Actions 等で test 実行
