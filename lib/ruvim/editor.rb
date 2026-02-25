@@ -704,6 +704,45 @@ module RuVim
       ids[(idx + step) % ids.length]
     end
 
+    def delete_buffer(buffer_id)
+      id = buffer_id.to_i
+      buffer = @buffers[id]
+      return nil unless buffer
+
+      if @buffers.length <= 1
+        replacement = add_empty_buffer
+      else
+        replacement = nil
+      end
+
+      fallback_id =
+        if replacement
+          replacement.id
+        else
+          candidates = @buffers.keys.reject { |bid| bid == id }
+          alt = @alternate_buffer_id
+          (alt && alt != id && @buffers.key?(alt)) ? alt : candidates.first
+        end
+
+      @windows.each_value do |win|
+        next unless win.buffer_id == id
+        next unless fallback_id
+
+        win.buffer_id = fallback_id
+        win.cursor_x = 0
+        win.cursor_y = 0
+        win.row_offset = 0
+        win.col_offset = 0
+      end
+
+      @buffers.delete(id)
+      @local_marks.delete(id)
+      @alternate_buffer_id = nil if @alternate_buffer_id == id
+      save_current_tabpage_state! unless @suspend_tab_autosave
+      ensure_bootstrap_buffer! if @buffers.empty?
+      true
+    end
+
     def window_order
       @window_order
     end

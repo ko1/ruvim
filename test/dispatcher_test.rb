@@ -183,6 +183,47 @@ class DispatcherTest < Minitest::Test
     end
   end
 
+  def test_bdelete_deletes_current_buffer_and_switches_to_another
+    @editor.materialize_intro_buffer!
+    first = @editor.current_buffer
+    other = @editor.add_empty_buffer(path: "other.txt")
+    @dispatcher.dispatch_ex(@editor, "buffer #{other.id}")
+    assert_equal other.id, @editor.current_buffer.id
+
+    @dispatcher.dispatch_ex(@editor, "bd")
+
+    assert_equal first.id, @editor.current_buffer.id
+    refute @editor.buffers.key?(other.id)
+    assert_equal "buffer #{other.id} deleted", @editor.message
+  end
+
+  def test_bdelete_rejects_modified_buffer_without_bang
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["x"])
+    @editor.current_buffer.modified = true
+
+    @dispatcher.dispatch_ex(@editor, "bd")
+
+    assert_equal true, @editor.message_error?
+    assert_match(/No write since last change/, @editor.message)
+    assert @editor.buffers.key?(@editor.current_buffer.id)
+  end
+
+  def test_bdelete_bang_deletes_modified_buffer
+    @editor.materialize_intro_buffer!
+    first = @editor.current_buffer
+    other = @editor.add_empty_buffer(path: "other.txt")
+    @dispatcher.dispatch_ex(@editor, "buffer #{other.id}")
+    @editor.current_buffer.replace_all_lines!(["dirty"])
+    @editor.current_buffer.modified = true
+
+    @dispatcher.dispatch_ex(@editor, "bd!")
+
+    assert_equal first.id, @editor.current_buffer.id
+    refute @editor.buffers.key?(other.id)
+    refute @editor.message_error?
+  end
+
   def test_splitbelow_and_splitright_change_insertion_side
     @editor.set_option("splitbelow", false, scope: :global)
     first = @editor.current_window_id

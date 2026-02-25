@@ -686,6 +686,28 @@ module RuVim
       switch_buffer_id(ctx, target_id, bang:)
     end
 
+    def buffer_delete(ctx, argv:, bang:, **)
+      arg = argv[0]
+      target_id =
+        if arg.nil? || arg.empty?
+          ctx.buffer.id
+        elsif arg == "#"
+          ctx.editor.alternate_buffer_id || raise(RuVim::CommandError, "No alternate buffer")
+        elsif arg.match?(/\A\d+\z/)
+          arg.to_i
+        else
+          find_buffer_by_name(ctx.editor, arg)&.id || raise(RuVim::CommandError, "No such buffer: #{arg}")
+        end
+
+      target = ctx.editor.buffers[target_id] || raise(RuVim::CommandError, "No such buffer: #{target_id}")
+      if target.modified? && !bang
+        raise RuVim::CommandError, "No write since last change (use :bdelete! to discard)"
+      end
+
+      ctx.editor.delete_buffer(target_id)
+      ctx.editor.echo("buffer #{target_id} deleted")
+    end
+
     def ex_help(ctx, argv: [], **)
       topic = argv.first.to_s
       registry = RuVim::ExCommandRegistry.instance
