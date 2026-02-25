@@ -64,9 +64,9 @@
 
 ### P0: 日常編集の体験差が大きい（優先）
 
-- `wrap`（長い行を折り返す）
-- `linebreak`（単語境界寄りで折り返す）
-- `breakindent`（折り返し行のインデント）
+- `[PARTIAL]` `wrap`（長い行を折り返す）
+- `[PARTIAL]` `linebreak`（単語境界寄りで折り返す）
+- `[PARTIAL]` `breakindent`（折り返し行のインデント）
 - `[DONE]` `cursorline`（現在行ハイライト）
 - `[DONE]` `scrolloff`（上下マージン行数）
 - `[DONE]` `sidescrolloff`（左右マージン桁数）
@@ -87,7 +87,7 @@
 
 - `[DONE]` `list`（不可視文字の表示、最小）
 - `[DONE]` `listchars`（不可視文字の表示内容、`tab/trail/nbsp` 最小）
-- `showbreak`（折り返し行の先頭表示）
+- `[PARTIAL]` `showbreak`（折り返し行の先頭表示）
 - `[DONE]` `colorcolumn`（桁ガイド）
 - `signcolumn`（サイン列の表示）
 - `[DONE]` `numberwidth`（行番号列の幅）

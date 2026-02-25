@@ -25,6 +25,7 @@ module RuVim
         rect = rects[win_id]
         next unless rect
         content_width = [rect[:width] - number_column_width(editor, win, buf), 1].max
+        win.col_offset = 0 if wrap_enabled?(editor, win, buf)
         win.ensure_visible(
           buf,
           height: [rect[:height], 1].max,
@@ -98,21 +99,15 @@ module RuVim
         rect = rects[win_id]
         next unless rect
 
-          window = editor.windows.fetch(win_id)
-          buffer = editor.buffers.fetch(window.buffer_id)
-          gutter_w = number_column_width(editor, window, buffer)
-          content_w = [rect[:width] - gutter_w, 1].max
-          rect[:height].times do |dy|
-            row_no = rect[:top] + dy
-            buffer_row = window.row_offset + dy
-            text =
-              if buffer_row < buffer.line_count
-                render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
-              else
-                line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
-              end
-            lines[row_no] = text
-          end
+        window = editor.windows.fetch(win_id)
+        buffer = editor.buffers.fetch(window.buffer_id)
+        gutter_w = number_column_width(editor, window, buffer)
+        content_w = [rect[:width] - gutter_w, 1].max
+        rows = window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
+        rect[:height].times do |dy|
+          row_no = rect[:top] + dy
+          lines[row_no] = rows[dy] || (" " * rect[:width])
+        end
       end
 
       rects.each_value do |rect|
@@ -134,12 +129,12 @@ module RuVim
           dy = row_no - rect[:top]
           text =
             if dy >= 0 && dy < rect[:height]
-              buffer_row = window.row_offset + dy
-              if buffer_row < buffer.line_count
-                render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
-              else
-                line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
-              end
+              @__window_rows_cache ||= {}
+              key = [window.id, rect[:height], gutter_w, content_w, window.row_offset, window.col_offset, window.cursor_y, window.cursor_x,
+                     editor.effective_option("wrap", window:, buffer:), editor.effective_option("linebreak", window:, buffer:),
+                     editor.effective_option("breakindent", window:, buffer:), editor.effective_option("showbreak", window:, buffer:)]
+              @__window_rows_cache[key] ||= window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
+              @__window_rows_cache[key][dy] || (" " * rect[:width])
             else
               " " * rect[:width]
             end
@@ -148,6 +143,7 @@ module RuVim
         end
         lines[row_no] = pieces
       end
+      @__window_rows_cache = nil
     end
 
     def can_diff_render?(frame)
@@ -186,11 +182,36 @@ module RuVim
     def render_text_line(text, editor, buffer_row:, window:, buffer:, width:)
       tabstop = tabstop_for(editor, window, buffer)
       cells, display_col = RuVim::TextMetrics.clip_cells_for_width(text, width, source_col_start: window.col_offset, tabstop:)
+      render_cells(cells, display_col, editor, buffer_row:, window:, buffer:, width:, source_line: buffer.line_at(buffer_row),
+                   source_col_offset: window.col_offset, leading_display_prefix: "")
+    end
+
+    def render_text_segment(source_line, editor, buffer_row:, window:, buffer:, width:, source_col_start:, display_prefix: "")
+      tabstop = tabstop_for(editor, window, buffer)
+      prefix = display_prefix.to_s
+      prefix_w = RuVim::DisplayWidth.display_width(prefix, tabstop:)
+      avail = [width - prefix_w, 0].max
+      cells, display_col = RuVim::TextMetrics.clip_cells_for_width(source_line[source_col_start..].to_s, avail, source_col_start:, tabstop:)
+      body = render_cells(cells, display_col, editor, buffer_row:, window:, buffer:, width: avail, source_line: source_line,
+                          source_col_offset: source_col_start, leading_display_prefix: prefix)
+      if width <= 0
+        ""
+      elsif prefix_w <= 0
+        body
+      else
+        prefix_render = RuVim::TextMetrics.pad_plain_to_screen_width(prefix, [width, 0].max, tabstop:)[0...prefix.length].to_s
+        # body already includes padding for avail; prepend the visible prefix and trim to width.
+        out = prefix_render + body
+        out
+      end
+    end
+
+    def render_cells(cells, display_col, editor, buffer_row:, window:, buffer:, width:, source_line:, source_col_offset:, leading_display_prefix:)
       highlighted = +""
-      source_line = buffer.line_at(buffer_row)
       visual = (editor.current_window_id == window.id && editor.visual_active?) ? editor.visual_selection(window) : nil
-      search_cols = search_highlight_source_cols(editor, text, source_col_offset: window.col_offset)
-      syntax_cols = syntax_highlight_source_cols(editor, window, buffer, text, source_col_offset: window.col_offset)
+      text_for_highlight = source_line[source_col_offset..].to_s
+      search_cols = search_highlight_source_cols(editor, text_for_highlight, source_col_offset: source_col_offset)
+      syntax_cols = syntax_highlight_source_cols(editor, window, buffer, text_for_highlight, source_col_offset: source_col_offset)
       list_enabled = !!editor.effective_option("list", window:, buffer:)
       listchars = parse_listchars(editor.effective_option("listchars", window:, buffer:))
       tab_seen = {}
@@ -199,7 +220,7 @@ module RuVim
       current_line = (editor.current_window_id == window.id && window.cursor_y == buffer_row)
       cursorline_enabled = cursorline && current_line
       colorcolumns = colorcolumn_display_cols(editor, window, buffer)
-      display_pos = 0
+      display_pos = RuVim::DisplayWidth.display_width(leading_display_prefix.to_s, tabstop: tabstop_for(editor, window, buffer))
 
       cells.each_with_index do |cell, idx|
         ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
@@ -224,8 +245,7 @@ module RuVim
       end
 
       if editor.current_window_id == window.id && window.cursor_y == buffer_row
-        col = window.cursor_x - window.col_offset
-        if col >= cells.length && col >= 0 && display_col < width
+        if window.cursor_x >= source_col_offset && window.cursor_x >= (cells.last&.source_col.to_i + 1) && display_col < width
           highlighted << "\e[7m \e[m"
           display_col += 1
         end
@@ -245,6 +265,116 @@ module RuVim
         highlighted << (" " * trailing)
       end
       highlighted
+    end
+
+    def window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      return plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:) unless wrap_enabled?(editor, window, buffer)
+
+      wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+    end
+
+    def plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      Array.new(height) do |dy|
+        buffer_row = window.row_offset + dy
+        if buffer_row < buffer.line_count
+          render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
+        else
+          line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
+        end
+      end
+    end
+
+    def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      rows = []
+      row_idx = window.row_offset
+      while rows.length < height
+        if row_idx >= buffer.line_count
+          rows << (line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w))
+          next
+        end
+
+        line = buffer.line_at(row_idx)
+        segments = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
+        segments.each_with_index do |seg, seg_i|
+          break if rows.length >= height
+
+          gutter = line_number_prefix(editor, window, buffer, seg_i.zero? ? row_idx : nil, gutter_w)
+          rows << gutter + render_text_segment(line, editor, buffer_row: row_idx, window:, buffer:, width: content_w,
+                                               source_col_start: seg[:source_col_start], display_prefix: seg[:display_prefix])
+        end
+        row_idx += 1
+      end
+      rows
+    end
+
+    def wrap_enabled?(editor, window, buffer)
+      !!editor.effective_option("wrap", window:, buffer:)
+    end
+
+    def wrapped_segments_for_line(editor, window, buffer, line, width:)
+      return [{ source_col_start: 0, display_prefix: "" }] if width <= 0
+
+      tabstop = tabstop_for(editor, window, buffer)
+      linebreak = !!editor.effective_option("linebreak", window:, buffer:)
+      showbreak = editor.effective_option("showbreak", window:, buffer:).to_s
+      breakindent = !!editor.effective_option("breakindent", window:, buffer:)
+      indent_prefix = breakindent ? wrapped_indent_prefix(line, tabstop:, max_width: [width - RuVim::DisplayWidth.display_width(showbreak, tabstop:), 0].max) : ""
+
+      segs = []
+      start_col = 0
+      first = true
+      line = line.to_s
+      if line.empty?
+        return [{ source_col_start: 0, display_prefix: "" }]
+      end
+
+      while start_col < line.length
+        display_prefix = first ? "" : "#{showbreak}#{indent_prefix}"
+        prefix_w = RuVim::DisplayWidth.display_width(display_prefix, tabstop:)
+        avail = [width - prefix_w, 1].max
+        cells, = RuVim::TextMetrics.clip_cells_for_width(line[start_col..].to_s, avail, source_col_start: start_col, tabstop:)
+        if cells.empty?
+          segs << { source_col_start: start_col, display_prefix: display_prefix }
+          break
+        end
+
+        if linebreak && cells.length > 1
+          break_idx = linebreak_break_index(cells, line)
+          if break_idx && break_idx < cells.length - 1
+            cells = cells[0..break_idx]
+          end
+        end
+
+        segs << { source_col_start: start_col, display_prefix: display_prefix }
+        next_start = cells.last.source_col.to_i + 1
+        if linebreak
+          next_start += 1 while next_start < line.length && line[next_start] == " "
+        end
+        break if next_start <= start_col
+
+        start_col = next_start
+        first = false
+      end
+
+      segs
+    end
+
+    def linebreak_break_index(cells, line)
+      idx = nil
+      cells.each_with_index do |cell, i|
+        ch = line[cell.source_col]
+        idx = i if ch =~ /\s/
+      end
+      idx
+    end
+
+    def wrapped_indent_prefix(line, tabstop:, max_width:)
+      indent = line.to_s[/\A[ \t]*/].to_s
+      return "" if indent.empty? || max_width <= 0
+
+      RuVim::TextMetrics.pad_plain_to_screen_width(indent, max_width, tabstop:)[0...indent.length].to_s
+    rescue StandardError
+      ""
     end
 
     def display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
@@ -412,13 +542,39 @@ module RuVim
       end
 
       rect = rects[window.id] || { top: 1, left: 1 }
-      row = rect[:top] + (window.cursor_y - window.row_offset)
-      line = editor.current_buffer.line_at(window.cursor_y)
-      gutter_w = number_column_width(editor, window, editor.current_buffer)
-      tabstop = tabstop_for(editor, window, editor.current_buffer)
-      prefix_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) -
-                          RuVim::TextMetrics.screen_col_for_char_index(line, window.col_offset, tabstop:)
-      col = rect[:left] + gutter_w + [prefix_screen_col, 0].max
+      buffer = editor.current_buffer
+      line = buffer.line_at(window.cursor_y)
+      gutter_w = number_column_width(editor, window, buffer)
+      content_w = [rect[:width] - gutter_w, 1].max
+      tabstop = tabstop_for(editor, window, buffer)
+      if wrap_enabled?(editor, window, buffer)
+        visual_rows_before = 0
+        row = window.row_offset
+        while row < window.cursor_y
+          visual_rows_before += wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+          row += 1
+        end
+        segs = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
+        seg_index = 0
+        segs.each_with_index do |seg, i|
+          nxt = segs[i + 1]
+          if nxt.nil? || window.cursor_x < nxt[:source_col_start]
+            seg_index = i
+            break
+          end
+        end
+        seg = segs[seg_index] || { source_col_start: 0, display_prefix: "" }
+        row = rect[:top] + visual_rows_before + seg_index
+        seg_prefix_w = RuVim::DisplayWidth.display_width(seg[:display_prefix].to_s, tabstop:)
+        cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:)
+        seg_sc = RuVim::TextMetrics.screen_col_for_char_index(line, seg[:source_col_start], tabstop:)
+        col = rect[:left] + gutter_w + seg_prefix_w + [cursor_sc - seg_sc, 0].max
+      else
+        row = rect[:top] + (window.cursor_y - window.row_offset)
+        prefix_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) -
+                            RuVim::TextMetrics.screen_col_for_char_index(line, window.col_offset, tabstop:)
+        col = rect[:left] + gutter_w + [prefix_screen_col, 0].max
+      end
       [row, col]
     end
 

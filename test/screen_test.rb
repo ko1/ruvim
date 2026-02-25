@@ -138,4 +138,47 @@ class ScreenTest < Minitest::Test
     assert_includes visible, "*"
     assert_includes visible, "~"
   end
+
+  def test_wrap_and_showbreak_render_continuation_rows
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["abcdef ghijkl"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("showbreak", ">>", scope: :window, window: win, buffer: buf)
+
+    term = TerminalStub.new([6, 8])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    row1 = frame[:lines][1].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    row2 = frame[:lines][2].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    assert_includes row1, "abcdef"
+    assert_includes row2, ">>"
+  end
+
+  def test_linebreak_and_breakindent_prefer_space_wrap
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["  foo bar baz"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("linebreak", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("breakindent", true, scope: :window, window: win, buffer: buf)
+    editor.set_option("showbreak", ">", scope: :window, window: win, buffer: buf)
+
+    term = TerminalStub.new([6, 10])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    row2 = frame[:lines][2].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    assert_includes row2, ">"
+    assert_match(/\s>|\>\s/, row2)
+  end
 end
