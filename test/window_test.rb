@@ -30,4 +30,18 @@ class WindowTest < Minitest::Test
     assert_equal 3, win.row_offset
     assert_operator win.col_offset, :>, 0
   end
+
+  def test_move_down_preserves_preferred_column_across_empty_line
+    long = "x" * 80
+    buffer = RuVim::Buffer.new(id: 1, lines: [long, "", long])
+    win = RuVim::Window.new(id: 1, buffer_id: 1)
+    win.cursor_y = 0
+    win.cursor_x = 50
+
+    win.move_down(buffer)
+    assert_equal [1, 0], [win.cursor_y, win.cursor_x]
+
+    win.move_down(buffer)
+    assert_equal [2, 50], [win.cursor_y, win.cursor_x]
+  end
 end

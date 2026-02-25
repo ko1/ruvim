@@ -4,5 +4,4 @@
    4 bar 日本語 編集    
    5 baz                
      ~                  
-     ~                  
 -- NORMAL -- [No Na 1:1 

@@ -902,7 +902,8 @@ module RuVim
     end
 
     def text_viewport_size(rows:, cols:)
-      text_rows = command_area_active? ? rows - 2 : rows - 1
+      # Reserve one status row + one command/error row at the bottom.
+      text_rows = rows - 2
       [text_rows, cols]
     end
 

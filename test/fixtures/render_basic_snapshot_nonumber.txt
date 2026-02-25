@@ -4,5 +4,4 @@ foo
 bar 日本語 編集         
 baz                     
 ~                       
-~                       
 -- NORMAL -- [No Na 1:1 

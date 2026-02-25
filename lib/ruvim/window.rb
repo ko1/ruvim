@@ -1,7 +1,8 @@
 module RuVim
   class Window
     attr_reader :id
-    attr_accessor :buffer_id, :cursor_x, :cursor_y, :row_offset, :col_offset
+    attr_accessor :buffer_id, :row_offset, :col_offset
+    attr_reader :cursor_x, :cursor_y
     attr_reader :options
 
     def initialize(id:, buffer_id:)
@@ -11,7 +12,17 @@ module RuVim
       @cursor_y = 0
       @row_offset = 0
       @col_offset = 0
+      @preferred_x = nil
       @options = {}
+    end
+
+    def cursor_x=(value)
+      @cursor_x = value.to_i
+      @preferred_x = nil
+    end
+
+    def cursor_y=(value)
+      @cursor_y = value.to_i
     end
 
     def clamp_to_buffer(buffer, max_extra_col: 0)
@@ -22,6 +33,7 @@ module RuVim
     end
 
     def move_left(buffer, count = 1)
+      @preferred_x = nil
       count.times do
         break if @cursor_x <= 0
         @cursor_x = RuVim::TextMetrics.previous_grapheme_char_index(buffer.line_at(@cursor_y), @cursor_x)
@@ -30,6 +42,7 @@ module RuVim
     end
 
     def move_right(buffer, count = 1)
+      @preferred_x = nil
       count.times do
         line = buffer.line_at(@cursor_y)
         break if @cursor_x >= line.length
@@ -39,13 +52,19 @@ module RuVim
     end
 
     def move_up(buffer, count = 1)
+      desired_x = @preferred_x || @cursor_x
       @cursor_y -= count
       clamp_to_buffer(buffer)
+      @cursor_x = [desired_x, buffer.line_length(@cursor_y)].min
+      @preferred_x = desired_x
     end
 
     def move_down(buffer, count = 1)
+      desired_x = @preferred_x || @cursor_x
       @cursor_y += count
       clamp_to_buffer(buffer)
+      @cursor_x = [desired_x, buffer.line_length(@cursor_y)].min
+      @preferred_x = desired_x
     end
 
     def ensure_visible(buffer, height:, width:, tabstop: 2, scrolloff: 0, sidescrolloff: 0)

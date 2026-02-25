@@ -68,6 +68,7 @@ module RuVim
 
       status_row = text_rows + 1
       lines[status_row] = "\e[7m#{truncate(status_line(editor, cols), cols)}\e[m"
+      lines[status_row + 1] = ""
 
       if editor.command_line_active?
         cmd = editor.command_line
@@ -230,7 +231,9 @@ module RuVim
         selected = selected_in_visual?(visual, buffer_row, buffer_col)
         cursor_here = (editor.current_window_id == window.id && window.cursor_y == buffer_row && window.cursor_x == buffer_col)
         colorcolumn_here = colorcolumns[display_pos]
-        if selected || cursor_here
+        if cursor_here
+          highlighted << cursor_cell_render(editor, ch)
+        elsif selected
           highlighted << "\e[7m#{ch}\e[m"
         elsif search_cols[buffer_col]
           highlighted << "#{search_bg_seq(editor)}#{ch}\e[m"
@@ -255,7 +258,7 @@ module RuVim
             display_col += gap
             display_pos += gap
           end
-          highlighted << "\e[7m \e[m"
+          highlighted << cursor_cell_render(editor, " ")
           display_col += 1
           display_pos += 1
         end
@@ -586,6 +589,14 @@ module RuVim
 
     def error_message_line(msg, cols)
       "\e[97;41m#{truncate(msg, cols)}\e[m"
+    end
+
+    def cursor_cell_render(editor, ch)
+      "#{cursor_cell_seq(editor)}#{ch}\e[m"
+    end
+
+    def cursor_cell_seq(editor)
+      "\e[7m"
     end
 
     def cursor_screen_position(editor, text_rows, rects)
