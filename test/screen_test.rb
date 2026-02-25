@@ -227,6 +227,26 @@ class ScreenTest < Minitest::Test
     assert_equal [1, 5], pos
   end
 
+  def test_cursor_screen_position_is_clamped_to_text_area_under_wrap
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["x" * 40, "tail"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    win.row_offset = 0
+    win.cursor_y = 1
+    win.cursor_x = 0
+
+    term = TerminalStub.new([6, 8]) # text_rows = 4 (footer 2 rows)
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    row, _col = screen.send(:cursor_screen_position, editor, text_rows, rects)
+
+    assert_operator row, :<=, text_rows
+  end
+
   def test_linebreak_and_breakindent_prefer_space_wrap
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

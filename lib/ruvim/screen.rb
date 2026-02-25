@@ -656,6 +656,12 @@ module RuVim
                             RuVim::TextMetrics.screen_col_for_char_index(line, window.col_offset, tabstop:)
         col = rect[:left] + gutter_w + [prefix_screen_col, 0].max + extra_virtual
       end
+      min_row = [rect[:top].to_i, 1].max
+      max_row = [rect[:top].to_i + [rect[:height].to_i, 1].max - 1, min_row].max
+      min_col = [rect[:left].to_i, 1].max
+      max_col = [rect[:left].to_i + [rect[:width].to_i, 1].max - 1, min_col].max
+      row = [[row.to_i, min_row].max, max_row].min
+      col = [[col.to_i, min_col].max, max_col].min
       [row, col]
     end
 
