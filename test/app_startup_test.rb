@@ -62,6 +62,13 @@ class AppStartupTest < Minitest::Test
     assert_match(/quickfix startup .*errors\.log.*not implemented/i, editor.message)
   end
 
+  def test_startup_session_placeholder_emits_message
+    app = RuVim::App.new(clean: true, session_file: "Session.ruvim")
+    editor = app.instance_variable_get(:@editor)
+
+    assert_match(/session startup .*Session\.ruvim.*not implemented/i, editor.message)
+  end
+
   def test_startup_nomodifiable_marks_opened_buffer_unmodifiable_and_readonly
     Tempfile.create(["ruvim-startup", ".txt"]) do |f|
       f.write("hello\n")

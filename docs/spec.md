@@ -130,6 +130,10 @@ RuVim::ExCommandRegistry.instance.register(
   - 起動時に開いた current buffer を readonly にする（現状は保存禁止の意味）
 - `-d`
   - diff mode 互換 placeholder（現状は通常起動 + 未実装メッセージ表示）
+- `-q {errorfile}`
+  - quickfix 起動互換 placeholder（現状は未実装メッセージ表示）
+- `-S [session]`
+  - session 起動互換 placeholder（現状は未実装メッセージ表示）
 - `-M`
   - 起動時に開いた file buffer を `modifiable=false` + `readonly=true` にする
 - `-Z`

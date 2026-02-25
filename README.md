@@ -29,6 +29,8 @@ ruby -Ilib exe/ruvim --help
 ruby -Ilib exe/ruvim --version
 ruby -Ilib exe/ruvim --clean
 ruby -Ilib exe/ruvim -d file.txt   # placeholder (diff UI 未実装)
+ruby -Ilib exe/ruvim -q errors.log  # placeholder (quickfix 未実装)
+ruby -Ilib exe/ruvim -S Session.vim # placeholder (session 未実装)
 ruby -Ilib exe/ruvim -u /tmp/init.rb
 ruby -Ilib exe/ruvim --cmd 'set number' file.txt
 ruby -Ilib exe/ruvim -c 'set number' file.txt

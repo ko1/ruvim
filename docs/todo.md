@@ -468,11 +468,13 @@
   - メモ:
     - 現状は CLI 互換 placeholder として受理し、起動時に未実装メッセージを表示
 
-- `-S [session]`（session 読み込み）
+- [DONE] `-S [session]`（session 読み込み）
   - 効果: 中
   - コスト: 高
   - 依存:
     - session 実装
+  - メモ:
+    - 現状は CLI 互換 placeholder として受理し、起動時に未実装メッセージを表示
 
 ### 仕様メモ（RuVim 方針）
 

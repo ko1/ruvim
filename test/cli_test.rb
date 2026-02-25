@@ -61,6 +61,15 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_session_option_with_and_without_argument
+    opts1 = RuVim::CLI.parse(["-S", "Session.ruvim", "file.txt"])
+    assert_equal "Session.ruvim", opts1.session_file
+    assert_equal ["file.txt"], opts1.files
+
+    opts2 = RuVim::CLI.parse(["-S"])
+    assert_equal "Session.vim", opts2.session_file
+  end
+
   def test_parse_nomodifiable_option
     opts = RuVim::CLI.parse(["-M", "file.txt"])
 
@@ -131,6 +140,7 @@ class CLITest < Minitest::Test
     assert_match(/-R\s+Open file readonly/, out.string)
     assert_match(/-d\s+Diff mode requested/, out.string)
     assert_match(/-q \{errorfile\}\s+Quickfix startup placeholder/, out.string)
+    assert_match(/-S \[session\]\s+Session startup placeholder/, out.string)
     assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-Z\s+Restricted mode/, out.string)
     assert_match(/-V\[N\], --verbose/, out.string)

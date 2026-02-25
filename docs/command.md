@@ -5,6 +5,8 @@
 - `--help`, `--version`
 - `--clean`
 - `-d`（diff mode placeholder, 未実装メッセージ表示）
+- `-q {errorfile}`（quickfix startup placeholder, 未実装メッセージ表示）
+- `-S [session]`（session startup placeholder, 未実装メッセージ表示）
 - `-R`
 - `-M`
 - `-Z`

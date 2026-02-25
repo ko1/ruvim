@@ -10,6 +10,7 @@ module RuVim
       :readonly,
       :diff_mode,
       :quickfix_errorfile,
+      :session_file,
       :no_swap,
       :nomodifiable,
       :restricted_mode,
@@ -58,6 +59,7 @@ module RuVim
         readonly: opts.readonly,
         diff_mode: opts.diff_mode,
         quickfix_errorfile: opts.quickfix_errorfile,
+        session_file: opts.session_file,
         nomodifiable: opts.nomodifiable,
         restricted: opts.restricted_mode,
         verbose_level: opts.verbose_level,
@@ -86,6 +88,7 @@ module RuVim
         readonly: false,
         diff_mode: false,
         quickfix_errorfile: nil,
+        session_file: nil,
         no_swap: false,
         nomodifiable: false,
         restricted_mode: false,
@@ -138,6 +141,13 @@ module RuVim
           i += 1
           raise ParseError, "-q requires an errorfile path" if i >= args.length
           opts.quickfix_errorfile = args[i]
+        when "-S"
+          if i + 1 < args.length && !args[i + 1].start_with?("-")
+            i += 1
+            opts.session_file = args[i]
+          else
+            opts.session_file = "Session.vim"
+          end
         when "-n"
           opts.no_swap = true
         when "-M"
@@ -224,6 +234,7 @@ module RuVim
           -R                Open file readonly (disallow :w on current buffer)
           -d                Diff mode requested (compat placeholder; not implemented yet)
           -q {errorfile}    Quickfix startup placeholder (not implemented yet)
+          -S [session]      Session startup placeholder (not implemented yet)
           -M                Open file unmodifiable (disallow editing; also readonly)
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
           -V[N], --verbose[=N]
