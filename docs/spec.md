@@ -143,7 +143,9 @@ RuVim::ExCommandRegistry.instance.register(
   - verbose ログを `stderr` に出力（現状は startup / config / startup actions / Ex submit の簡易ログ）
 - `--startuptime FILE`
   - 起動フェーズ時刻の簡易ログをファイルへ出力
-  - 現状は `init.start`, `config.loaded`, `signals.installed`, `buffers.opened`, `ftplugin.loaded`, `startup_actions.done`
+  - 現状は `init.start`, `pre_config_actions.done`, `config.loaded`, `signals.installed`, `buffers.opened`, `ftplugin.loaded`, `startup_actions.done`
+- `--cmd {cmd}`
+  - user config 読み込み前に Ex コマンドを実行（複数回指定可）
 - `-u {path|NONE}`
   - `path`: 指定ファイルを設定として読み込む
   - `NONE`: user config のみ無効化（ftplugin は有効）
@@ -153,6 +155,7 @@ RuVim::ExCommandRegistry.instance.register(
   - 起動後の Ex 実行 / 行ジャンプ / 最終行ジャンプ
 
 起動時コマンド（`-c`, `+...`）は、初期 buffer / file open / intro screen 構築の後に実行します。
+`--cmd` はそれより前で、user config 読み込み前に実行します。
 
 ### Keymap layering（現状）
 

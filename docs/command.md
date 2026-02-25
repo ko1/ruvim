@@ -11,6 +11,7 @@
 - `-o[N]`, `-O[N]`, `-p[N]`
 - `-V[N]`, `--verbose[=N]`
 - `--startuptime FILE`
+- `--cmd {cmd}`（user config 読み込み前に Ex 実行）
 - `-u {path|NONE}`
 - `-c {cmd}`
 - `+{cmd}`, `+{line}`, `+`

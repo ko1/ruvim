@@ -22,6 +22,17 @@ class CLITest < Minitest::Test
     ], opts.startup_actions
   end
 
+  def test_parse_pre_config_cmd_option
+    opts = RuVim::CLI.parse(["--cmd", "set number", "--cmd=set relativenumber", "file.txt"])
+
+    assert_equal ["file.txt"], opts.files
+    assert_equal [
+      { type: :ex, value: "set number" },
+      { type: :ex, value: "set relativenumber" }
+    ], opts.pre_config_actions
+    assert_equal [], opts.startup_actions
+  end
+
   def test_parse_custom_config_path
     opts = RuVim::CLI.parse(["-u", "/tmp/ruvimrc.rb"])
 
@@ -108,6 +119,7 @@ class CLITest < Minitest::Test
     assert_match(/-Z\s+Restricted mode/, out.string)
     assert_match(/-V\[N\], --verbose/, out.string)
     assert_match(/--startuptime FILE/, out.string)
+    assert_match(/--cmd \{cmd\}/, out.string)
     assert_match(/-n\s+No-op/, out.string)
     assert_match(/-o\[N\]/, out.string)
     assert_match(/-O\[N\]/, out.string)

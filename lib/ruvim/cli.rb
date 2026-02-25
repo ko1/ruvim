@@ -2,6 +2,7 @@ module RuVim
   class CLI
     Options = Struct.new(
       :files,
+      :pre_config_actions,
       :startup_actions,
       :clean,
       :skip_user_config,
@@ -47,6 +48,7 @@ module RuVim
         paths: opts.files,
         stdin: stdin,
         stdout: stdout,
+        pre_config_actions: opts.pre_config_actions,
         startup_actions: opts.startup_actions,
         clean: opts.clean,
         skip_user_config: opts.skip_user_config,
@@ -72,6 +74,7 @@ module RuVim
       args = Array(argv).dup
       opts = Options.new(
         files: [],
+        pre_config_actions: [],
         startup_actions: [],
         clean: false,
         skip_user_config: false,
@@ -113,6 +116,12 @@ module RuVim
           i += 1
           raise ParseError, "--startuptime requires a file path" if i >= args.length
           opts.startup_time_path = args[i]
+        when "--cmd"
+          i += 1
+          raise ParseError, "--cmd requires an argument" if i >= args.length
+          opts.pre_config_actions << { type: :ex, value: args[i] }
+        when /\A--cmd=(.+)\z/
+          opts.pre_config_actions << { type: :ex, value: Regexp.last_match(1) }
         when "--clean"
           opts.clean = true
         when "-R"
@@ -207,6 +216,7 @@ module RuVim
                             Verbose startup/config/command logs to stderr
           --startuptime FILE
                             Write startup timing log
+          --cmd {cmd}       Execute Ex command before loading user config
           -n                No-op (reserved for swap/persistent features compatibility)
           -o[N]             Open files in horizontal splits
           -O[N]             Open files in vertical splits
@@ -220,6 +230,7 @@ module RuVim
         Examples:
           ruvim file.txt
           ruvim +10 file.txt
+          ruvim --cmd 'set number' file.txt
           ruvim -c 'set number' file.txt
           ruvim --clean -u NONE
       TXT

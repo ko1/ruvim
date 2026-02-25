@@ -127,6 +127,40 @@ class AppStartupTest < Minitest::Test
     assert_match(/startup ex: set number/, text)
   end
 
+  def test_pre_config_actions_run_before_user_config_and_startup_actions
+    Tempfile.create(["ruvim-config", ".rb"]) do |cfg|
+      cfg.write("::ENV['RUVIM_PRECONFIG_ORDER_TEST'] = 'config_loaded'\n")
+      cfg.flush
+
+      begin
+        ENV.delete("RUVIM_PRECONFIG_ORDER_TEST")
+        log = StringIO.new
+        app = RuVim::App.new(
+          config_path: cfg.path,
+          pre_config_actions: [{ type: :ex, value: "set number" }],
+          startup_actions: [{ type: :ex, value: "set relativenumber" }],
+          verbose_level: 2,
+          verbose_io: log
+        )
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal true, editor.effective_option("number")
+        assert_equal true, editor.effective_option("relativenumber")
+        assert_equal "config_loaded", ENV["RUVIM_PRECONFIG_ORDER_TEST"]
+
+        text = log.string
+        assert_match(/startup: run_pre_config_actions count=1/, text)
+        assert_match(/pre-config ex: set number/, text)
+        assert_match(/startup: load_user_config/, text)
+        assert_match(/startup ex: set relativenumber/, text)
+        assert_operator text.index("startup: run_pre_config_actions"), :<, text.index("startup: load_user_config")
+        assert_operator text.index("startup: load_user_config"), :<, text.index("startup: run_startup_actions")
+      ensure
+        ENV.delete("RUVIM_PRECONFIG_ORDER_TEST")
+      end
+    end
+  end
+
   def test_startuptime_writes_startup_phase_log
     Tempfile.create(["ruvim-startuptime", ".log"]) do |f|
       path = f.path
@@ -136,6 +170,7 @@ class AppStartupTest < Minitest::Test
 
       text = File.read(path)
       assert_match(/init\.start/, text)
+      assert_match(/pre_config_actions\.done/, text)
       assert_match(/buffers\.opened/, text)
       assert_match(/startup_actions\.done/, text)
     end

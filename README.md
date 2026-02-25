@@ -29,6 +29,7 @@ ruby -Ilib exe/ruvim --help
 ruby -Ilib exe/ruvim --version
 ruby -Ilib exe/ruvim --clean
 ruby -Ilib exe/ruvim -u /tmp/init.rb
+ruby -Ilib exe/ruvim --cmd 'set number' file.txt
 ruby -Ilib exe/ruvim -c 'set number' file.txt
 ruby -Ilib exe/ruvim +10 file.txt
 ```

@@ -21,6 +21,8 @@
   - 指定ファイルを user config として読む
 - `-u NONE`
   - user config を読まない（ftplugin は有効）
+- `--cmd {cmd}`
+  - user config 読み込み前に Ex コマンドを実行（複数回指定可）
 
 ## `:set` 系コマンド（現状）
 

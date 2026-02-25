@@ -28,6 +28,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 - `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
 - `-V[N]` / `--verbose[=N]`（起動/設定/Ex のログを stderr に出す）
 - `--startuptime file.log`（起動フェーズの簡易 timing log を書く）
+- `--cmd 'set number'`（user config 読み込み前に Ex 実行）
 - `-u path/to/init.rb`（設定ファイルを指定）
 - `-u NONE`（ユーザー設定を読まない）
 - `-c 'set number'`（起動後に Ex 実行）
@@ -39,6 +40,7 @@ ruby -Ilib exe/ruvim path/to/file.txt
 ```bash
 ruby -Ilib exe/ruvim --clean file.txt
 ruby -Ilib exe/ruvim -R file.txt
+ruby -Ilib exe/ruvim --cmd 'set number' -u /tmp/minimal_init.rb file.txt
 ruby -Ilib exe/ruvim -u /tmp/minimal_init.rb -c 'set number' file.txt
 ruby -Ilib exe/ruvim +10 file.txt
 ruby -Ilib exe/ruvim -o a.rb b.rb

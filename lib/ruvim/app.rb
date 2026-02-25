@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -30,13 +30,16 @@ module RuVim
       register_builtins!
       bind_default_keys!
       init_config_loader!
+      @editor.ensure_bootstrap_buffer!
+      verbose_log(1, "startup: run_pre_config_actions count=#{Array(pre_config_actions).length}")
+      run_startup_actions!(pre_config_actions, log_prefix: "pre-config")
+      startup_mark("pre_config_actions.done")
       verbose_log(1, "startup: load_user_config")
       load_user_config!
       startup_mark("config.loaded")
       install_signal_handlers
       startup_mark("signals.installed")
 
-      @editor.ensure_bootstrap_buffer!
       startup_paths = Array(paths || path).compact
       if startup_paths.empty?
         verbose_log(1, "startup: intro")
@@ -73,9 +76,9 @@ module RuVim
       end
     end
 
-    def run_startup_actions!(actions)
+    def run_startup_actions!(actions, log_prefix: "startup")
       Array(actions).each do |action|
-        run_startup_action!(action)
+        run_startup_action!(action, log_prefix:)
         break unless @editor.running?
       end
     end
@@ -1346,16 +1349,16 @@ module RuVim
       @editor.echo("ftplugin error: #{e.message}")
     end
 
-    def run_startup_action!(action)
+    def run_startup_action!(action, log_prefix: "startup")
       case action[:type]
       when :ex
-        verbose_log(2, "startup ex: #{action[:value]}")
+        verbose_log(2, "#{log_prefix} ex: #{action[:value]}")
         @dispatcher.dispatch_ex(@editor, action[:value].to_s)
       when :line
-        verbose_log(2, "startup line: #{action[:value]}")
+        verbose_log(2, "#{log_prefix} line: #{action[:value]}")
         move_cursor_to_line(action[:value].to_i)
       when :line_end
-        verbose_log(2, "startup line_end")
+        verbose_log(2, "#{log_prefix} line_end")
         move_cursor_to_line(@editor.current_buffer.line_count)
       end
     end
