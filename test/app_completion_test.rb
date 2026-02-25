@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "tmpdir"
 
 class AppCompletionTest < Minitest::Test
   def setup
@@ -35,5 +36,18 @@ class AppCompletionTest < Minitest::Test
 
     assert_equal "foobar", b.line_at(0)
     assert_equal 6, @editor.current_window.cursor_x
+  end
+
+  def test_path_completion_respects_wildignore
+    Dir.mktmpdir("ruvim-complete") do |dir|
+      File.write(File.join(dir, "a.rb"), "")
+      File.write(File.join(dir, "a.o"), "")
+      @editor.set_option("wildignore", "*.o", scope: :global)
+
+      matches = @app.send(:path_completion_candidates, File.join(dir, "a"))
+
+      assert_includes matches, File.join(dir, "a.rb")
+      refute_includes matches, File.join(dir, "a.o")
+    end
   end
 end

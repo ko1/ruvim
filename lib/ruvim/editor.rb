@@ -3,9 +3,49 @@ module RuVim
     OPTION_DEFS = {
       "number" => { default_scope: :window, type: :bool, default: false },
       "relativenumber" => { default_scope: :window, type: :bool, default: false },
+      "wrap" => { default_scope: :window, type: :bool, default: false },
+      "linebreak" => { default_scope: :window, type: :bool, default: false },
+      "breakindent" => { default_scope: :window, type: :bool, default: false },
+      "cursorline" => { default_scope: :window, type: :bool, default: false },
+      "scrolloff" => { default_scope: :window, type: :int, default: 0 },
+      "sidescrolloff" => { default_scope: :window, type: :int, default: 0 },
+      "numberwidth" => { default_scope: :window, type: :int, default: 4 },
+      "colorcolumn" => { default_scope: :window, type: :string, default: nil },
+      "signcolumn" => { default_scope: :window, type: :string, default: "auto" },
+      "list" => { default_scope: :window, type: :bool, default: false },
+      "listchars" => { default_scope: :window, type: :string, default: "tab:>-,trail:-,nbsp:+" },
+      "showbreak" => { default_scope: :window, type: :string, default: ">" },
+      "showmatch" => { default_scope: :global, type: :bool, default: false },
+      "matchtime" => { default_scope: :global, type: :int, default: 5 },
+      "whichwrap" => { default_scope: :global, type: :string, default: "" },
+      "virtualedit" => { default_scope: :global, type: :string, default: "" },
       "ignorecase" => { default_scope: :global, type: :bool, default: false },
       "smartcase" => { default_scope: :global, type: :bool, default: false },
       "hlsearch" => { default_scope: :global, type: :bool, default: true },
+      "incsearch" => { default_scope: :global, type: :bool, default: false },
+      "splitbelow" => { default_scope: :global, type: :bool, default: false },
+      "splitright" => { default_scope: :global, type: :bool, default: false },
+      "hidden" => { default_scope: :global, type: :bool, default: false },
+      "clipboard" => { default_scope: :global, type: :string, default: "" },
+      "timeoutlen" => { default_scope: :global, type: :int, default: 1000 },
+      "ttimeoutlen" => { default_scope: :global, type: :int, default: 50 },
+      "backspace" => { default_scope: :global, type: :string, default: "indent,eol,start" },
+      "completeopt" => { default_scope: :global, type: :string, default: "menu,menuone,noselect" },
+      "pumheight" => { default_scope: :global, type: :int, default: 10 },
+      "wildmode" => { default_scope: :global, type: :string, default: "full" },
+      "wildignore" => { default_scope: :global, type: :string, default: "" },
+      "wildignorecase" => { default_scope: :global, type: :bool, default: false },
+      "wildmenu" => { default_scope: :global, type: :bool, default: false },
+      "path" => { default_scope: :buffer, type: :string, default: nil },
+      "suffixesadd" => { default_scope: :buffer, type: :string, default: nil },
+      "textwidth" => { default_scope: :buffer, type: :int, default: 0 },
+      "formatoptions" => { default_scope: :buffer, type: :string, default: nil },
+      "expandtab" => { default_scope: :buffer, type: :bool, default: false },
+      "shiftwidth" => { default_scope: :buffer, type: :int, default: 2 },
+      "softtabstop" => { default_scope: :buffer, type: :int, default: 0 },
+      "autoindent" => { default_scope: :buffer, type: :bool, default: false },
+      "smartindent" => { default_scope: :buffer, type: :bool, default: false },
+      "iskeyword" => { default_scope: :buffer, type: :string, default: nil },
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil }
     }.freeze
@@ -201,6 +241,12 @@ module RuVim
 
       payload = write_register_payload(key, text: text.to_s, type: type.to_sym)
       write_clipboard_register(key, payload)
+      if key == "\""
+        if (default_clip = clipboard_default_register_key)
+          mirror = write_register_payload(default_clip, text: payload[:text], type: payload[:type])
+          write_clipboard_register(default_clip, mirror)
+        end
+      end
       @registers["\""] = payload unless key == "\""
       payload
     end
@@ -225,6 +271,14 @@ module RuVim
 
     def get_register(name = "\"")
       key = name.to_s.downcase
+      if key == "\""
+        if (default_clip = clipboard_default_register_key)
+          if (payload = read_clipboard_register(default_clip))
+            @registers["\""] = dup_register_payload(payload)
+            return @registers["\""]
+          end
+        end
+      end
       return read_clipboard_register(key) if clipboard_register?(key)
 
       @registers[key]
@@ -458,10 +512,16 @@ module RuVim
       window
     end
 
-    def split_current_window(layout: :horizontal)
+    def split_current_window(layout: :horizontal, place: :after)
       save_current_tabpage_state! unless @suspend_tab_autosave
       src = current_window
-      win = add_window(buffer_id: src.buffer_id)
+      id = next_window_id
+      win = Window.new(id:, buffer_id: src.buffer_id)
+      @windows[id] = win
+      src_idx = @window_order.index(src.id) || (@window_order.length - 1)
+      insert_idx = (place.to_sym == :before ? src_idx : src_idx + 1)
+      @window_order.insert(insert_idx, win.id)
+      ensure_initial_tabpage!
       win.cursor_x = src.cursor_x
       win.cursor_y = src.cursor_y
       win.row_offset = src.row_offset
@@ -948,6 +1008,15 @@ module RuVim
 
     def clipboard_register?(key)
       key == "+" || key == "*"
+    end
+
+    def clipboard_default_register_key
+      spec = @global_options["clipboard"].to_s
+      parts = spec.split(",").map { |s| s.strip.downcase }.reject(&:empty?)
+      return "+" if parts.include?("unnamedplus")
+      return "*" if parts.include?("unnamed")
+
+      nil
     end
 
     def write_clipboard_register(key, payload)

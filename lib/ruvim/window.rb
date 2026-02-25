@@ -47,21 +47,26 @@ module RuVim
       clamp_to_buffer(buffer)
     end
 
-    def ensure_visible(buffer, height:, width:, tabstop: 2)
+    def ensure_visible(buffer, height:, width:, tabstop: 2, scrolloff: 0, sidescrolloff: 0)
       clamp_to_buffer(buffer)
+      so = [[scrolloff.to_i, 0].max, [height.to_i - 1, 0].max].min
 
-      @row_offset = @cursor_y if @cursor_y < @row_offset
-      @row_offset = @cursor_y - height + 1 if @cursor_y >= @row_offset + height
+      top_target = @cursor_y - so
+      bottom_target = @cursor_y + so
+      @row_offset = top_target if top_target < @row_offset
+      @row_offset = bottom_target - height + 1 if bottom_target >= @row_offset + height
       @row_offset = 0 if @row_offset.negative?
 
       line = buffer.line_at(@cursor_y)
       cursor_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, @cursor_x, tabstop:)
       offset_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, @col_offset, tabstop:)
+      sso = [[sidescrolloff.to_i, 0].max, [width.to_i - 1, 0].max].min
 
-      if cursor_screen_col < offset_screen_col
-        @col_offset = RuVim::TextMetrics.char_index_for_screen_col(line, cursor_screen_col, tabstop:)
-      elsif cursor_screen_col >= offset_screen_col + width
-        target_left = cursor_screen_col - width + 1
+      if cursor_screen_col < offset_screen_col + sso
+        target_left = [cursor_screen_col - sso, 0].max
+        @col_offset = RuVim::TextMetrics.char_index_for_screen_col(line, target_left, tabstop:)
+      elsif cursor_screen_col >= offset_screen_col + width - sso
+        target_left = cursor_screen_col - width + sso + 1
         @col_offset = RuVim::TextMetrics.char_index_for_screen_col(line, target_left, tabstop:, align: :ceil)
       end
       @col_offset = 0 if @col_offset.negative?

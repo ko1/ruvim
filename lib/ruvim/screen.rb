@@ -29,7 +29,9 @@ module RuVim
           buf,
           height: [rect[:height], 1].max,
           width: content_width,
-          tabstop: tabstop_for(editor, win, buf)
+          tabstop: tabstop_for(editor, win, buf),
+          scrolloff: editor.effective_option("scrolloff", window: win, buffer: buf),
+          sidescrolloff: editor.effective_option("sidescrolloff", window: win, buffer: buf)
         )
       end
 
@@ -188,21 +190,32 @@ module RuVim
       visual = (editor.current_window_id == window.id && editor.visual_active?) ? editor.visual_selection(window) : nil
       search_cols = search_highlight_source_cols(editor, text, source_col_offset: window.col_offset)
       syntax_cols = syntax_highlight_source_cols(editor, window, buffer, text, source_col_offset: window.col_offset)
+      cursorline = !!editor.effective_option("cursorline", window:, buffer:)
+      current_line = (editor.current_window_id == window.id && window.cursor_y == buffer_row)
+      cursorline_enabled = cursorline && current_line
+      colorcolumns = colorcolumn_display_cols(editor, window, buffer)
+      display_pos = 0
 
       cells.each_with_index do |cell, idx|
         ch = cell.glyph
         buffer_col = cell.source_col
         selected = selected_in_visual?(visual, buffer_row, buffer_col)
         cursor_here = (editor.current_window_id == window.id && window.cursor_y == buffer_row && window.cursor_x == buffer_col)
+        colorcolumn_here = colorcolumns[display_pos]
         if selected || cursor_here
           highlighted << "\e[7m#{ch}\e[m"
         elsif search_cols[buffer_col]
           highlighted << "\e[43m#{ch}\e[m"
+        elsif colorcolumn_here
+          highlighted << "\e[48;5;238m#{ch}\e[m"
+        elsif cursorline_enabled
+          highlighted << "\e[48;5;236m#{ch}\e[m"
         elsif (syntax_color = syntax_cols[buffer_col])
           highlighted << "#{syntax_color}#{ch}\e[m"
         else
           highlighted << ch
         end
+        display_pos += [cell.display_width.to_i, 1].max
       end
 
       if editor.current_window_id == window.id && window.cursor_y == buffer_row
@@ -213,7 +226,19 @@ module RuVim
         end
       end
 
-      highlighted << (" " * [width - display_col, 0].max)
+      trailing = [width - display_col, 0].max
+      if trailing.positive? && cursorline_enabled
+        trailing.times do
+          if colorcolumns[display_pos]
+            highlighted << "\e[48;5;238m \e[m"
+          else
+            highlighted << "\e[48;5;236m \e[m"
+          end
+          display_pos += 1
+        end
+      else
+        highlighted << (" " * trailing)
+      end
       highlighted
     end
 
@@ -237,7 +262,9 @@ module RuVim
       enabled = editor.effective_option("number", window:, buffer:) || editor.effective_option("relativenumber", window:, buffer:)
       return 0 unless enabled
 
-      [buffer.line_count.to_s.length, 1].max + 1
+      base = [buffer.line_count.to_s.length, 1].max
+      minw = editor.effective_option("numberwidth", window:, buffer:).to_i
+      [[base, minw].max, 1].max + 1
     end
 
     def line_number_prefix(editor, window, buffer, buffer_row, width)
@@ -256,6 +283,24 @@ module RuVim
           "0"
         end
       num.rjust(width - 1) + " "
+    end
+
+    def colorcolumn_display_cols(editor, window, buffer)
+      raw = editor.effective_option("colorcolumn", window:, buffer:).to_s
+      return {} if raw.empty?
+
+      cols = {}
+      raw.split(",").each do |tok|
+        t = tok.strip
+        next if t.empty?
+        next unless t.match?(/\A\d+\z/)
+        n = t.to_i
+        next if n <= 0
+        cols[n - 1] = true
+      end
+      cols
+    rescue StandardError
+      {}
     end
 
     def pad_plain_display(text, width)

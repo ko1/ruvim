@@ -149,6 +149,7 @@ module RuVim
       x = ctx.buffer.line_length(y)
       ctx.buffer.begin_change_group
       new_y, new_x = ctx.buffer.insert_newline(y, x)
+      new_x = apply_autoindent_to_newline(ctx, row: new_y, previous_row: y, start_col: new_x)
       ctx.window.cursor_y = new_y
       ctx.window.cursor_x = new_x
       ctx.editor.enter_insert_mode
@@ -159,8 +160,10 @@ module RuVim
       materialize_intro_buffer_if_needed(ctx)
       y = ctx.window.cursor_y
       ctx.buffer.begin_change_group
-      ctx.buffer.insert_newline(y, 0)
-      ctx.window.cursor_x = 0
+      _new_y, new_x = ctx.buffer.insert_newline(y, 0)
+      new_x = apply_autoindent_to_newline(ctx, row: y, previous_row: y + 1, start_col: 0)
+      ctx.window.cursor_y = y
+      ctx.window.cursor_x = new_x
       ctx.editor.enter_insert_mode
       ctx.editor.echo("-- INSERT --")
     end
@@ -181,12 +184,14 @@ module RuVim
     end
 
     def window_split(ctx, **)
-      ctx.editor.split_current_window(layout: :horizontal)
+      place = ctx.editor.effective_option("splitbelow", window: ctx.window, buffer: ctx.buffer) ? :after : :before
+      ctx.editor.split_current_window(layout: :horizontal, place:)
       ctx.editor.echo("split")
     end
 
     def window_vsplit(ctx, **)
-      ctx.editor.split_current_window(layout: :vertical)
+      place = ctx.editor.effective_option("splitright", window: ctx.window, buffer: ctx.buffer) ? :after : :before
+      ctx.editor.split_current_window(layout: :vertical, place:)
       ctx.editor.echo("vsplit")
     end
 
@@ -212,7 +217,7 @@ module RuVim
 
     def tab_new(ctx, argv:, **)
       path = argv[0]
-      if ctx.buffer.modified?
+      if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
         ctx.editor.echo_error("Unsaved changes (use :w or :q!)")
         return
       end
@@ -587,8 +592,12 @@ module RuVim
       end
 
       if ctx.buffer.modified? && !bang
-        ctx.editor.echo_error("Unsaved changes (use :e! to discard and open)")
-        return
+        if ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
+          # hidden permits abandoning a modified buffer without forcing write.
+        else
+          ctx.editor.echo_error("Unsaved changes (use :e! to discard and open)")
+          return
+        end
       end
 
       new_buffer = ctx.editor.add_buffer_from_file(path)
@@ -979,7 +988,7 @@ module RuVim
         raise RuVim::CommandError, "No such buffer: #{buffer_id}"
       end
 
-      if ctx.buffer.modified? && ctx.buffer.id != buffer_id && !bang
+      if ctx.buffer.modified? && ctx.buffer.id != buffer_id && !bang && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
         ctx.editor.echo_error("Unsaved changes (use :w or :buffer! / :bnext! / :bprev!)")
         return
       end
@@ -1015,6 +1024,27 @@ module RuVim
         e_col = [sel[:end_col], line.length].min
         line[s_col...e_col].to_s
       end.join("\n")
+    end
+
+    def apply_autoindent_to_newline(ctx, row:, previous_row:, start_col: 0)
+      return start_col unless ctx.editor.effective_option("autoindent", window: ctx.window, buffer: ctx.buffer)
+
+      prev = ctx.buffer.line_at(previous_row)
+      indent = prev[/\A[ \t]*/].to_s
+
+      if ctx.editor.effective_option("smartindent", window: ctx.window, buffer: ctx.buffer)
+        trimmed = prev.rstrip
+        if trimmed.end_with?("{", "[", "(")
+          sw = ctx.editor.effective_option("shiftwidth", window: ctx.window, buffer: ctx.buffer).to_i
+          sw = 2 if sw <= 0
+          indent += " " * sw
+        end
+      end
+
+      return start_col if indent.empty?
+
+      _y, x = ctx.buffer.insert_text(row, start_col, indent)
+      x
     end
 
     def search_current_word(ctx, exact:, direction:)

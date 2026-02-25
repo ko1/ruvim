@@ -4,7 +4,7 @@ module RuVim
       @stdin = stdin
     end
 
-    def read_key(timeout: nil, wakeup_ios: [])
+    def read_key(timeout: nil, wakeup_ios: [], esc_timeout: nil)
       ios = [@stdin, *wakeup_ios].compact
       readable = IO.select(ios, nil, nil, timeout)
       return nil unless readable
@@ -26,7 +26,7 @@ module RuVim
       return :enter if ch == "\r" || ch == "\n"
       return :backspace if ch == "\u007f" || ch == "\b"
 
-      return read_escape_sequence if ch == "\e"
+      return read_escape_sequence(timeout: esc_timeout) if ch == "\e"
 
       ch
     end
@@ -41,10 +41,11 @@ module RuVim
       nil
     end
 
-    def read_escape_sequence
+    def read_escape_sequence(timeout: nil)
       extra = +""
+      wait = timeout.nil? ? 0.005 : [timeout.to_f, 0.0].max
       begin
-        while IO.select([@stdin], nil, nil, 0.005)
+        while IO.select([@stdin], nil, nil, wait)
           extra << @stdin.read_nonblock(1)
         end
       rescue IO::WaitReadable, EOFError

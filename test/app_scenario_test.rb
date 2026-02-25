@@ -74,4 +74,29 @@ class AppScenarioTest < Minitest::Test
 
     assert_equal ["bc", "bc", "bc"], @editor.current_buffer.lines
   end
+
+  def test_expandtab_and_autoindent_in_insert_mode
+    @editor.set_option("expandtab", true, scope: :buffer)
+    @editor.set_option("tabstop", 4, scope: :buffer)
+    @editor.set_option("softtabstop", 4, scope: :buffer)
+    @editor.set_option("autoindent", true, scope: :buffer)
+    @editor.current_buffer.replace_all_lines!(["  foo"])
+
+    feed("A", :ctrl_i, :enter, :escape)
+
+    assert_equal ["  foo   ", "  "], @editor.current_buffer.lines
+  end
+
+  def test_smartindent_adds_shiftwidth_after_open_brace
+    @editor.set_option("autoindent", true, scope: :buffer)
+    @editor.set_option("smartindent", true, scope: :buffer)
+    @editor.set_option("shiftwidth", 2, scope: :buffer)
+    @editor.current_buffer.replace_all_lines!(["if x {"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
+
+    feed("A", :enter, :escape)
+
+    assert_equal ["if x {", "  "], @editor.current_buffer.lines
+  end
 end

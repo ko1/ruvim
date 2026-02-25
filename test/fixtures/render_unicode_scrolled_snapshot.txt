@@ -1,7 +1,7 @@
-1 # title           
-2                   
-3 foo               
-4 bar 日本語 編集   
-5 baz               
-6 qux               
+   1 # title        
+   2                
+   3 foo            
+   4 bar 日本語 編集
+   5 baz            
+   6 qux            
 -- NORMAL -- t1 4:5 

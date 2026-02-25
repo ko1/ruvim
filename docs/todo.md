@@ -56,8 +56,78 @@
     - grep/検索基盤
     - preview（任意）
 
+## TODO option system 拡張（Vim でよく使われる未実装設定）
+
+注記:
+- 実装済みの `number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype` は除外
+- まずは「option 名を受理して挙動に反映する」範囲から進める
+
+### P0: 日常編集の体験差が大きい（優先）
+
+- `wrap`（長い行を折り返す）
+- `linebreak`（単語境界寄りで折り返す）
+- `breakindent`（折り返し行のインデント）
+- `cursorline`（現在行ハイライト）
+- `scrolloff`（上下マージン行数）
+- `sidescrolloff`（左右マージン桁数）
+- `expandtab`（Tab 入力を空白化）
+- `shiftwidth`（`>`/`<` やインデント幅の基準）
+- `softtabstop`（Tab/BS 時の編集幅）
+- `autoindent`（改行時に前行インデントを引き継ぐ）
+- `smartindent`（言語非依存の簡易インデント）
+- `incsearch`（検索入力中の逐次移動/ハイライト）
+- `splitbelow`（`:split` の配置方向）
+- `splitright`（`:vsplit` の配置方向）
+- `hidden`（未保存バッファ切替の挙動）
+- `clipboard`（unnamed/unnamedplus 連携方針）
+- `timeoutlen`（マップ待ち時間）
+- `ttimeoutlen`（端末キーコード待ち時間）
+
+### P1: 使う人が多い / UI と編集体験を整える
+
+- `list`（不可視文字の表示）
+- `listchars`（不可視文字の表示内容）
+- `showbreak`（折り返し行の先頭表示）
+- `colorcolumn`（桁ガイド）
+- `signcolumn`（サイン列の表示）
+- `numberwidth`（行番号列の幅）
+- `showmatch`（対応括弧を一時強調）
+- `matchtime`（`showmatch` の表示時間）
+- `backspace`（Insert mode での BS 挙動）
+- `whichwrap`（左右移動が行をまたぐ条件）
+- `virtualedit`（実文字のない位置へのカーソル）
+- `iskeyword`（単語境界の定義）
+- `completeopt`（補完 UI の挙動）
+- `pumheight`（補完候補 UI の高さ）
+- `wildmode`（コマンドライン補完の挙動）
+- `wildignore`（補完から除外するパターン）
+- `wildignorecase`（補完の大文字小文字）
+- `wildmenu`（コマンドライン補完 UI）
+- `path`（`gf` / 検索系のパス探索）
+- `suffixesadd`（補完/検索時の拡張子補完）
+
+### P2: 実用性は高いが依存が増えやすい / 実装範囲が広い
+
+- `undofile`（永続 undo の ON/OFF）
+- `undodir`（永続 undo の保存先）
+- `updatetime`（アイドル更新間隔。診断/自動処理にも関係）
+- `swapfile`（swap file の ON/OFF）
+- `backup`（バックアップ保存）
+- `writebackup`（書き込み時バックアップ）
+- `autoread`（外部更新の再読込）
+- `autowrite`（特定コマンド時の自動保存）
+- `confirm`（確認ダイアログ相当の確認フロー）
+- `grepprg`（外部 grep コマンド）
+- `grepformat`（grep 結果のパース形式）
+- `makeprg`（外部 build コマンド）
+- `errorformat`（quickfix のパース形式）
+- `formatoptions`（自動整形/コメント継続の挙動）
+- `textwidth`（自動改行幅）
+- `spell`（スペルチェック ON/OFF）
+- `spelllang`（スペルチェック言語）
+- `termguicolors`（true color 前提の配色）
+
 ## メモ（方針）
 
 - Vim 完全互換の CLI を目指すより、よく使うフラグから互換寄りに実装する
 - Ruby DSL 前提なので、Vim の `-u NONE` / `-U NONE` は RuVim 向けに意味を再定義してよい
-

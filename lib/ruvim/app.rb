@@ -10,6 +10,8 @@ module RuVim
       @signal_r, @signal_w = IO.pipe
       @cmdline_history = Hash.new { |h, k| h[k] = [] }
       @cmdline_history_index = nil
+      @pending_key_deadline = nil
+      @pending_ambiguous_invocation = nil
       @needs_redraw = true
       @clean_mode = clean
       @skip_user_config = skip_user_config
@@ -71,8 +73,15 @@ module RuVim
           end
           break unless @editor.running?
 
-          key = @input.read_key(wakeup_ios: [@signal_r])
-          next if key.nil?
+          key = @input.read_key(
+            wakeup_ios: [@signal_r],
+            timeout: pending_key_timeout_seconds,
+            esc_timeout: escape_sequence_timeout_seconds
+          )
+          if key.nil?
+            handle_pending_key_timeout if pending_key_timeout_expired?
+            next
+          end
 
           handle_key(key)
           @needs_redraw = true
@@ -88,6 +97,47 @@ module RuVim
     end
 
     private
+
+    def pending_key_timeout_seconds
+      return nil unless @pending_key_deadline
+
+      [@pending_key_deadline - monotonic_now, 0.0].max
+    end
+
+    def pending_key_timeout_expired?
+      @pending_key_deadline && monotonic_now >= @pending_key_deadline
+    end
+
+    def escape_sequence_timeout_seconds
+      ms = @editor.global_options["ttimeoutlen"].to_i
+      ms = 50 if ms <= 0
+      ms / 1000.0
+    rescue StandardError
+      0.005
+    end
+
+    def arm_pending_key_timeout
+      ms = @editor.global_options["timeoutlen"].to_i
+      ms = 1000 if ms <= 0
+      @pending_key_deadline = monotonic_now + (ms / 1000.0)
+    end
+
+    def clear_pending_key_timeout
+      @pending_key_deadline = nil
+      @pending_ambiguous_invocation = nil
+    end
+
+    def handle_pending_key_timeout
+      inv = @pending_ambiguous_invocation
+      clear_pending_key_timeout
+      if inv
+        @dispatcher.dispatch(@editor, dup_invocation(inv))
+      elsif @pending_keys && !@pending_keys.empty?
+        @editor.echo_error("Unknown key: #{@pending_keys.join}")
+      end
+      @editor.pending_count = nil
+      @pending_keys = []
+    end
 
     def register_builtins!
       cmd = CommandRegistry.instance
@@ -399,8 +449,17 @@ module RuVim
       match = @keymaps.resolve_with_context(:normal, @pending_keys, editor: @editor)
       case match.status
       when :pending, :ambiguous
+        if match.status == :ambiguous && match.invocation
+          inv = dup_invocation(match.invocation)
+          inv.count = @editor.pending_count || 1
+          @pending_ambiguous_invocation = inv
+        else
+          @pending_ambiguous_invocation = nil
+        end
+        arm_pending_key_timeout
         return
       when :match
+        clear_pending_key_timeout
         matched_keys = @pending_keys.dup
         repeat_count = @editor.pending_count || 1
         invocation = dup_invocation(match.invocation)
@@ -408,6 +467,7 @@ module RuVim
         @dispatcher.dispatch(@editor, invocation)
         maybe_record_simple_dot_change(invocation, matched_keys, repeat_count)
       else
+        clear_pending_key_timeout
         @editor.echo_error("Unknown key: #{@pending_keys.join}")
       end
       @editor.pending_count = nil
@@ -433,11 +493,11 @@ module RuVim
         insert_complete(-1)
       when :ctrl_i
         clear_insert_completion
-        @editor.current_buffer.insert_char(@editor.current_window.cursor_y, @editor.current_window.cursor_x, "\t")
-        @editor.current_window.cursor_x += 1
+        insert_tab_in_insert_mode
       when :enter
         clear_insert_completion
         y, x = @editor.current_buffer.insert_newline(@editor.current_window.cursor_y, @editor.current_window.cursor_x)
+        x = apply_insert_autoindent(y, x, previous_row: y - 1)
         @editor.current_window.cursor_y = y
         @editor.current_window.cursor_x = x
       when :left
@@ -461,6 +521,7 @@ module RuVim
         clear_insert_completion
         @editor.current_buffer.insert_char(@editor.current_window.cursor_y, @editor.current_window.cursor_x, key)
         @editor.current_window.cursor_x += 1
+        maybe_showmatch_after_insert(key)
       end
     end
 
@@ -551,6 +612,7 @@ module RuVim
       if token == "g"
         @pending_keys ||= []
         @pending_keys << token
+        arm_pending_key_timeout
         return
       end
 
@@ -559,9 +621,11 @@ module RuVim
       end
 
       if id
+        clear_pending_key_timeout
         count = @editor.pending_count || 1
         @dispatcher.dispatch(@editor, CommandInvocation.new(id:, count: count))
       else
+        clear_pending_key_timeout
         @editor.echo_error("Unknown visual key: #{token}")
       end
     ensure
@@ -682,17 +746,21 @@ module RuVim
         finish_insert_change_group
         finish_dot_change_capture
         clear_insert_completion
+        clear_pending_key_timeout
         @editor.enter_normal_mode
         @editor.echo("")
       when :command_line
+        clear_pending_key_timeout
         @editor.cancel_command_line
       when :visual_char, :visual_line, :visual_block
         @visual_pending = nil
         @register_pending = false
         @mark_pending = false
         @jump_pending = nil
+        clear_pending_key_timeout
         @editor.enter_normal_mode
       else
+        clear_pending_key_timeout
         @editor.pending_count = nil
         @pending_keys = []
         @operator_pending = nil
@@ -1219,6 +1287,61 @@ module RuVim
       @insert_completion = nil
     end
 
+    def insert_tab_in_insert_mode
+      buf = @editor.current_buffer
+      win = @editor.current_window
+      if @editor.effective_option("expandtab", window: win, buffer: buf)
+        width = @editor.effective_option("softtabstop", window: win, buffer: buf).to_i
+        width = @editor.effective_option("tabstop", window: win, buffer: buf).to_i if width <= 0
+        width = 2 if width <= 0
+        line = buf.line_at(win.cursor_y)
+        current_col = RuVim::TextMetrics.screen_col_for_char_index(line, win.cursor_x, tabstop: effective_tabstop(win, buf))
+        spaces = width - (current_col % width)
+        spaces = width if spaces <= 0
+        _y, x = buf.insert_text(win.cursor_y, win.cursor_x, " " * spaces)
+        win.cursor_x = x
+      else
+        buf.insert_char(win.cursor_y, win.cursor_x, "\t")
+        win.cursor_x += 1
+      end
+    end
+
+    def apply_insert_autoindent(row, x, previous_row:)
+      buf = @editor.current_buffer
+      win = @editor.current_window
+      return x unless @editor.effective_option("autoindent", window: win, buffer: buf)
+      return x if previous_row.negative?
+
+      prev = buf.line_at(previous_row)
+      indent = prev[/\A[ \t]*/].to_s
+      if @editor.effective_option("smartindent", window: win, buffer: buf)
+        trimmed = prev.rstrip
+        if trimmed.end_with?("{", "[", "(")
+          sw = @editor.effective_option("shiftwidth", window: win, buffer: buf).to_i
+          sw = effective_tabstop(win, buf) if sw <= 0
+          sw = 2 if sw <= 0
+          indent += " " * sw
+        end
+      end
+      return x if indent.empty?
+
+      _y, new_x = buf.insert_text(row, x, indent)
+      new_x
+    end
+
+    def maybe_showmatch_after_insert(key)
+      return unless [")", "]", "}"].include?(key)
+      return unless @editor.effective_option("showmatch")
+
+      # Minimal implementation: show a short message instead of a timed flash.
+      @editor.echo("match")
+    end
+
+    def effective_tabstop(window = @editor.current_window, buffer = @editor.current_buffer)
+      v = @editor.effective_option("tabstop", window:, buffer:).to_i
+      v.positive? ? v : 2
+    end
+
     def insert_complete(direction)
       state = ensure_insert_completion_state
       return unless state
@@ -1369,10 +1492,25 @@ module RuVim
       Dir.glob(pattern, File::FNM_DOTMATCH).sort.filter_map do |p|
         next if [".", ".."].include?(File.basename(p))
         next unless p.start_with?(input) || input.empty?
+        next if wildignore_path?(p)
         File.directory?(p) ? "#{p}/" : p
       end
     rescue StandardError
       []
+    end
+
+    def wildignore_path?(path)
+      spec = @editor.global_options["wildignore"].to_s
+      return false if spec.empty?
+
+      flags = @editor.global_options["wildignorecase"] ? File::FNM_CASEFOLD : 0
+      name = path.to_s
+      base = File.basename(name)
+      spec.split(",").map(&:strip).reject(&:empty?).any? do |pat|
+        File.fnmatch?(pat, name, flags) || File.fnmatch?(pat, base, flags)
+      end
+    rescue StandardError
+      false
     end
 
     def buffer_completion_candidates(prefix)

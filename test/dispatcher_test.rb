@@ -121,4 +121,31 @@ class DispatcherTest < Minitest::Test
     @dispatcher.dispatch_ex(@editor, "lnext")
     assert_equal 1, @editor.current_window.cursor_y
   end
+
+  def test_hidden_option_allows_buffer_switch_without_bang
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["x"])
+    @editor.current_buffer.modified = true
+    other = @editor.add_empty_buffer(path: "other.txt")
+    @editor.set_option("hidden", true, scope: :global)
+
+    @dispatcher.dispatch_ex(@editor, "buffer #{other.id}")
+
+    assert_equal other.id, @editor.current_buffer.id
+    refute @editor.message_error?
+  end
+
+  def test_splitbelow_and_splitright_change_insertion_side
+    @editor.set_option("splitbelow", false, scope: :global)
+    first = @editor.current_window_id
+    @dispatcher.dispatch_ex(@editor, "split")
+    assert_equal @editor.window_order[0], @editor.current_window_id
+    assert_equal first, @editor.window_order[1]
+
+    @editor.set_option("splitright", false, scope: :global)
+    @editor.current_window_id = first
+    @dispatcher.dispatch_ex(@editor, "vsplit")
+    idx = @editor.window_order.index(@editor.current_window_id)
+    assert_equal 1, idx
+  end
 end
