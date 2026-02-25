@@ -165,6 +165,8 @@ module RuVim
       register_internal_unless(cmd, "cursor.down", call: :cursor_down, desc: "Move cursor down")
       register_internal_unless(cmd, "cursor.page_up", call: :cursor_page_up, desc: "Move one page up")
       register_internal_unless(cmd, "cursor.page_down", call: :cursor_page_down, desc: "Move one page down")
+      register_internal_unless(cmd, "window.scroll_up", call: :window_scroll_up, desc: "Scroll window up")
+      register_internal_unless(cmd, "window.scroll_down", call: :window_scroll_down, desc: "Scroll window down")
       register_internal_unless(cmd, "cursor.line_start", call: :cursor_line_start, desc: "Move to column 1")
       register_internal_unless(cmd, "cursor.line_end", call: :cursor_line_end, desc: "Move to end of line")
       register_internal_unless(cmd, "cursor.first_nonblank", call: :cursor_first_nonblank, desc: "Move to first nonblank")
@@ -349,6 +351,16 @@ module RuVim
 
       if paging_key?(key)
         invoke_page_key(key)
+        return
+      end
+
+      if ctrl_paging_key?(key)
+        invoke_ctrl_paging_key(key)
+        return
+      end
+
+      if ctrl_scroll_line_key?(key)
+        invoke_ctrl_scroll_line_key(key)
         return
       end
 
@@ -720,6 +732,14 @@ module RuVim
       %i[pageup pagedown].include?(key)
     end
 
+    def ctrl_paging_key?(key)
+      %i[ctrl_d ctrl_u ctrl_f ctrl_b].include?(key)
+    end
+
+    def ctrl_scroll_line_key?(key)
+      %i[ctrl_e ctrl_y].include?(key)
+    end
+
     def invoke_arrow(key)
       id = {
         left: "cursor.left",
@@ -745,9 +765,56 @@ module RuVim
       @pending_keys = []
     end
 
+    def invoke_ctrl_paging_key(key)
+      case key
+      when :ctrl_d
+        id = "cursor.page_down"
+        page_lines = current_half_page_step_lines
+      when :ctrl_u
+        id = "cursor.page_up"
+        page_lines = current_half_page_step_lines
+      when :ctrl_f
+        id = "cursor.page_down"
+        page_lines = current_page_step_lines
+      when :ctrl_b
+        id = "cursor.page_up"
+        page_lines = current_page_step_lines
+      else
+        return
+      end
+
+      inv = CommandInvocation.new(
+        id: id,
+        count: @editor.pending_count || 1,
+        kwargs: { page_lines: page_lines }
+      )
+      @dispatcher.dispatch(@editor, inv)
+      @editor.pending_count = nil
+      @pending_keys = []
+    end
+
+    def invoke_ctrl_scroll_line_key(key)
+      id = (key == :ctrl_y ? "window.scroll_up" : "window.scroll_down")
+      inv = CommandInvocation.new(
+        id: id,
+        count: @editor.pending_count || 1,
+        kwargs: { lines: 1, view_height: current_page_step_lines + 1 }
+      )
+      @dispatcher.dispatch(@editor, inv)
+      @editor.pending_count = nil
+      @pending_keys = []
+    end
+
     def current_page_step_lines
       height = @screen.current_window_view_height(@editor)
       [height - 1, 1].max
+    rescue StandardError
+      1
+    end
+
+    def current_half_page_step_lines
+      height = @screen.current_window_view_height(@editor)
+      [height / 2, 1].max
     rescue StandardError
       1
     end
@@ -768,10 +835,17 @@ module RuVim
       when String then key
       when :escape then "\e"
       when :ctrl_r then "<C-r>"
+      when :ctrl_d then "<C-d>"
+      when :ctrl_u then "<C-u>"
+      when :ctrl_f then "<C-f>"
+      when :ctrl_b then "<C-b>"
+      when :ctrl_e then "<C-e>"
+      when :ctrl_y then "<C-y>"
       when :ctrl_v then "<C-v>"
       when :ctrl_i then "<C-i>"
       when :ctrl_o then "<C-o>"
       when :ctrl_w then "<C-w>"
+      when :ctrl_l then "<C-l>"
       when :home then "<Home>"
       when :end then "<End>"
       when :pageup then "<PageUp>"

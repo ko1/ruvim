@@ -71,6 +71,47 @@ class AppMotionTest < Minitest::Test
     assert_equal 8, @editor.current_window.cursor_y
   end
 
+  def test_ctrl_d_u_and_ctrl_f_b_move_by_half_and_full_page
+    b = @editor.current_buffer
+    b.replace_all_lines!((1..40).map { |i| "line#{i}" })
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    screen = @app.instance_variable_get(:@screen)
+    screen.define_singleton_method(:current_window_view_height) { |_editor| 10 }
+
+    @app.send(:handle_normal_key, :ctrl_d)
+    assert_equal 5, @editor.current_window.cursor_y
+
+    @app.send(:handle_normal_key, :ctrl_u)
+    assert_equal 0, @editor.current_window.cursor_y
+
+    @app.send(:handle_normal_key, :ctrl_f)
+    assert_equal 9, @editor.current_window.cursor_y
+
+    @app.send(:handle_normal_key, :ctrl_b)
+    assert_equal 0, @editor.current_window.cursor_y
+  end
+
+  def test_ctrl_e_and_ctrl_y_scroll_window_without_primary_cursor_motion
+    b = @editor.current_buffer
+    b.replace_all_lines!((1..40).map { |i| "line#{i}" })
+    @editor.current_window.cursor_y = 6
+    @editor.current_window.cursor_x = 0
+    @editor.current_window.row_offset = 5
+
+    screen = @app.instance_variable_get(:@screen)
+    screen.define_singleton_method(:current_window_view_height) { |_editor| 10 }
+
+    @app.send(:handle_normal_key, :ctrl_e)
+    assert_equal 6, @editor.current_window.row_offset
+    assert_equal 6, @editor.current_window.cursor_y
+
+    @app.send(:handle_normal_key, :ctrl_y)
+    assert_equal 5, @editor.current_window.row_offset
+    assert_equal 6, @editor.current_window.cursor_y
+  end
+
   def test_virtualedit_onemore_allows_right_move_past_eol_once
     b = @editor.current_buffer
     b.replace_all_lines!(["abc"])

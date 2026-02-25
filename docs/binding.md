@@ -61,6 +61,9 @@
 - `.` : 直前変更の repeat（現状: `x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
 - `Ctrl-o` : jumplist の古い位置へ
 - `Ctrl-i` : jumplist の新しい位置へ（端末では Tab と同じコード）
+- `Ctrl-d` / `Ctrl-u` : 半ページ下/上へ移動（概ね表示高さの半分）
+- `Ctrl-f` / `Ctrl-b` : 1ページ下/上へ移動（`PageDown` / `PageUp` 相当）
+- `Ctrl-e` / `Ctrl-y` : カーソル位置をなるべく保ったまま画面を1行下/上へスクロール（最小実装）
 - `q{reg}` : macro 記録開始/終了（再度 `q` で停止）
 - `@{reg}` / `@@` : macro 再生 / 直前 macro 再生
 - `n` : 直前検索を次へ

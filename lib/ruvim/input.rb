@@ -15,14 +15,21 @@ module RuVim
       return nil unless ready.include?(@stdin)
 
       ch = @stdin.getch
+      return :ctrl_b if ch == "\u0002"
       return :ctrl_c if ch == "\u0003"
+      return :ctrl_d if ch == "\u0004"
+      return :ctrl_e if ch == "\u0005"
+      return :ctrl_f if ch == "\u0006"
       return :ctrl_i if ch == "\u0009"
+      return :ctrl_l if ch == "\u000c"
       return :ctrl_n if ch == "\u000e"
       return :ctrl_o if ch == "\u000f"
       return :ctrl_p if ch == "\u0010"
       return :ctrl_r if ch == "\u0012"
+      return :ctrl_u if ch == "\u0015"
       return :ctrl_v if ch == "\u0016"
       return :ctrl_w if ch == "\u0017"
+      return :ctrl_y if ch == "\u0019"
       return :enter if ch == "\r" || ch == "\n"
       return :backspace if ch == "\u007f" || ch == "\b"
 

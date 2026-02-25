@@ -37,6 +37,14 @@ module RuVim
       ctx.window.move_down(ctx.buffer, page_lines * [count.to_i, 1].max)
     end
 
+    def window_scroll_up(ctx, kwargs:, count:, **)
+      scroll_window_vertically(ctx, direction: :up, lines: kwargs[:lines] || kwargs["lines"], view_height: kwargs[:view_height] || kwargs["view_height"], count:)
+    end
+
+    def window_scroll_down(ctx, kwargs:, count:, **)
+      scroll_window_vertically(ctx, direction: :down, lines: kwargs[:lines] || kwargs["lines"], view_height: kwargs[:view_height] || kwargs["view_height"], count:)
+    end
+
     def cursor_line_start(ctx, **)
       ctx.window.cursor_x = 0
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -1676,6 +1684,33 @@ module RuVim
       return :onemore if toks.include?("onemore")
 
       nil
+    end
+
+    def scroll_window_vertically(ctx, direction:, lines:, view_height:, count:)
+      step = [[lines.to_i, 1].max * [count.to_i, 1].max, 1].max
+      height = [view_height.to_i, 1].max
+      max_row_offset = [ctx.buffer.line_count - height, 0].max
+
+      before = ctx.window.row_offset.to_i
+      after =
+        if direction == :up
+          [before - step, 0].max
+        else
+          [before + step, max_row_offset].min
+        end
+      return if after == before
+
+      ctx.window.row_offset = after
+
+      # Vim-like behavior: scroll viewport first, then keep cursor inside it.
+      top = after
+      bottom = after + height - 1
+      if ctx.window.cursor_y < top
+        ctx.window.cursor_y = top
+      elsif ctx.window.cursor_y > bottom
+        ctx.window.cursor_y = bottom
+      end
+      ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
     def cursor_to_offset(buffer, row, col)
