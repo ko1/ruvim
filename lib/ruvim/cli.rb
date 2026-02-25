@@ -7,6 +7,7 @@ module RuVim
       :skip_user_config,
       :config_path,
       :readonly,
+      :no_swap,
       :show_help,
       :show_version,
       keyword_init: true
@@ -62,6 +63,7 @@ module RuVim
         skip_user_config: false,
         config_path: nil,
         readonly: false,
+        no_swap: false,
         show_help: false,
         show_version: false
       )
@@ -87,6 +89,8 @@ module RuVim
           opts.clean = true
         when "-R"
           opts.readonly = true
+        when "-n"
+          opts.no_swap = true
         when "-u"
           i += 1
           raise ParseError, "-u requires an argument" if i >= args.length
@@ -143,6 +147,7 @@ module RuVim
           -v, --version     Show version
           --clean           Start without user config and ftplugin
           -R                Open file readonly (disallow :w on current buffer)
+          -n                No-op (reserved for swap/persistent features compatibility)
           -u {path|NONE}    Use config file path, or disable user config with NONE
           -c {cmd}          Execute Ex command after startup
           +{cmd}            Execute Ex command after startup

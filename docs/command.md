@@ -5,6 +5,7 @@
 - `--help`, `--version`
 - `--clean`
 - `-R`
+- `-n`（現状 no-op）
 - `-u {path|NONE}`
 - `-c {cmd}`
 - `+{cmd}`, `+{line}`, `+`

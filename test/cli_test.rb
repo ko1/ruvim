@@ -36,6 +36,13 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_n_option_as_accepted_no_op
+    opts = RuVim::CLI.parse(["-n", "file.txt"])
+
+    assert_equal true, opts.no_swap
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_help_and_version_return_without_starting_ui
     out = StringIO.new
     err = StringIO.new
@@ -51,6 +58,7 @@ class CLITest < Minitest::Test
     assert_equal 0, code
     assert_match(/Usage: ruvim/, out.string)
     assert_match(/-R\s+Open file readonly/, out.string)
+    assert_match(/-n\s+No-op/, out.string)
     assert_equal "", err.string
   end
 

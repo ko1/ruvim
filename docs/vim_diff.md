@@ -85,6 +85,7 @@
   - `--help`, `--version`
   - `--clean`
   - `-u {path|NONE}`
+  - `-R`, `-n`（`-n` は現状 no-op）
   - `-c {cmd}`
   - `+{cmd}`, `+{line}`, `+`
 - 未実装（Vim で定番だが RuVim は未対応）
