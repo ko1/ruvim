@@ -15,12 +15,5 @@ module RuVim
       editor.current_buffer
     end
 
-    def count
-      invocation&.count || 1
-    end
-
-    def bang?
-      invocation&.bang || false
-    end
   end
 end

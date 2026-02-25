@@ -504,19 +504,9 @@ ctx.window.clamp_to_buffer(ctx.buffer)
 - 型: `RuVim::CommandInvocation` または `nil`
 - 意味:
   - 現在実行中のコマンド呼び出し情報
-- 直接使わなくても、通常は `ctx.count` / `ctx.bang?` で足ります
-
-### `ctx.count`
-
-- 型: `Integer`
-- 意味:
-  - Normal mode の count（なければ `1`）
-
-### `ctx.bang?`
-
-- 型: `true` / `false`
-- 意味:
-  - Ex コマンドが `!` 付きで呼ばれたかどうか
+- 主な参照:
+  - `ctx.invocation&.count`
+  - `ctx.invocation&.bang`
 
 ## block で使う引数（`argv`, `kwargs`, `bang`, `count`）
 
@@ -533,9 +523,9 @@ end
 - `kwargs`
   - keymap / 内部呼び出しの named args（Hash）
 - `bang`
-  - `ctx.bang?` と同じ意味
+  - Ex コマンドが `!` 付きで呼ばれたかどうか
 - `count`
-  - `ctx.count` と同じ意味
+  - Normal mode の count（なければ `1`）
 
 ## どこまで plugin と呼べる？
 
