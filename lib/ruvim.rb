@@ -8,6 +8,7 @@ end
 require_relative "ruvim/version"
 require_relative "ruvim/command_invocation"
 require_relative "ruvim/display_width"
+require_relative "ruvim/keyword_chars"
 require_relative "ruvim/text_metrics"
 require_relative "ruvim/clipboard"
 require_relative "ruvim/highlighter"

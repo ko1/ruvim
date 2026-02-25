@@ -225,7 +225,7 @@ module RuVim
       leading_prefix_width = RuVim::DisplayWidth.display_width(leading_display_prefix.to_s, tabstop:)
       display_pos = leading_prefix_width
 
-      cells.each_with_index do |cell, idx|
+      cells.each do |cell|
         ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
         buffer_col = cell.source_col
         selected = selected_in_visual?(visual, buffer_row, buffer_col)
@@ -418,12 +418,16 @@ module RuVim
     end
 
     def parse_listchars(raw)
-      cfg = { tab_head: ">", tab_fill: "-", trail: "-", nbsp: "+" }
-      raw.to_s.split(",").each do |entry|
-        key, val = entry.split(":", 2)
-        next unless key && val
+      raw_key = raw.to_s
+      @listchars_cache ||= {}
+      return @listchars_cache[raw_key] if @listchars_cache.key?(raw_key)
 
-        case key.strip
+      cfg = { tab_head: ">", tab_fill: "-", trail: "-", nbsp: "+" }
+      raw_key.split(",").each do |entry|
+        entry_key, val = entry.split(":", 2)
+        next unless entry_key && val
+
+        case entry_key.strip
         when "tab"
           chars = val.to_s.each_char.to_a
           cfg[:tab_head] = chars[0] if chars[0]
@@ -436,7 +440,7 @@ module RuVim
           cfg[:nbsp] = ch if ch
         end
       end
-      cfg
+      @listchars_cache[raw_key] = cfg.freeze
     rescue StandardError
       { tab_head: ">", tab_fill: "-", trail: "-", nbsp: "+" }
     end
@@ -512,6 +516,9 @@ module RuVim
       raw = editor.effective_option("colorcolumn", window:, buffer:).to_s
       return {} if raw.empty?
 
+      @colorcolumn_cache ||= {}
+      return @colorcolumn_cache[raw] if @colorcolumn_cache.key?(raw)
+
       cols = {}
       raw.split(",").each do |tok|
         t = tok.strip
@@ -521,7 +528,7 @@ module RuVim
         next if n <= 0
         cols[n - 1] = true
       end
-      cols
+      @colorcolumn_cache[raw] = cols.freeze
     rescue StandardError
       {}
     end

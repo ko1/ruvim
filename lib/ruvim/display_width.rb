@@ -11,6 +11,25 @@ module RuVim
       end
 
       code = ch.ord
+      return cached_codepoint_width(code) if codepoint_cacheable?(code)
+
+      uncached_codepoint_width(code)
+    end
+
+    def codepoint_cacheable?(code)
+      !code.nil? && !code.zero?
+    end
+
+    def cached_codepoint_width(code)
+      aw = ambiguous_width
+      @codepoint_width_cache ||= {}
+      key = [code, aw]
+      return @codepoint_width_cache[key] if @codepoint_width_cache.key?(key)
+
+      @codepoint_width_cache[key] = uncached_codepoint_width(code)
+    end
+
+    def uncached_codepoint_width(code)
       return 0 if code.zero?
       return 0 if combining_mark?(code)
       return 0 if zero_width_codepoint?(code)
@@ -102,9 +121,13 @@ module RuVim
 
     def ambiguous_width
       env = ::ENV["RUVIM_AMBIGUOUS_WIDTH"]
-      return 2 if env == "2"
+      if !defined?(@ambiguous_width_cached) || @ambiguous_width_env != env
+        @ambiguous_width_env = env
+        @ambiguous_width_cached = (env == "2" ? 2 : 1)
+        @codepoint_width_cache = {}
+      end
 
-      1
+      @ambiguous_width_cached
     end
   end
 end

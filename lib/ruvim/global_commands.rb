@@ -1647,25 +1647,7 @@ module RuVim
         else
           buf&.options&.fetch("iskeyword", nil).to_s
         end
-      return /[[:alnum:]_]/ if raw.empty?
-
-      extra = []
-      raw.split(",").each do |tok|
-        t = tok.strip
-        next if t.empty? || t == "@"
-
-        if t.length == 1
-          extra << Regexp.escape(t)
-        elsif t.match?(/\A\d+-\d+\z/)
-          a, b = t.split("-", 2).map(&:to_i)
-          lo, hi = [a, b].minmax
-          next if lo < 0 || hi > 255
-          extra << "#{Regexp.escape(lo.chr)}-#{Regexp.escape(hi.chr)}"
-        end
-      end
-      /[[:alnum:]_#{extra.join}]/
-    rescue RegexpError
-      /[[:alnum:]_]/
+      RuVim::KeywordChars.regex(raw)
     end
 
     def move_cursor_horizontally(ctx, direction:, count:)

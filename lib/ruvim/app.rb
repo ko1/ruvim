@@ -1912,24 +1912,9 @@ module RuVim
 
     def keyword_char_class(window, buffer)
       raw = @editor.effective_option("iskeyword", window:, buffer:).to_s
-      return "[:alnum:]_" if raw.empty?
-
-      extra = []
-      raw.split(",").each do |tok|
-        t = tok.strip
-        next if t.empty?
-        next if t == "@"
-
-        if t.length == 1
-          extra << Regexp.escape(t)
-        elsif t.match?(/\A\d+-\d+\z/)
-          a, b = t.split("-", 2).map(&:to_i)
-          lo, hi = [a, b].minmax
-          next if lo < 0 || hi > 255
-          extra << "#{Regexp.escape(lo.chr)}-#{Regexp.escape(hi.chr)}"
-        end
-      end
-      "[:alnum:]_#{extra.join}"
+      RuVim::KeywordChars.char_class(raw)
+    rescue StandardError
+      "[:alnum:]_"
     end
 
     def ex_completion_context(cmd)
