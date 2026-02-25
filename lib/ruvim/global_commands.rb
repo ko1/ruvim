@@ -40,12 +40,36 @@ module RuVim
       ctx.window.move_down(ctx.buffer, page_lines * [count.to_i, 1].max)
     end
 
+    def cursor_page_up_default(ctx, count:, bang:, **)
+      call(:cursor_page_up, ctx, count:, bang:, kwargs: { page_lines: current_page_step_lines(ctx) })
+    end
+
+    def cursor_page_down_default(ctx, count:, bang:, **)
+      call(:cursor_page_down, ctx, count:, bang:, kwargs: { page_lines: current_page_step_lines(ctx) })
+    end
+
+    def cursor_page_up_half(ctx, count:, bang:, **)
+      call(:cursor_page_up, ctx, count:, bang:, kwargs: { page_lines: current_half_page_step_lines(ctx) })
+    end
+
+    def cursor_page_down_half(ctx, count:, bang:, **)
+      call(:cursor_page_down, ctx, count:, bang:, kwargs: { page_lines: current_half_page_step_lines(ctx) })
+    end
+
     def window_scroll_up(ctx, kwargs:, count:, **)
       scroll_window_vertically(ctx, direction: :up, lines: kwargs[:lines] || kwargs["lines"], view_height: kwargs[:view_height] || kwargs["view_height"], count:)
     end
 
     def window_scroll_down(ctx, kwargs:, count:, **)
       scroll_window_vertically(ctx, direction: :down, lines: kwargs[:lines] || kwargs["lines"], view_height: kwargs[:view_height] || kwargs["view_height"], count:)
+    end
+
+    def window_scroll_up_line(ctx, count:, bang:, **)
+      call(:window_scroll_up, ctx, count:, bang:, kwargs: { lines: 1, view_height: current_view_height(ctx) + 1 })
+    end
+
+    def window_scroll_down_line(ctx, count:, bang:, **)
+      call(:window_scroll_down, ctx, count:, bang:, kwargs: { lines: 1, view_height: current_view_height(ctx) + 1 })
     end
 
     def cursor_line_start(ctx, **)
@@ -1778,6 +1802,21 @@ module RuVim
       return :onemore if toks.include?("onemore")
 
       nil
+    end
+
+    def current_view_height(ctx)
+      hint = ctx.editor.respond_to?(:current_window_view_height_hint) ? ctx.editor.current_window_view_height_hint : nil
+      [hint.to_i, 1].max
+    rescue StandardError
+      1
+    end
+
+    def current_page_step_lines(ctx)
+      [current_view_height(ctx) - 1, 1].max
+    end
+
+    def current_half_page_step_lines(ctx)
+      [current_view_height(ctx) / 2, 1].max
     end
 
     def scroll_window_vertically(ctx, direction:, lines:, view_height:, count:)

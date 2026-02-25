@@ -19,6 +19,9 @@ module RuVim
       text_cols = [text_cols, 1].max
 
       rects = window_rects(editor, text_rows:, text_cols:)
+      if (current_rect = rects[editor.current_window_id])
+        editor.current_window_view_height_hint = [current_rect[:height].to_i, 1].max
+      end
       editor.window_order.each do |win_id|
         win = editor.windows.fetch(win_id)
         buf = editor.buffers.fetch(win.buffer_id)
@@ -55,7 +58,9 @@ module RuVim
       text_rows = [text_rows, 1].max
       text_cols = [text_cols, 1].max
       rect = window_rects(editor, text_rows:, text_cols:)[editor.current_window_id]
-      [rect ? rect[:height].to_i : text_rows, 1].max
+      height = [rect ? rect[:height].to_i : text_rows, 1].max
+      editor.current_window_view_height_hint = height if editor.respond_to?(:current_window_view_height_hint=)
+      height
     rescue StandardError
       1
     end

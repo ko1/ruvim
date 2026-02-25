@@ -57,8 +57,7 @@ class AppMotionTest < Minitest::Test
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = 0
 
-    screen = @app.instance_variable_get(:@screen)
-    screen.define_singleton_method(:current_window_view_height) { |_editor| 5 }
+    @editor.current_window_view_height_hint = 5
 
     @app.send(:handle_normal_key, :pagedown)
     assert_equal 4, @editor.current_window.cursor_y
@@ -77,8 +76,7 @@ class AppMotionTest < Minitest::Test
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = 0
 
-    screen = @app.instance_variable_get(:@screen)
-    screen.define_singleton_method(:current_window_view_height) { |_editor| 10 }
+    @editor.current_window_view_height_hint = 10
 
     @app.send(:handle_normal_key, :ctrl_d)
     assert_equal 5, @editor.current_window.cursor_y
@@ -100,8 +98,7 @@ class AppMotionTest < Minitest::Test
     @editor.current_window.cursor_x = 0
     @editor.current_window.row_offset = 5
 
-    screen = @app.instance_variable_get(:@screen)
-    screen.define_singleton_method(:current_window_view_height) { |_editor| 10 }
+    @editor.current_window_view_height_hint = 10
 
     @app.send(:handle_normal_key, :ctrl_e)
     assert_equal 6, @editor.current_window.row_offset

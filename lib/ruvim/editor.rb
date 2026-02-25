@@ -53,7 +53,7 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint
 
     def initialize
       @buffers = {}
@@ -74,6 +74,7 @@ module RuVim
       @message_deadline = nil
       @pending_count = nil
       @restricted_mode = false
+      @current_window_view_height_hint = 1
       @running = true
       @global_options = default_global_options
       @command_line = CommandLine.new

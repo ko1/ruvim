@@ -167,6 +167,12 @@ module RuVim
       register_internal_unless(cmd, "cursor.page_down", call: :cursor_page_down, desc: "Move one page down")
       register_internal_unless(cmd, "window.scroll_up", call: :window_scroll_up, desc: "Scroll window up")
       register_internal_unless(cmd, "window.scroll_down", call: :window_scroll_down, desc: "Scroll window down")
+      register_internal_unless(cmd, "cursor.page_up.default", call: :cursor_page_up_default, desc: "Move one page up (view-sized)")
+      register_internal_unless(cmd, "cursor.page_down.default", call: :cursor_page_down_default, desc: "Move one page down (view-sized)")
+      register_internal_unless(cmd, "cursor.page_up.half", call: :cursor_page_up_half, desc: "Move half page up")
+      register_internal_unless(cmd, "cursor.page_down.half", call: :cursor_page_down_half, desc: "Move half page down")
+      register_internal_unless(cmd, "window.scroll_up.line", call: :window_scroll_up_line, desc: "Scroll window up one line")
+      register_internal_unless(cmd, "window.scroll_down.line", call: :window_scroll_down_line, desc: "Scroll window down one line")
       register_internal_unless(cmd, "cursor.line_start", call: :cursor_line_start, desc: "Move to column 1")
       register_internal_unless(cmd, "cursor.line_end", call: :cursor_line_end, desc: "Move to end of line")
       register_internal_unless(cmd, "cursor.first_nonblank", call: :cursor_first_nonblank, desc: "Move to first nonblank")
@@ -301,12 +307,12 @@ module RuVim
       @keymaps.bind(:normal, ["<C-r>"], "buffer.redo")
       @keymaps.bind(:normal, ["<C-o>"], "jump.older")
       @keymaps.bind(:normal, ["<C-i>"], "jump.newer")
-      @keymaps.bind(:normal, ["<C-d>"], "cursor.page_down")
-      @keymaps.bind(:normal, ["<C-u>"], "cursor.page_up")
-      @keymaps.bind(:normal, ["<C-f>"], "cursor.page_down")
-      @keymaps.bind(:normal, ["<C-b>"], "cursor.page_up")
-      @keymaps.bind(:normal, ["<C-e>"], "window.scroll_down")
-      @keymaps.bind(:normal, ["<C-y>"], "window.scroll_up")
+      @keymaps.bind(:normal, ["<C-d>"], "cursor.page_down.half")
+      @keymaps.bind(:normal, ["<C-u>"], "cursor.page_up.half")
+      @keymaps.bind(:normal, ["<C-f>"], "cursor.page_down.default")
+      @keymaps.bind(:normal, ["<C-b>"], "cursor.page_up.default")
+      @keymaps.bind(:normal, ["<C-e>"], "window.scroll_down.line")
+      @keymaps.bind(:normal, ["<C-y>"], "window.scroll_up.line")
       @keymaps.bind(:normal, "n", "search.next")
       @keymaps.bind(:normal, "N", "search.prev")
       @keymaps.bind(:normal, "*", "search.word_forward")
@@ -314,8 +320,8 @@ module RuVim
       @keymaps.bind(:normal, "g*", "search.word_forward_partial")
       @keymaps.bind(:normal, "g#", "search.word_backward_partial")
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
-      @keymaps.bind(:normal, ["<PageUp>"], "cursor.page_up")
-      @keymaps.bind(:normal, ["<PageDown>"], "cursor.page_down")
+      @keymaps.bind(:normal, ["<PageUp>"], "cursor.page_up.default")
+      @keymaps.bind(:normal, ["<PageDown>"], "cursor.page_down.default")
       @keymaps.bind(:normal, "\e", "ui.clear_message")
     end
 
@@ -469,7 +475,6 @@ module RuVim
         repeat_count = @editor.pending_count || 1
         invocation = dup_invocation(match.invocation)
         invocation.count = repeat_count
-        apply_runtime_normal_invocation_defaults(invocation)
         @dispatcher.dispatch(@editor, invocation)
         maybe_record_simple_dot_change(invocation, matched_keys, repeat_count)
       else
@@ -755,34 +760,6 @@ module RuVim
       @dispatcher.dispatch(@editor, inv)
       @editor.pending_count = nil
       @pending_keys = []
-    end
-
-    def apply_runtime_normal_invocation_defaults(invocation)
-      return invocation unless invocation
-
-      kwargs = invocation.kwargs || {}
-      raw_keys = Array(invocation.raw_keys)
-
-      case invocation.id
-      when "cursor.page_up", "cursor.page_down"
-        has_page_lines = kwargs.key?(:page_lines) || kwargs.key?("page_lines")
-        unless has_page_lines
-          half_page = raw_keys.include?("<C-d>") || raw_keys.include?("<C-u>")
-          page_lines = half_page ? current_half_page_step_lines : current_page_step_lines
-          invocation.kwargs = kwargs.merge(page_lines: page_lines)
-        end
-      when "window.scroll_up", "window.scroll_down"
-        has_lines = kwargs.key?(:lines) || kwargs.key?("lines")
-        has_view_height = kwargs.key?(:view_height) || kwargs.key?("view_height")
-        unless has_lines && has_view_height
-          merged = kwargs.dup
-          merged[:lines] = 1 unless has_lines
-          merged[:view_height] = current_page_step_lines + 1 unless has_view_height
-          invocation.kwargs = merged
-        end
-      end
-
-      invocation
     end
 
     def current_page_step_lines
