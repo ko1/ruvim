@@ -170,6 +170,9 @@ register prefix を付けると register を指定できます。
 
 - `"ayy` : register `a` に行 yank
 - `"Ayy` : register `a` に追記 yank
+- `"_dd` : black hole register に捨てる（unnamed/numbered を汚さない）
+- `yy` の結果は register `0` にも入る
+- `dd` / `d{motion}` の結果は register `1-9` に回転保存される（簡易）
 - `"+p` : system clipboard を paste（backend が使える環境）
 - `"*p` : system clipboard register `*` を paste（backend が使える環境）
 

@@ -247,7 +247,7 @@ module RuVim
         deleted << chunk.to_s
       end
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
+      store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
       ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
@@ -257,7 +257,7 @@ module RuVim
       deleted_lines = []
       count.times { deleted_lines << ctx.buffer.delete_line(ctx.window.cursor_y) }
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted_lines.join("\n") + "\n", type: :linewise)
+      store_delete_register(ctx, text: deleted_lines.join("\n") + "\n", type: :linewise)
       ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
@@ -398,7 +398,7 @@ module RuVim
     def yank_line(ctx, count:, **)
       start = ctx.window.cursor_y
       text = ctx.buffer.line_block_text(start, count)
-      store_register(ctx, text:, type: :linewise)
+      store_yank_register(ctx, text:, type: :linewise)
       ctx.editor.echo("#{count} line(s) yanked")
     end
 
@@ -411,7 +411,7 @@ module RuVim
         target = advance_word_forward(ctx.buffer, y, x, count)
         target ||= { row: y, col: x }
         text = ctx.buffer.span_text(y, x, target[:row], target[:col])
-        store_register(ctx, text:, type: :charwise)
+        store_yank_register(ctx, text:, type: :charwise)
         ctx.editor.echo("yanked")
       when "iw"
         yank_text_object_word(ctx, around: false)
@@ -443,10 +443,10 @@ module RuVim
       if sel[:mode] == :linewise
         count = sel[:end_row] - sel[:start_row] + 1
         text = ctx.buffer.line_block_text(sel[:start_row], count)
-        store_register(ctx, text:, type: :linewise)
+        store_yank_register(ctx, text:, type: :linewise)
       else
         text = ctx.buffer.span_text(sel[:start_row], sel[:start_col], sel[:end_row], sel[:end_col])
-        store_register(ctx, text:, type: :charwise)
+        store_yank_register(ctx, text:, type: :charwise)
       end
       ctx.editor.enter_normal_mode
       ctx.editor.echo("yanked")
@@ -463,7 +463,7 @@ module RuVim
         ctx.buffer.begin_change_group
         count.times { ctx.buffer.delete_line(sel[:start_row]) }
         ctx.buffer.end_change_group
-        store_register(ctx, text:, type: :linewise)
+        store_delete_register(ctx, text:, type: :linewise)
         ctx.window.cursor_y = [sel[:start_row], ctx.buffer.line_count - 1].min
         ctx.window.cursor_x = 0
       else
@@ -471,7 +471,7 @@ module RuVim
         ctx.buffer.begin_change_group
         ctx.buffer.delete_span(sel[:start_row], sel[:start_col], sel[:end_row], sel[:end_col])
         ctx.buffer.end_change_group
-        store_register(ctx, text:, type: :charwise)
+        store_delete_register(ctx, text:, type: :charwise)
         ctx.window.cursor_y = sel[:start_row]
         ctx.window.cursor_x = sel[:start_col]
       end
@@ -829,7 +829,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(y, start_x, y, x)
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
+      store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
       ctx.window.cursor_x = start_x
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
@@ -848,7 +848,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(y, x, y, end_x)
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
+      store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
     end
@@ -859,7 +859,7 @@ module RuVim
       ctx.buffer.begin_change_group
       total.times { ctx.buffer.delete_line(ctx.window.cursor_y) }
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :linewise)
+      store_delete_register(ctx, text: deleted, type: :linewise)
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
     end
@@ -872,7 +872,7 @@ module RuVim
       ctx.buffer.begin_change_group
       total.times { ctx.buffer.delete_line(start) }
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :linewise)
+      store_delete_register(ctx, text: deleted, type: :linewise)
       ctx.window.cursor_y = start
       ctx.window.cursor_x = 0 if ctx.window.cursor_x > ctx.buffer.line_length(ctx.window.cursor_y)
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -889,7 +889,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(y, x, y, line_len)
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
+      store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
     end
@@ -904,7 +904,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(y, x, target[:row], target[:col])
       ctx.buffer.end_change_group
-      store_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
+      store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
     end
@@ -917,7 +917,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
       ctx.buffer.end_change_group
-      store_register(ctx, text:, type: :charwise) unless text.empty?
+      store_delete_register(ctx, text:, type: :charwise) unless text.empty?
       ctx.window.cursor_y = span[:start_row]
       ctx.window.cursor_x = span[:start_col]
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -932,7 +932,7 @@ module RuVim
       ctx.buffer.begin_change_group
       ctx.buffer.delete_span(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
       ctx.buffer.end_change_group
-      store_register(ctx, text:, type: :charwise) unless text.empty?
+      store_delete_register(ctx, text:, type: :charwise) unless text.empty?
       ctx.window.cursor_y = span[:start_row]
       ctx.window.cursor_x = span[:start_col]
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -944,7 +944,7 @@ module RuVim
       return false unless span
 
       text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
-      store_register(ctx, text:, type: :charwise) unless text.empty?
+      store_yank_register(ctx, text:, type: :charwise) unless text.empty?
       ctx.editor.echo("yanked")
       true
     end
@@ -954,7 +954,7 @@ module RuVim
       return false unless span
 
       text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
-      store_register(ctx, text:, type: :charwise) unless text.empty?
+      store_yank_register(ctx, text:, type: :charwise) unless text.empty?
       ctx.editor.echo("yanked")
       true
     end
@@ -1253,9 +1253,21 @@ module RuVim
       ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
-    def store_register(ctx, text:, type:)
+    def store_register(ctx, text:, type:, kind: :generic)
       name = ctx.editor.consume_active_register("\"")
-      ctx.editor.set_register(name, text:, type:)
+      if kind == :generic
+        ctx.editor.set_register(name, text:, type:)
+      else
+        ctx.editor.store_operator_register(name, text:, type:, kind:)
+      end
+    end
+
+    def store_delete_register(ctx, text:, type:)
+      store_register(ctx, text:, type:, kind: :delete)
+    end
+
+    def store_yank_register(ctx, text:, type:)
+      store_register(ctx, text:, type:, kind: :yank)
     end
 
     def record_jump(ctx)

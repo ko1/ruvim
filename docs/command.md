@@ -217,6 +217,9 @@
 ## レジスタ（現状）
 
 - unnamed register（`"`）、named register（`"a`..`"z`）、append（`"A`..`"Z`）
+- black hole register（`"_`）
+- yank register `0`
+- numbered delete registers `1-9`（簡易回転）
 - `"+`, `"*` は system clipboard register（利用可能環境のみ）
 - delete / yank で更新
 - `p`, `P` で paste（register prefix 対応）

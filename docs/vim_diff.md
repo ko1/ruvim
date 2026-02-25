@@ -19,7 +19,7 @@
 - tabpage は最小実装
   - `:tabnew`, `:tabnext`, `:tabprev` はある
   - Vim の高度な tab 操作/コマンド群は未実装
-- register は `unnamed` / `named` / `"+` / `"*` の基礎のみ
+- register は `unnamed` / `named` / `"_` / `0` / `1-9` / `"+` / `"*` の基礎を実装
 - option system は基礎のみ（`:set`, `:setlocal`, `:setglobal`, `number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype`）
 - filetype 検出 / ftplugin は基礎のみ（拡張子中心の簡易判定）
 - Ex コマンドは一部のみ
@@ -48,8 +48,9 @@
 ## レジスタ / yank / paste の違い
 
 - unnamed register（`"`）と named register（`"a`, `"A` append）を実装
+- black hole（`"_`）、yank `0`、numbered delete `1-9`（簡易）を実装
 - `"+`, `"*` は環境依存の system clipboard と連携（`pbcopy/pbpaste`, `wl-copy/wl-paste`, `xclip`, `xsel` のいずれか）
-- black hole register など Vim の全 register 種別は未実装
+- small delete register `-` など Vim の全 register 種別は未実装
 - paste の挙動は基本的な `charwise` / `linewise` 対応まで
 - Vim の細かいカーソル位置ルールとは差がある可能性がある
 

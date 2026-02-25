@@ -419,6 +419,9 @@ Vim 完全互換ではなく、まずは扱いやすい粒度を優先した仕�
 - unnamed register (`"`) を実装
 - named register（`"a`..`"z`）を実装
 - append register（`"A`..`"Z`）を実装（小文字 register へ追記）
+- black hole register（`"_`）を実装
+- yank register `0` を実装（yank 操作で更新）
+- numbered delete register `1-9` を簡易実装（delete/change 操作で回転）
 - `"+`, `"*` は system clipboard register として扱う（利用可能 backend がある場合）
 - delete / yank 操作で指定 register と unnamed register を更新
 - `p`, `P` は指定 register（なければ unnamed）を paste

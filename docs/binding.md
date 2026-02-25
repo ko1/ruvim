@@ -38,7 +38,7 @@
 - `yi"` / `ya"` : quote text object yank（簡易）
 - `yi)` / `ya)` : paren text object yank（簡易）
 - `p` / `P` : paste
-- `"a`, `"A`, `"+`, `"*` + operator/paste : register 指定
+- `"a`, `"A`, `"_`, `"+`, `"*` + operator/paste : register 指定
 - `m{a-zA-Z}` : mark を設定（小文字 local / 大文字 global）
 - `'{mark}` / `` `{mark} `` : mark へ jump（行頭寄せ / 正確位置）
 - `''` / `` `` `` : jumplist で前の位置へ jump（行頭寄せ / 正確位置）

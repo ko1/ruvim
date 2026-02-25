@@ -189,10 +189,30 @@ module RuVim
 
     def set_register(name = "\"", text:, type: :charwise)
       key = name.to_s
+      return { text: text.to_s, type: type.to_sym } if key == "_"
+
       payload = write_register_payload(key, text: text.to_s, type: type.to_sym)
       write_clipboard_register(key, payload)
       @registers["\""] = payload unless key == "\""
       payload
+    end
+
+    def store_operator_register(name = "\"", text:, type:, kind:)
+      key = (name || "\"").to_s
+      payload = { text: text.to_s, type: type.to_sym }
+      return payload if key == "_"
+
+      written = set_register(key, text: payload[:text], type: payload[:type])
+      op_payload = dup_register_payload(written)
+
+      case kind.to_sym
+      when :yank
+        @registers["0"] = dup_register_payload(op_payload)
+      when :delete, :change
+        rotate_delete_registers!(op_payload)
+      end
+
+      written
     end
 
     def get_register(name = "\"")
@@ -692,6 +712,24 @@ module RuVim
         @registers[key.downcase] = payload
       end
       payload
+    end
+
+    def rotate_delete_registers!(payload)
+      9.downto(2) do |i|
+        prev = @registers[(i - 1).to_s]
+        if prev
+          @registers[i.to_s] = dup_register_payload(prev)
+        else
+          @registers.delete(i.to_s)
+        end
+      end
+      @registers["1"] = dup_register_payload(payload)
+    end
+
+    def dup_register_payload(payload)
+      return nil unless payload
+
+      { text: payload[:text].to_s.dup, type: payload[:type].to_sym }
     end
 
     def assign_detected_filetype(buffer)
