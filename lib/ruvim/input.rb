@@ -43,22 +43,26 @@ module RuVim
 
     def read_escape_sequence(timeout: nil)
       extra = +""
+      recognized = {
+        "[A" => :up,
+        "[B" => :down,
+        "[C" => :right,
+        "[D" => :left,
+        "[5~" => :pageup,
+        "[6~" => :pagedown
+      }
       wait = timeout.nil? ? 0.005 : [timeout.to_f, 0.0].max
       begin
         while IO.select([@stdin], nil, nil, wait)
           extra << @stdin.read_nonblock(1)
+          key = recognized[extra]
+          return key if key
         end
       rescue IO::WaitReadable, EOFError
       end
 
       case extra
       when "" then :escape
-      when "[A" then :up
-      when "[B" then :down
-      when "[C" then :right
-      when "[D" then :left
-      when "[5~" then :pageup
-      when "[6~" then :pagedown
       else
         [:escape_sequence, extra]
       end

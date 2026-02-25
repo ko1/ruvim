@@ -30,6 +30,21 @@ class InputScreenIntegrationTest < Minitest::Test
     end
   end
 
+  def with_fake_select
+    io_sc = IO.singleton_class
+    verbose, $VERBOSE = $VERBOSE, nil
+    io_sc.alias_method(:__orig_select_for_input_screen_test, :select)
+    io_sc.define_method(:select) do |readers, *_rest|
+      ready = Array(readers).select { |io| io.respond_to?(:ready?) && io.ready? }
+      ready.empty? ? nil : [ready, [], []]
+    end
+    yield
+  ensure
+    io_sc.alias_method(:select, :__orig_select_for_input_screen_test)
+    io_sc.remove_method(:__orig_select_for_input_screen_test) rescue nil
+    $VERBOSE = verbose
+  end
+
   def test_input_pagedown_to_app_and_screen_render
     app = RuVim::App.new(clean: true)
     editor = app.instance_variable_get(:@editor)
@@ -43,15 +58,7 @@ class InputScreenIntegrationTest < Minitest::Test
     stdin = FakeTTY.new("\e[6~")
     input = RuVim::Input.new(stdin: stdin)
 
-    io_sc = IO.singleton_class
-    verbose, $VERBOSE = $VERBOSE, nil
-    io_sc.alias_method(:__orig_select_for_input_screen_test, :select)
-    io_sc.define_method(:select) do |readers, *_rest|
-      ready = Array(readers).select { |io| io.respond_to?(:ready?) && io.ready? }
-      ready.empty? ? nil : [ready, [], []]
-    end
-
-    begin
+    with_fake_select do
       key = input.read_key(timeout: 0.2)
       assert_equal :pagedown, key
 
@@ -60,10 +67,16 @@ class InputScreenIntegrationTest < Minitest::Test
 
       assert_operator editor.current_window.cursor_y, :>, 0
       assert_includes term.writes.last, "line "
-    ensure
-      io_sc.alias_method(:select, :__orig_select_for_input_screen_test)
-      io_sc.remove_method(:__orig_select_for_input_screen_test) rescue nil
-      $VERBOSE = verbose
+    end
+  end
+
+  def test_input_keeps_repeated_arrow_sequences_separate
+    stdin = FakeTTY.new("\e[A\e[A")
+    input = RuVim::Input.new(stdin: stdin)
+
+    with_fake_select do
+      assert_equal :up, input.read_key(timeout: 0.2)
+      assert_equal :up, input.read_key(timeout: 0.2)
     end
   end
 end
