@@ -346,167 +346,105 @@ module RuVim
     end
 
     def handle_normal_key(key)
-      if key == :enter && handle_list_window_enter
-        return
+      case
+      when handle_normal_key_pre_dispatch(key)
+      when (token = normalize_key_token(key)).nil?
+      when handle_normal_pending_state(token)
+      when handle_normal_direct_token(token)
+      else
+        @pending_keys ||= []
+        @pending_keys << token
+        resolve_normal_key_sequence
       end
+    end
 
-      if arrow_key?(key)
+    def handle_normal_key_pre_dispatch(key)
+      case
+      when key == :enter && handle_list_window_enter
+      when arrow_key?(key)
         invoke_arrow(key)
-        return
-      end
-
-      if paging_key?(key)
+      when paging_key?(key)
         invoke_page_key(key)
-        return
-      end
-
-      if special_ctrl_key?(key) && try_special_ctrl_keymap_override(key)
-        return
-      end
-
-      if ctrl_paging_key?(key)
+      when special_ctrl_key?(key) && try_special_ctrl_keymap_override(key)
+      when ctrl_paging_key?(key)
         invoke_ctrl_paging_key(key)
-        return
-      end
-
-      if ctrl_scroll_line_key?(key)
+      when ctrl_scroll_line_key?(key)
         invoke_ctrl_scroll_line_key(key)
-        return
-      end
-
-      if digit_key?(key) && count_digit_allowed?(key)
+      when digit_key?(key) && count_digit_allowed?(key)
         @editor.pending_count = (@editor.pending_count.to_s + key).to_i
         @editor.echo(@editor.pending_count.to_s)
         @pending_keys = []
-        return
+      else
+        return false
       end
+      true
+    end
 
-      token = normalize_key_token(key)
-      return if token.nil?
-
-      if @pending_keys && !@pending_keys.empty?
+    def handle_normal_pending_state(token)
+      case
+      when @pending_keys && !@pending_keys.empty?
         @pending_keys << token
         resolve_normal_key_sequence
-        return
-      end
-
-      if @operator_pending
+      when @operator_pending
         handle_operator_pending_key(token)
-        return
-      end
-
-      if @register_pending
+      when @register_pending
         finish_register_pending(token)
-        return
-      end
-
-      if @mark_pending
+      when @mark_pending
         finish_mark_pending(token)
-        return
-      end
-
-      if @jump_pending
+      when @jump_pending
         finish_jump_pending(token)
-        return
-      end
-
-      if @macro_record_pending
+      when @macro_record_pending
         finish_macro_record_pending(token)
-        return
-      end
-
-      if @macro_play_pending
+      when @macro_play_pending
         finish_macro_play_pending(token)
-        return
-      end
-
-      if @replace_pending
+      when @replace_pending
         handle_replace_pending_key(token)
-        return
-      end
-
-      if @find_pending
+      when @find_pending
         finish_find_pending(token)
-        return
+      else
+        return false
       end
+      true
+    end
 
-      if token == "\""
+    def handle_normal_direct_token(token)
+      case token
+      when "\""
         start_register_pending
-        return
-      end
-
-      if token == "d"
+      when "d"
         start_operator_pending(:delete)
-        return
-      end
-
-      if token == "y"
+      when "y"
         start_operator_pending(:yank)
-        return
-      end
-
-      if token == "c"
+      when "c"
         start_operator_pending(:change)
-        return
-      end
-
-      if token == "r"
+      when "r"
         start_replace_pending
-        return
-      end
-
-      if %w[f F t T].include?(token)
+      when "f", "F", "t", "T"
         start_find_pending(token)
-        return
-      end
-
-      if token == ";"
+      when ";"
         repeat_last_find(reverse: false)
-        return
-      end
-
-      if token == ","
+      when ","
         repeat_last_find(reverse: true)
-        return
-      end
-
-      if token == "."
+      when "."
         repeat_last_change
-        return
-      end
-
-      if token == "q"
+      when "q"
         if @editor.macro_recording?
           stop_macro_recording
         else
           start_macro_record_pending
         end
-        return
-      end
-
-      if token == "@"
+      when "@"
         start_macro_play_pending
-        return
-      end
-
-      if token == "m"
+      when "m"
         start_mark_pending
-        return
-      end
-
-      if token == "'"
+      when "'"
         start_jump_pending(linewise: true, repeat_token: "'")
-        return
-      end
-
-      if token == "`"
+      when "`"
         start_jump_pending(linewise: false, repeat_token: "`")
-        return
+      else
+        return false
       end
-
-      @pending_keys ||= []
-      @pending_keys << token
-      resolve_normal_key_sequence
+      true
     end
 
     def resolve_normal_key_sequence
