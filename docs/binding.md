@@ -58,6 +58,7 @@
 - `Ctrl-w h/j/k/l` : window 間移動（split UI）
 - `u` : Undo
 - `Ctrl-r` : Redo
+- `.` : 直前変更の repeat（現状: `x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
 - `Ctrl-o` : jumplist の古い位置へ
 - `Ctrl-i` : jumplist の新しい位置へ（端末では Tab と同じコード）
 - `q{reg}` : macro 記録開始/終了（再度 `q` で停止）

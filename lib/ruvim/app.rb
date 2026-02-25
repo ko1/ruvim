@@ -305,6 +305,11 @@ module RuVim
         return
       end
 
+      if token == "."
+        repeat_last_change
+        return
+      end
+
       if token == "q"
         if @editor.macro_recording?
           stop_macro_recording
@@ -342,9 +347,12 @@ module RuVim
       when :pending, :ambiguous
         return
       when :match
+        matched_keys = @pending_keys.dup
+        repeat_count = @editor.pending_count || 1
         invocation = dup_invocation(match.invocation)
-        invocation.count = @editor.pending_count || 1
+        invocation.count = repeat_count
         @dispatcher.dispatch(@editor, invocation)
+        maybe_record_simple_dot_change(invocation, matched_keys, repeat_count)
       else
         @editor.echo("Unknown key: #{@pending_keys.join}")
       end
@@ -808,12 +816,14 @@ module RuVim
       if op[:name] == :delete && motion == "d"
         inv = CommandInvocation.new(id: "buffer.delete_line", count: op[:count])
         @dispatcher.dispatch(@editor, inv)
+        record_last_change_keys(count_prefixed_keys(op[:count], ["d", "d"]))
         return
       end
 
       if op[:name] == :delete
         inv = CommandInvocation.new(id: "buffer.delete_motion", count: op[:count], kwargs: { motion: motion })
         @dispatcher.dispatch(@editor, inv)
+        record_last_change_keys(count_prefixed_keys(op[:count], ["d", *motion.each_char.to_a]))
         return
       end
 
@@ -862,9 +872,45 @@ module RuVim
       if token.is_a?(String) && !token.empty?
         inv = CommandInvocation.new(id: "buffer.replace_char", argv: [token], count: pending[:count])
         @dispatcher.dispatch(@editor, inv)
+        record_last_change_keys(count_prefixed_keys(pending[:count], ["r", token]))
       else
         @editor.echo("r expects one character")
       end
+    end
+
+    def repeat_last_change
+      keys = @last_change_keys
+      if keys.nil? || keys.empty?
+        @editor.echo("No previous change")
+        return
+      end
+
+      @dot_replay_depth = (@dot_replay_depth || 0) + 1
+      keys.each { |k| handle_key(dup_macro_runtime_key(k)) }
+      @editor.echo(".")
+    ensure
+      @dot_replay_depth = [(@dot_replay_depth || 1) - 1, 0].max
+    end
+
+    def maybe_record_simple_dot_change(invocation, matched_keys, count)
+      return if (@dot_replay_depth || 0).positive?
+
+      case invocation.id
+      when "buffer.delete_char", "buffer.paste_after", "buffer.paste_before"
+        record_last_change_keys(count_prefixed_keys(count, matched_keys))
+      end
+    end
+
+    def record_last_change_keys(keys)
+      return if (@dot_replay_depth || 0).positive?
+
+      @last_change_keys = Array(keys).map { |k| dup_macro_runtime_key(k) }
+    end
+
+    def count_prefixed_keys(count, keys)
+      c = count.to_i
+      prefix = c > 1 ? c.to_s.each_char.to_a : []
+      prefix + Array(keys)
     end
 
     def start_find_pending(token)

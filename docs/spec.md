@@ -179,6 +179,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `V`: Visual (linewise)
 - `u`: Undo
 - `Ctrl-r`: Redo
+- `.`: 直前変更の repeat（初版。`x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
 - `n`: 直前検索を同方向に繰り返し
 - `N`: 直前検索を逆方向に繰り返し
 - `1..9` + 動作: count（例: `3j`, `2x`）

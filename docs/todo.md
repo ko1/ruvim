@@ -246,14 +246,14 @@
   - 行番号表示（`number`）ON/OFF での描画テスト
   - ANSI 色付き行（cursor/search/highlight）での折り返し回避テスト
 
-- `.`（直前変更の repeat）
+- [DONE] `.`（直前変更の repeat）
   - 効果: 高（Vim の編集テンポに直結）
   - コスト: 中
   - 依存:
     - 変更コマンドの「再実行可能表現」を記録する仕組み
     - operator / insert / replace の repeat 粒度整理
   - メモ:
-    - まず `x`, `dd`, `p`, `r`, `cw/cc` あたりから対応すると効果が高い
+    - 初版として `x`, `dd`, `d{motion}`, `p/P`, `r<char>` を対応（DONE）
 
 - [DONE] `f/F/t/T`, `;`, `,`（行内文字移動）
   - 効果: 高（移動効率が一気に上がる）

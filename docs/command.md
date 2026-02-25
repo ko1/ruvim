@@ -216,6 +216,15 @@
 - `buffer.visual_yank`
 - `buffer.visual_delete`
 
+## repeat（Normal mode）
+
+- `.` : 直前変更の repeat（初版）
+- 現状の対象:
+  - `x`
+  - `dd`, `d{motion}`
+  - `p`, `P`
+  - `r<char>`
+
 ## レジスタ（現状）
 
 - unnamed register（`"`）、named register（`"a`..`"z`）、append（`"A`..`"Z`）

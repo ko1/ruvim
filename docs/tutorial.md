@@ -71,6 +71,7 @@ ruby -Ilib exe/ruvim +10 file.txt
 - `c` + motion / `cc` change（削除して Insert mode）
 - `u` undo
 - `Ctrl-r` redo
+- `.` 直前変更の繰り返し（現状は `x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
 - `n` 検索を次へ
 - `N` 検索を前へ
 - `3j` など count 対応（一部コマンド）
