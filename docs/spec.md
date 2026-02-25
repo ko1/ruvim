@@ -180,7 +180,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `-d`
   - diff mode 互換 placeholder（現状は通常起動 + 未実装メッセージ表示）
 - `-q {errorfile}`
-  - quickfix 起動互換 placeholder（現状は未実装メッセージ表示）
+  - `-q {errorfile}` は quickfix 起動互換 placeholder（現状は未実装メッセージ表示）
+  - Ex の quickfix/location list は最小実装あり（`:vimgrep`, `:lvimgrep`, `:copen`, `:cnext` など）
 - `-S [session]`
   - session 起動互換 placeholder（現状は未実装メッセージ表示）
 - `-M`

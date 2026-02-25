@@ -93,4 +93,32 @@ class DispatcherTest < Minitest::Test
     assert_match(/Error:/, @editor.message)
     assert_equal true, @editor.message_error?
   end
+
+  def test_vimgrep_populates_quickfix_and_cnext_moves
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "bar foo", "baz"])
+    @dispatcher.dispatch_ex(@editor, "vimgrep /foo/")
+
+    assert_equal 2, @editor.quickfix_items.length
+    assert_equal 0, @editor.current_window.cursor_y
+
+    @dispatcher.dispatch_ex(@editor, "cnext")
+    assert_equal 1, @editor.current_window.cursor_y
+
+    @dispatcher.dispatch_ex(@editor, "copen")
+    qf_windows = @editor.find_window_ids_by_buffer_kind(:quickfix)
+    refute_empty qf_windows
+  end
+
+  def test_lvimgrep_populates_location_list_and_lnext_moves
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["aa", "bb aa", "cc aa"])
+    wid = @editor.current_window_id
+
+    @dispatcher.dispatch_ex(@editor, "lvimgrep /aa/")
+    assert_equal 3, @editor.location_items(wid).length
+
+    @dispatcher.dispatch_ex(@editor, "lnext")
+    assert_equal 1, @editor.current_window.cursor_y
+  end
 end

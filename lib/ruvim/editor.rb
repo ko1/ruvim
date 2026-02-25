@@ -45,6 +45,8 @@ module RuVim
       @macros = {}
       @macro_recording = nil
       @visual_state = nil
+      @quickfix_list = { items: [], index: nil }
+      @location_lists = Hash.new { |h, k| h[k] = { items: [], index: nil } }
     end
 
     def running?
@@ -460,15 +462,21 @@ module RuVim
     end
 
     def close_current_window
+      close_window(@current_window_id)
+    end
+
+    def close_window(id)
       return nil if @window_order.empty?
       return nil if @window_order.length <= 1
+      return nil unless @window_order.include?(id)
 
       save_current_tabpage_state! unless @suspend_tab_autosave
-      idx = @window_order.index(@current_window_id) || 0
-      removed_id = @current_window_id
-      @windows.delete(removed_id)
-      @window_order.delete(removed_id)
-      @current_window_id = @window_order[[idx, @window_order.length - 1].min]
+      idx = @window_order.index(id) || 0
+      @windows.delete(id)
+      @window_order.delete(id)
+      @location_lists.delete(id)
+      @current_window_id = @window_order[[idx, @window_order.length - 1].min] if @current_window_id == id
+      @current_window_id ||= @window_order.first
       @window_layout = :single if @window_order.length <= 1
       save_current_tabpage_state! unless @suspend_tab_autosave
       current_window
@@ -480,7 +488,10 @@ module RuVim
 
       save_current_tabpage_state!
       removed = @tabpages.delete_at(@current_tabpage_index)
-      Array(removed && removed[:window_order]).each { |wid| @windows.delete(wid) }
+      Array(removed && removed[:window_order]).each do |wid|
+        @windows.delete(wid)
+        @location_lists.delete(wid)
+      end
       @current_tabpage_index = [@current_tabpage_index, @tabpages.length - 1].min
       load_tabpage_state!(@tabpages[@current_tabpage_index])
       current_window
@@ -641,6 +652,71 @@ module RuVim
 
     def window_count
       @window_order.length
+    end
+
+    def quickfix_items
+      @quickfix_list[:items]
+    end
+
+    def quickfix_index
+      @quickfix_list[:index]
+    end
+
+    def set_quickfix_list(items)
+      ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
+      @quickfix_list = { items: ary, index: ary.empty? ? nil : 0 }
+      @quickfix_list
+    end
+
+    def current_quickfix_item
+      idx = @quickfix_list[:index]
+      idx ? @quickfix_list[:items][idx] : nil
+    end
+
+    def move_quickfix(step)
+      items = @quickfix_list[:items]
+      return nil if items.empty?
+
+      @quickfix_list[:index] = ((@quickfix_list[:index] || 0) + step.to_i) % items.length
+      current_quickfix_item
+    end
+
+    def location_list(window_id = current_window_id)
+      @location_lists[window_id]
+    end
+
+    def location_items(window_id = current_window_id)
+      location_list(window_id)[:items]
+    end
+
+    def set_location_list(items, window_id: current_window_id)
+      ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
+      @location_lists[window_id] = { items: ary, index: ary.empty? ? nil : 0 }
+      @location_lists[window_id]
+    end
+
+    def current_location_list_item(window_id = current_window_id)
+      list = location_list(window_id)
+      idx = list[:index]
+      idx ? list[:items][idx] : nil
+    end
+
+    def move_location_list(step, window_id: current_window_id)
+      list = location_list(window_id)
+      items = list[:items]
+      return nil if items.empty?
+
+      list[:index] = ((list[:index] || 0) + step.to_i) % items.length
+      current_location_list_item(window_id)
+    end
+
+    def find_window_ids_by_buffer_kind(kind)
+      sym = kind.to_sym
+      @window_order.select do |wid|
+        win = @windows[wid]
+        buf = win && @buffers[win.buffer_id]
+        buf && buf.kind == sym
+      end
     end
 
     def tabnew(path: nil)
@@ -807,6 +883,8 @@ module RuVim
       ]
     end
 
+    public
+
     def jump_to_location(loc, linewise: false)
       location = normalize_location(loc)
       return nil unless location
@@ -820,6 +898,8 @@ module RuVim
       current_window.clamp_to_buffer(current_buffer)
       current_location
     end
+
+    private
 
     def first_nonblank_col(buffer, row)
       line = buffer.line_at(row)

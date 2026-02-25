@@ -133,6 +133,10 @@ ruby -Ilib exe/ruvim -p a.rb b.rb
 - `:tabnew [path]`
 - `:tabnext` / `:tabn`
 - `:tabprev` / `:tabp`
+- `:vimgrep /foo/`
+- `:copen`, `:cnext`, `:cprev`, `:cclose`
+- `:lvimgrep /foo/`
+- `:lopen`, `:lnext`, `:lprev`, `:lclose`
 
 ## Undo / Redo
 
@@ -155,6 +159,14 @@ ruby -Ilib exe/ruvim -p a.rb b.rb
 
 検索は command-line の入力欄を再利用しています（prefix が `:` ではなく `/` または `?` になる）。
 検索パターンは Ruby 正規表現です（例: `/foo\d+/` 相当なら `foo\d+` を入力）。
+
+### quickfix / location list（最小）
+
+- `:vimgrep /foo/` : 開いている file buffer 群を検索して quickfix list を作る
+- `:copen` : quickfix list を read-only `qf` バッファで開く
+- `:cnext`, `:cprev` : quickfix 項目を移動してジャンプ
+- `:lvimgrep /foo/` : current buffer を検索して current window の location list を作る
+- `:lopen`, `:lnext`, `:lprev`, `:lclose` : location list を操作
 
 ### substitute（最小）
 

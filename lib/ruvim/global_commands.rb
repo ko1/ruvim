@@ -730,6 +730,90 @@ module RuVim
       ex_set_common(ctx, argv, scope: :global)
     end
 
+    def ex_vimgrep(ctx, argv:, **)
+      pattern = parse_vimgrep_pattern(argv)
+      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
+      items = grep_items_for_buffers(ctx.editor.buffers.values.select(&:file_buffer?), regex)
+      if items.empty?
+        ctx.editor.echo_error("Pattern not found: #{pattern}")
+        return
+      end
+
+      ctx.editor.set_quickfix_list(items)
+      ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
+      ctx.editor.echo("quickfix: #{items.length} item(s)")
+    end
+
+    def ex_lvimgrep(ctx, argv:, **)
+      pattern = parse_vimgrep_pattern(argv)
+      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
+      items = grep_items_for_buffers([ctx.buffer], regex)
+      if items.empty?
+        ctx.editor.echo_error("Pattern not found: #{pattern}")
+        return
+      end
+
+      ctx.editor.set_location_list(items, window_id: ctx.window.id)
+      ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
+      ctx.editor.echo("location list: #{items.length} item(s)")
+    end
+
+    def ex_copen(ctx, **)
+      open_list_window(ctx, kind: :quickfix, title: "[Quickfix]", lines: quickfix_buffer_lines(ctx.editor))
+    end
+
+    def ex_cclose(ctx, **)
+      close_list_windows(ctx.editor, :quickfix)
+    end
+
+    def ex_cnext(ctx, **)
+      item = ctx.editor.move_quickfix(+1)
+      unless item
+        ctx.editor.echo_error("quickfix list is empty")
+        return
+      end
+      ctx.editor.jump_to_location(item)
+      ctx.editor.echo(quickfix_item_echo(ctx.editor))
+    end
+
+    def ex_cprev(ctx, **)
+      item = ctx.editor.move_quickfix(-1)
+      unless item
+        ctx.editor.echo_error("quickfix list is empty")
+        return
+      end
+      ctx.editor.jump_to_location(item)
+      ctx.editor.echo(quickfix_item_echo(ctx.editor))
+    end
+
+    def ex_lopen(ctx, **)
+      open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id))
+    end
+
+    def ex_lclose(ctx, **)
+      close_list_windows(ctx.editor, :location_list)
+    end
+
+    def ex_lnext(ctx, **)
+      item = ctx.editor.move_location_list(+1, window_id: ctx.window.id)
+      unless item
+        ctx.editor.echo_error("location list is empty")
+        return
+      end
+      ctx.editor.jump_to_location(item)
+      ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
+    end
+
+    def ex_lprev(ctx, **)
+      item = ctx.editor.move_location_list(-1, window_id: ctx.window.id)
+      unless item
+        ctx.editor.echo_error("location list is empty")
+        return
+      end
+      ctx.editor.jump_to_location(item)
+      ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
+    end
+
     def ex_substitute(ctx, pattern:, replacement:, global: false, **)
       materialize_intro_buffer_if_needed(ctx)
       regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
@@ -772,6 +856,99 @@ module RuVim
     end
 
     private
+
+    def parse_vimgrep_pattern(argv)
+      raw = Array(argv).join(" ").strip
+      raise RuVim::CommandError, "Usage: :vimgrep /pattern/" if raw.empty?
+
+      if raw.length >= 2 && raw[0] == raw[-1] && raw[0] !~ /[[:alnum:]\s]/
+        raw[1...-1]
+      else
+        raw
+      end
+    end
+
+    def grep_items_for_buffers(buffers, regex)
+      Array(buffers).flat_map do |buffer|
+        buffer.lines.each_with_index.flat_map do |line, row|
+          line.to_enum(:scan, regex).map do
+            m = Regexp.last_match
+            next unless m
+            { buffer_id: buffer.id, row: row, col: m.begin(0), text: line }
+          end.compact
+        end
+      end
+    end
+
+    def quickfix_buffer_lines(editor)
+      items = editor.quickfix_items
+      return ["Quickfix", "", "(empty)"] if items.empty?
+
+      idx = editor.quickfix_index || 0
+      build_list_buffer_lines(editor, items, idx, title: "Quickfix")
+    end
+
+    def location_list_buffer_lines(editor, window_id)
+      items = editor.location_items(window_id)
+      idx = editor.location_list(window_id)[:index] || 0
+      return ["Location List", "", "(empty)"] if items.empty?
+
+      build_list_buffer_lines(editor, items, idx, title: "Location List")
+    end
+
+    def build_list_buffer_lines(editor, items, current_index, title:)
+      [
+        title,
+        "",
+        *items.each_with_index.map do |it, i|
+          b = editor.buffers[it[:buffer_id]]
+          path = b&.display_name || "(missing)"
+          mark = i == current_index ? ">" : " "
+          "#{mark} #{i + 1}: #{path}:#{it[:row] + 1}:#{it[:col] + 1}: #{it[:text]}"
+        end
+      ]
+    end
+
+    def open_list_window(ctx, kind:, title:, lines:)
+      editor = ctx.editor
+      editor.split_current_window(layout: :horizontal)
+      buffer = editor.add_virtual_buffer(kind:, name: title, lines:, filetype: "qf", readonly: true, modifiable: false)
+      editor.switch_to_buffer(buffer.id)
+      editor.echo(title)
+      buffer
+    end
+
+    def close_list_windows(editor, kind)
+      ids = editor.find_window_ids_by_buffer_kind(kind)
+      if ids.empty?
+        editor.echo_error("#{kind} window is not open")
+        return
+      end
+
+      ids.each do |wid|
+        break if editor.window_count <= 1
+        editor.close_window(wid)
+      end
+      editor.echo("#{kind} closed")
+    end
+
+    def quickfix_item_echo(editor)
+      item = editor.current_quickfix_item
+      list_item_echo(editor, item, editor.quickfix_index, editor.quickfix_items.length, label: "qf")
+    end
+
+    def location_item_echo(editor, window_id)
+      item = editor.current_location_list_item(window_id)
+      list = editor.location_list(window_id)
+      list_item_echo(editor, item, list[:index], list[:items].length, label: "ll")
+    end
+
+    def list_item_echo(editor, item, index, total, label:)
+      return "#{label}: empty" unless item
+
+      b = editor.buffers[item[:buffer_id]]
+      "#{label} #{index.to_i + 1}/#{total}: #{b&.display_name || '(missing)'}:#{item[:row] + 1}:#{item[:col] + 1}"
+    end
 
     def switch_buffer_id(ctx, buffer_id, bang: false)
       unless ctx.editor.buffers.key?(buffer_id)

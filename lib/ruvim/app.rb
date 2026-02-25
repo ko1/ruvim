@@ -175,6 +175,16 @@ module RuVim
       register_ex_unless(ex, "tabnew", call: :tab_new, desc: "New tab", nargs: :maybe_one)
       register_ex_unless(ex, "tabnext", call: :tab_next, aliases: %w[tabn], desc: "Next tab", nargs: 0)
       register_ex_unless(ex, "tabprev", call: :tab_prev, aliases: %w[tabp], desc: "Prev tab", nargs: 0)
+      register_ex_unless(ex, "vimgrep", call: :ex_vimgrep, desc: "Populate quickfix from regex (minimal)", nargs: :any)
+      register_ex_unless(ex, "lvimgrep", call: :ex_lvimgrep, desc: "Populate location list from regex (minimal)", nargs: :any)
+      register_ex_unless(ex, "copen", call: :ex_copen, desc: "Open quickfix list", nargs: 0)
+      register_ex_unless(ex, "cclose", call: :ex_cclose, desc: "Close quickfix window", nargs: 0)
+      register_ex_unless(ex, "cnext", call: :ex_cnext, aliases: %w[cn], desc: "Next quickfix item", nargs: 0)
+      register_ex_unless(ex, "cprev", call: :ex_cprev, aliases: %w[cp], desc: "Prev quickfix item", nargs: 0)
+      register_ex_unless(ex, "lopen", call: :ex_lopen, desc: "Open location list", nargs: 0)
+      register_ex_unless(ex, "lclose", call: :ex_lclose, desc: "Close location list window", nargs: 0)
+      register_ex_unless(ex, "lnext", call: :ex_lnext, aliases: %w[ln], desc: "Next location item", nargs: 0)
+      register_ex_unless(ex, "lprev", call: :ex_lprev, aliases: %w[lp], desc: "Prev location item", nargs: 0)
     end
 
     def bind_default_keys!

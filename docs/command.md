@@ -5,7 +5,7 @@
 - `--help`, `--version`
 - `--clean`
 - `-d`（diff mode placeholder, 未実装メッセージ表示）
-- `-q {errorfile}`（quickfix startup placeholder, 未実装メッセージ表示）
+- `-q {errorfile}`（quickfix startup placeholder。現状は未実装メッセージ表示）
 - `-S [session]`（session startup placeholder, 未実装メッセージ表示）
 - `-R`
 - `-M`
@@ -63,6 +63,24 @@
 
 - 形式: `:commands`
 - Ex コマンド一覧（alias 含む）を read-only バッファに表示
+
+### quickfix / location list（最小）
+
+- `:vimgrep /pattern/`
+  - 現在開いている file buffer 群を検索して quickfix list を作成
+- `:lvimgrep /pattern/`
+  - current window の current buffer を検索して location list を作成
+- `:copen` / `:cclose`
+  - quickfix list を read-only な `qf` バッファで開く / 閉じる
+- `:cnext` / `:cn`, `:cprev` / `:cp`
+  - quickfix 項目を前後移動して該当位置へジャンプ
+- `:lopen` / `:lclose`
+  - current window の location list を開く / 閉じる
+- `:lnext` / `:ln`, `:lprev` / `:lp`
+  - location list 項目を前後移動して該当位置へジャンプ
+- 現状の制限:
+  - `:grep`, `:make`, `:cfile`, `:lgrep` は未実装
+  - 一覧バッファ上で `Enter` からのジャンプは未実装
 
 ### `:command`
 
@@ -198,6 +216,7 @@
 - `N` : reverse repeat
 - `*` / `#` : カーソル下の単語検索（単語境界）
 - `g*` / `g#` : カーソル下の単語検索（部分一致）
+- `:vimgrep` / `:lvimgrep` : 検索結果を quickfix/location list に積む
 
 ### `:%s/.../.../g`（最小実装）
 

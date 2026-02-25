@@ -312,7 +312,7 @@
 
 ### P2: モダン実用性（人気だが土台が必要）
 
-- quickfix / location list
+- [DONE] quickfix / location list
   - 効果: 高（検索/LSP 診断の受け皿）
   - コスト: 中〜高
   - 依存:
