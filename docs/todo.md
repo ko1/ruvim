@@ -229,9 +229,9 @@
   - lint / format 方針を `README.md` に明文化
   - `rake docs:check` / `rake ci` を追加（docs 整合チェック）
 
-- 内部座標の整理（byte index / character index / grapheme index）
-  - 現状どの API がどの単位かを明文化
-  - Buffer / Window / Screen / Search で単位混在を減らす
+- [DONE] 内部座標の整理（byte index / character index / grapheme index）
+  - `TextMetrics` を中心に `Window` / `Screen` の単位を分離（char index / grapheme / screen column）
+  - `docs/spec.md` に現状の座標系と責務分担を明文化
 
 - エンコーディング方針の明文化と実装整理
   - 読み込み時の decode 戦略（UTF-8 / default_external / scrub）の仕様化

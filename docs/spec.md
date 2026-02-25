@@ -60,6 +60,30 @@ RuVim は Ruby で実装する Vim ライクなターミナルエディタです
 同一 buffer を複数 window で表示できる前提の設計です（現状 UI は単一 window）。
 同一 buffer を複数 window で表示できる前提の設計です（現状 UI は simple split 対応）。
 
+#### 座標系（現状の単位）
+
+RuVim は Vim と同様に、用途ごとに座標系を分けています。
+
+- `buffer row` (`cursor_y`, `row_offset`)
+  - 行番号ベース（0-origin）
+- `char index` (`cursor_x`, `col_offset`)
+  - Ruby の UTF-8 `String` に対する文字 index（byte offset ではない）
+- `grapheme boundary`
+  - 左右移動時は `RuVim::TextMetrics` で grapheme cluster 境界に揃える
+- `screen column`
+  - 描画・横スクロールでは表示幅（全角/結合文字/tab 幅込み）を使う
+
+役割分担（現状）:
+
+- `RuVim::Window`
+  - カーソル位置保持（`char index`）
+  - `ensure_visible` で `screen column` ベースの横スクロール
+- `RuVim::TextMetrics`
+  - `char index <-> screen column` 変換
+  - grapheme 境界移動
+- `RuVim::Screen`
+  - 表示幅ベースの clipping / padding / cursor 描画位置計算
+
 ### 3. Editor
 
 エディタ全体の実行状態です。
