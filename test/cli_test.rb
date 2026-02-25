@@ -1,0 +1,58 @@
+require_relative "test_helper"
+require "stringio"
+require "tempfile"
+
+class CLITest < Minitest::Test
+  def test_parse_clean_and_u_none
+    opts = RuVim::CLI.parse(["--clean", "-u", "NONE"])
+
+    assert_equal true, opts.clean
+    assert_equal true, opts.skip_user_config
+    assert_nil opts.config_path
+  end
+
+  def test_parse_startup_actions_preserves_order
+    opts = RuVim::CLI.parse(["+10", "-c", "set number", "+", "file.txt"])
+
+    assert_equal ["file.txt"], opts.files
+    assert_equal [
+      { type: :line, value: 10 },
+      { type: :ex, value: "set number" },
+      { type: :line_end }
+    ], opts.startup_actions
+  end
+
+  def test_parse_custom_config_path
+    opts = RuVim::CLI.parse(["-u", "/tmp/ruvimrc.rb"])
+
+    assert_equal false, opts.skip_user_config
+    assert_equal "/tmp/ruvimrc.rb", opts.config_path
+  end
+
+  def test_help_and_version_return_without_starting_ui
+    out = StringIO.new
+    err = StringIO.new
+
+    code = RuVim::CLI.run(["--version"], stdout: out, stderr: err, stdin: StringIO.new)
+    assert_equal 0, code
+    assert_match(/RuVim /, out.string)
+    assert_equal "", err.string
+
+    out = StringIO.new
+    err = StringIO.new
+    code = RuVim::CLI.run(["--help"], stdout: out, stderr: err, stdin: StringIO.new)
+    assert_equal 0, code
+    assert_match(/Usage: ruvim/, out.string)
+    assert_equal "", err.string
+  end
+
+  def test_run_returns_error_for_missing_config_file
+    out = StringIO.new
+    err = StringIO.new
+
+    code = RuVim::CLI.run(["-u", "/tmp/ruvim/no-such-config.rb"], stdout: out, stderr: err, stdin: StringIO.new)
+
+    assert_equal 2, code
+    assert_match(/config file not found/, err.string)
+  end
+end
