@@ -755,6 +755,15 @@ module RuVim
       current_quickfix_item
     end
 
+    def select_quickfix(index)
+      items = @quickfix_list[:items]
+      return nil if items.empty?
+
+      i = [[index.to_i, 0].max, items.length - 1].min
+      @quickfix_list[:index] = i
+      current_quickfix_item
+    end
+
     def location_list(window_id = current_window_id)
       @location_lists[window_id]
     end
@@ -781,6 +790,16 @@ module RuVim
       return nil if items.empty?
 
       list[:index] = ((list[:index] || 0) + step.to_i) % items.length
+      current_location_list_item(window_id)
+    end
+
+    def select_location_list(index, window_id: current_window_id)
+      list = location_list(window_id)
+      items = list[:items]
+      return nil if items.empty?
+
+      i = [[index.to_i, 0].max, items.length - 1].min
+      list[:index] = i
       current_location_list_item(window_id)
     end
 

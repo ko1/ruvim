@@ -30,7 +30,7 @@
 
 ### Day 1: quickfix を「使える入口」までつなぐ
 
-- `quickfix` / `location list` バッファで `Enter` ジャンプ
+- `[DONE]` `quickfix` / `location list` バッファで `Enter` ジャンプ
   - qf 行フォーマット -> location 解決
   - cursor 行の項目へ移動（window 復帰含む）
 - docs 更新
@@ -101,7 +101,6 @@
   - `p`, `P` のカーソル位置ルールを調整
   - Visual mode の端点/inclusive ルールを整理
   - Visual block の blockwise paste / text object
-  - quickfix バッファ上の Enter ジャンプ（一覧→位置移動）
   - `Ctrl-e` / `Ctrl-y` / `Ctrl-d` / `Ctrl-u` の細部挙動（Vim との差分詰め）
 
 ## TODO Vim 差分で実用上効く追加機能（未着手）

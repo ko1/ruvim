@@ -344,6 +344,10 @@ module RuVim
     end
 
     def handle_normal_key(key)
+      if key == :enter && handle_list_window_enter
+        return
+      end
+
       if arrow_key?(key)
         invoke_arrow(key)
         return
@@ -731,6 +735,49 @@ module RuVim
         end
       end
       update_incsearch_preview_if_needed
+    end
+
+    def handle_list_window_enter
+      buffer = @editor.current_buffer
+      return false unless buffer.kind == :quickfix || buffer.kind == :location_list
+
+      item_index = @editor.current_window.cursor_y - 2
+      if item_index.negative?
+        @editor.echo_error("No list item on this line")
+        return true
+      end
+
+      source_window_id = buffer.options["ruvim_list_source_window_id"]
+      source_window_id = source_window_id.to_i if source_window_id
+      source_window_id = nil unless source_window_id && @editor.windows.key?(source_window_id)
+
+      item =
+        if buffer.kind == :quickfix
+          @editor.select_quickfix(item_index)
+        else
+          owner_window_id = source_window_id || @editor.current_window_id
+          @editor.select_location_list(item_index, window_id: owner_window_id)
+        end
+
+      unless item
+        @editor.echo_error("#{buffer.kind == :quickfix ? 'quickfix' : 'location list'} item not found")
+        return true
+      end
+
+      if source_window_id
+        @editor.current_window_id = source_window_id
+      end
+      @editor.jump_to_location(item)
+      @editor.echo(
+        if buffer.kind == :quickfix
+          "qf #{@editor.quickfix_index.to_i + 1}/#{@editor.quickfix_items.length}"
+        else
+          owner_window_id = source_window_id || @editor.current_window_id
+          list = @editor.location_list(owner_window_id)
+          "ll #{list[:index].to_i + 1}/#{list[:items].length}"
+        end
+      )
+      true
     end
 
     def arrow_key?(key)

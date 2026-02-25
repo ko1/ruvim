@@ -29,7 +29,8 @@
 - `:w`, `:q`, `:wq`, `:e`, `:buffer`, `:bnext`, `:bprev`, `:ls` などはあるが一部のみ
 - quickfix / location list は最小実装のみ
   - `:vimgrep`, `:lvimgrep`, `:copen/:cnext`, `:lopen/:lnext` など
-  - `:grep`, `:make`, `:cfile`, `:lgrep`, 一覧バッファからの選択ジャンプは未実装
+  - `qf/location list` 一覧バッファで `Enter` による選択ジャンプは対応
+  - `:grep`, `:make`, `:cfile`, `:lgrep` は未実装
 - `:command` はあるが、現状は「Ex 文字列エイリアス展開」に近い簡易実装
 - `:ruby` はあるが、Vim の `:ruby` 機能互換ではなく RuVim 独自の Ruby eval 入口
 - `:w!` は現状 `:w` とほぼ同じ（権限昇格や readonly 強制保存の完全な意味は未実装）

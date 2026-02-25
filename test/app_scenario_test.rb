@@ -6,6 +6,7 @@ class AppScenarioTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
+    @dispatcher = @app.instance_variable_get(:@dispatcher)
     @editor.materialize_intro_buffer!
   end
 
@@ -134,6 +135,26 @@ class AppScenarioTest < Minitest::Test
     assert_equal :normal, @editor.mode
     assert_equal 0, @editor.current_window.cursor_y
     assert_equal 0, @editor.current_window.cursor_x
+  end
+
+  def test_lopen_enter_jumps_to_selected_location_and_returns_to_source_window
+    @editor.current_buffer.replace_all_lines!(["aa", "bb aa", "cc aa"])
+    source_window_id = @editor.current_window_id
+
+    @dispatcher.dispatch_ex(@editor, "lvimgrep /aa/")
+    @dispatcher.dispatch_ex(@editor, "lopen")
+
+    assert_equal :location_list, @editor.current_buffer.kind
+    assert_equal 2, @editor.window_count
+
+    # Header lines are: title, blank, then items...
+    @editor.current_window.cursor_y = 4 # 3rd item
+    feed(:enter)
+
+    refute_equal :location_list, @editor.current_buffer.kind
+    assert_equal source_window_id, @editor.current_window_id
+    assert_equal 2, @editor.current_window.cursor_y
+    assert_equal 3, @editor.current_window.cursor_x
   end
 
   def test_incsearch_submit_stays_on_previewed_match

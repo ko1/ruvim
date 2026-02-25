@@ -880,7 +880,7 @@ module RuVim
     end
 
     def ex_copen(ctx, **)
-      open_list_window(ctx, kind: :quickfix, title: "[Quickfix]", lines: quickfix_buffer_lines(ctx.editor))
+      open_list_window(ctx, kind: :quickfix, title: "[Quickfix]", lines: quickfix_buffer_lines(ctx.editor), source_window_id: ctx.window.id)
     end
 
     def ex_cclose(ctx, **)
@@ -908,7 +908,8 @@ module RuVim
     end
 
     def ex_lopen(ctx, **)
-      open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id))
+      open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id),
+                       source_window_id: ctx.window.id)
     end
 
     def ex_lclose(ctx, **)
@@ -1030,10 +1031,11 @@ module RuVim
       ]
     end
 
-    def open_list_window(ctx, kind:, title:, lines:)
+    def open_list_window(ctx, kind:, title:, lines:, source_window_id:)
       editor = ctx.editor
       editor.split_current_window(layout: :horizontal)
       buffer = editor.add_virtual_buffer(kind:, name: title, lines:, filetype: "qf", readonly: true, modifiable: false)
+      buffer.options["ruvim_list_source_window_id"] = source_window_id
       editor.switch_to_buffer(buffer.id)
       editor.echo(title)
       buffer
