@@ -5,6 +5,7 @@
 - `--help`, `--version`
 - `--clean`
 - `-R`
+- `-M`
 - `-n`（現状 no-op）
 - `-o[N]`, `-O[N]`, `-p[N]`
 - `-u {path|NONE}`

@@ -47,6 +47,19 @@ class AppStartupTest < Minitest::Test
     end
   end
 
+  def test_startup_nomodifiable_marks_opened_buffer_unmodifiable_and_readonly
+    Tempfile.create(["ruvim-startup", ".txt"]) do |f|
+      f.write("hello\n")
+      f.flush
+
+      app = RuVim::App.new(path: f.path, clean: true, nomodifiable: true)
+      editor = app.instance_variable_get(:@editor)
+
+      assert_equal false, editor.current_buffer.modifiable?
+      assert_equal true, editor.current_buffer.readonly?
+    end
+  end
+
   def test_startup_horizontal_split_opens_multiple_files
     Tempfile.create(["ruvim-a", ".txt"]) do |a|
       Tempfile.create(["ruvim-b", ".txt"]) do |b|

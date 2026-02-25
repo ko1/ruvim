@@ -36,6 +36,13 @@ class CLITest < Minitest::Test
     assert_equal ["file.txt"], opts.files
   end
 
+  def test_parse_nomodifiable_option
+    opts = RuVim::CLI.parse(["-M", "file.txt"])
+
+    assert_equal true, opts.nomodifiable
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_parse_n_option_as_accepted_no_op
     opts = RuVim::CLI.parse(["-n", "file.txt"])
 
@@ -72,6 +79,7 @@ class CLITest < Minitest::Test
     assert_equal 0, code
     assert_match(/Usage: ruvim/, out.string)
     assert_match(/-R\s+Open file readonly/, out.string)
+    assert_match(/-M\s+Open file unmodifiable/, out.string)
     assert_match(/-n\s+No-op/, out.string)
     assert_match(/-o\[N\]/, out.string)
     assert_match(/-O\[N\]/, out.string)

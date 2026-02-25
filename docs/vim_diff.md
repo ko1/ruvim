@@ -85,7 +85,7 @@
   - `--help`, `--version`
   - `--clean`
   - `-u {path|NONE}`
-  - `-R`, `-n`（`-n` は現状 no-op）
+  - `-R`, `-M`, `-n`（`-n` は現状 no-op）
   - `-o[N]`, `-O[N]`, `-p[N]`（基礎）
   - `-c {cmd}`
   - `+{cmd}`, `+{line}`, `+`

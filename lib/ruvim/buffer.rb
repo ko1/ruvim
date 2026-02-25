@@ -83,6 +83,10 @@ module RuVim
       @modifiable
     end
 
+    def modifiable=(value)
+      @modifiable = !!value
+    end
+
     def file_buffer?
       @kind == :file
     end

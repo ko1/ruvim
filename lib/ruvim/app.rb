@@ -1,6 +1,6 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, nomodifiable: false, startup_open_layout: nil, startup_open_count: nil)
       @editor = Editor.new
       @terminal = Terminal.new(stdin:, stdout:)
       @input = Input.new(stdin:)
@@ -15,6 +15,7 @@ module RuVim
       @skip_user_config = skip_user_config
       @config_path = config_path
       @startup_readonly = readonly
+      @startup_nomodifiable = nomodifiable
       @startup_open_layout = startup_open_layout
       @startup_open_count = startup_open_count
 
@@ -1342,6 +1343,15 @@ module RuVim
       @editor.echo("readonly: #{buf.display_name}")
     end
 
+    def apply_startup_nomodifiable!
+      buf = @editor.current_buffer
+      return unless buf&.file_buffer?
+
+      buf.modifiable = false
+      buf.readonly = true
+      @editor.echo("nomodifiable: #{buf.display_name}")
+    end
+
     def open_startup_paths!(paths)
       list = Array(paths).compact
       return if list.empty?
@@ -1349,6 +1359,7 @@ module RuVim
       first, *rest = list
       @editor.open_path(first)
       apply_startup_readonly! if @startup_readonly
+      apply_startup_nomodifiable! if @startup_nomodifiable
 
       case @startup_open_layout
       when :horizontal
@@ -1367,11 +1378,13 @@ module RuVim
       buf = @editor.add_buffer_from_file(path)
       @editor.switch_to_buffer(buf.id)
       apply_startup_readonly! if @startup_readonly
+      apply_startup_nomodifiable! if @startup_nomodifiable
     end
 
     def open_path_in_tab!(path)
       @editor.tabnew(path:)
       apply_startup_readonly! if @startup_readonly
+      apply_startup_nomodifiable! if @startup_nomodifiable
     end
 
     def move_cursor_to_line(line_number)
