@@ -1807,15 +1807,8 @@ module RuVim
       raw = ctx.editor.effective_option("path", window: ctx.window, buffer: ctx.buffer).to_s
       dirs = raw.split(",").map(&:strip).reject(&:empty?)
       dirs = ["."] if dirs.empty?
-      dirs.map do |dir|
-        case dir
-        when "."
-          current_dir
-        when ""
-          current_dir
-        else
-          File.expand_path(dir, current_dir)
-        end
+      dirs.flat_map do |dir|
+        expand_gf_path_entry(dir, current_dir)
       end.uniq
     rescue StandardError
       [Dir.pwd]
@@ -1826,6 +1819,27 @@ module RuVim
       raw.split(",").map(&:strip).reject(&:empty?).map do |s|
         s.start_with?(".") ? s : ".#{s}"
       end
+    end
+
+    def expand_gf_path_entry(entry, current_dir)
+      dir = entry.to_s
+      return [current_dir] if dir.empty? || dir == "."
+
+      expanded = File.expand_path(dir, current_dir)
+      if expanded.end_with?("/**")
+        base = expanded[0...-3]
+        [base, *Dir.glob(File.join(base, "**", "*"))].select { |p| File.directory?(p) }
+      elsif expanded.end_with?("**")
+        base = expanded.sub(/\*\*\z/, "")
+        base = base.sub(%r{/+\z}, "")
+        [base, *Dir.glob(File.join(base, "**", "*"))].select { |p| File.directory?(p) }
+      elsif expanded.match?(/[*?\[]/)
+        Dir.glob(expanded).select { |p| File.directory?(p) }
+      else
+        [expanded]
+      end
+    rescue StandardError
+      [expanded || File.expand_path(dir, current_dir)]
     end
 
     def ex_set_common(ctx, argv, scope:)

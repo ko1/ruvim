@@ -209,6 +209,7 @@ setglobal "tabstop=8"
 - `path` (`string`, default `nil`) [`PARTIAL`]
   - `gf` などのファイル探索ディレクトリを指定します（`,` 区切り）。
   - 現状は `gf` の最小探索に利用します。
+  - `lib/**` のような再帰探索（簡易）に対応します。
 
 - `suffixesadd` (`string`, default `nil`) [`PARTIAL`]
   - `gf` などで補完する拡張子候補を指定します（`,` 区切り）。

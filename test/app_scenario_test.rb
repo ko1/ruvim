@@ -224,6 +224,25 @@ class AppScenarioTest < Minitest::Test
     end
   end
 
+  def test_gf_supports_recursive_path_entry_with_double_star
+    Dir.mktmpdir("ruvim-gf-rec") do |dir|
+      FileUtils.mkdir_p(File.join(dir, "lib", "deep", "nest"))
+      target = File.join(dir, "lib", "deep", "nest", "foo.rb")
+      File.write(target, "puts :deep\n")
+      @editor.current_buffer.path = File.join(dir, "main.txt")
+      @editor.current_buffer.replace_all_lines!(["foo"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 0
+      @editor.set_option("hidden", true, scope: :global)
+      @editor.set_option("path", "lib/**", scope: :buffer)
+      @editor.set_option("suffixesadd", ".rb", scope: :buffer)
+
+      feed("g", "f")
+
+      assert_equal File.expand_path(target), File.expand_path(@editor.current_buffer.path)
+    end
+  end
+
   def test_showmatch_message_respects_matchtime_and_clears
     @editor.set_option("showmatch", true, scope: :global)
     @editor.set_option("matchtime", 1, scope: :global) # 0.1 sec
