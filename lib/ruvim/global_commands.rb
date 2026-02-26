@@ -72,6 +72,18 @@ module RuVim
       call(:window_scroll_down, ctx, count:, bang:, kwargs: { lines: 1, view_height: current_view_height(ctx) + 1 })
     end
 
+    def window_cursor_line_top(ctx, count:, **)
+      place_cursor_line_in_window(ctx, where: :top, count:)
+    end
+
+    def window_cursor_line_center(ctx, count:, **)
+      place_cursor_line_in_window(ctx, where: :center, count:)
+    end
+
+    def window_cursor_line_bottom(ctx, count:, **)
+      place_cursor_line_in_window(ctx, where: :bottom, count:)
+    end
+
     def cursor_line_start(ctx, **)
       ctx.window.cursor_x = 0
       ctx.window.clamp_to_buffer(ctx.buffer)
@@ -310,6 +322,79 @@ module RuVim
       ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
+    def substitute_char(ctx, count:, bang:, **)
+      call(:change_motion, ctx, count:, bang:, kwargs: { motion: "l" })
+    end
+
+    def swapcase_char(ctx, count:, **)
+      materialize_intro_buffer_if_needed(ctx)
+      count = normalized_count(count)
+
+      y = ctx.window.cursor_y
+      x = ctx.window.cursor_x
+      changed = false
+      processed = false
+
+      ctx.buffer.begin_change_group
+      count.times do
+        line = ctx.buffer.line_at(y)
+        break if x >= line.length
+
+        ch = line[x]
+        swapped = ch.to_s.swapcase
+        if !swapped.empty? && swapped != ch
+          ctx.buffer.delete_span(y, x, y, x + 1)
+          ctx.buffer.insert_char(y, x, swapped[0])
+          changed = true
+        end
+        processed = true
+        x += 1
+      end
+      ctx.buffer.end_change_group
+
+      ctx.window.cursor_y = y
+      ctx.window.cursor_x = processed ? x : ctx.window.cursor_x
+      ctx.window.clamp_to_buffer(ctx.buffer)
+    end
+
+    def join_lines(ctx, count:, **)
+      materialize_intro_buffer_if_needed(ctx)
+      joins = [normalized_count(count) - 1, 1].max
+      y = ctx.window.cursor_y
+      x = ctx.window.cursor_x
+      changed = false
+
+      ctx.buffer.begin_change_group
+      joins.times do
+        break if y >= ctx.buffer.line_count - 1
+
+        left = ctx.buffer.line_at(y)
+        right = ctx.buffer.line_at(y + 1)
+        join_col = left.length
+
+        # Join raw lines first.
+        break unless ctx.buffer.delete_char(y, join_col)
+
+        right_trimmed = right.sub(/\A\s+/, "")
+        trimmed_count = right.length - right_trimmed.length
+        if trimmed_count.positive?
+          ctx.buffer.delete_span(y, join_col, y, join_col + trimmed_count)
+        end
+
+        need_space = !left.empty? && !left.match?(/\s\z/) && !right_trimmed.empty? && !right_trimmed.match?(/\A\s/)
+        ctx.buffer.insert_char(y, join_col, " ") if need_space
+
+        x = join_col
+        changed = true
+      end
+      ctx.buffer.end_change_group
+
+      ctx.window.cursor_y = y
+      ctx.window.cursor_x = x
+      ctx.window.clamp_to_buffer(ctx.buffer)
+      ctx.editor.echo("joined") if changed
+    end
+
     def delete_line(ctx, count:, **)
       materialize_intro_buffer_if_needed(ctx)
       count = normalized_count(count)
@@ -324,14 +409,15 @@ module RuVim
     def delete_motion(ctx, count:, kwargs:, **)
       materialize_intro_buffer_if_needed(ctx)
       motion = (kwargs[:motion] || kwargs["motion"]).to_s
+      ncount = normalized_count(count)
       handled =
         case motion
-        when "h" then delete_chars_left(ctx, count)
-        when "l" then delete_chars_right(ctx, count)
-        when "j" then delete_lines_down(ctx, count)
-        when "k" then delete_lines_up(ctx, count)
+        when "h" then delete_chars_left(ctx, ncount)
+        when "l" then delete_chars_right(ctx, ncount)
+        when "j" then delete_lines_down(ctx, ncount)
+        when "k" then delete_lines_up(ctx, ncount)
         when "$" then delete_to_end_of_line(ctx)
-        when "w" then delete_word_forward(ctx, count)
+        when "w" then delete_word_forward(ctx, ncount)
         when "iw" then delete_text_object_word(ctx, around: false)
         when "aw" then delete_text_object_word(ctx, around: true)
         else
@@ -773,7 +859,7 @@ module RuVim
       when "config"
         "Config: XDG Ruby DSL at ~/.config/ruvim/init.rb and ftplugin/<filetype>.rb"
       when "bindings", "keys", "keymap"
-        "Bindings: see docs/binding.md. Ex complement: Tab, insert completion: Ctrl-n/Ctrl-p"
+        "Bindings: use :bindings (current effective key bindings by layer). Docs: docs/binding.md"
       when "number", "relativenumber", "ignorecase", "smartcase", "hlsearch", "tabstop", "filetype"
         option_help_line(key)
       else
@@ -923,6 +1009,16 @@ module RuVim
         "#{spec.name}#{alias_text}#{source}"
       end
       ctx.editor.show_help_buffer!(title: "[Commands]", lines: ["Ex commands", "", *items])
+    end
+
+    def ex_bindings(ctx, argv: [], **)
+      keymaps = ctx.editor.keymap_manager
+      raise RuVim::CommandError, "Keymap manager is unavailable" unless keymaps
+
+      mode_filter, sort = parse_bindings_args(argv)
+      entries = keymaps.binding_entries_for_context(ctx.editor, mode: mode_filter)
+      lines = bindings_buffer_lines(ctx.editor, entries, mode_filter:, sort:)
+      ctx.editor.show_help_buffer!(title: "[Bindings]", lines:)
     end
 
     def ex_set(ctx, argv:, **)
@@ -1466,6 +1562,14 @@ module RuVim
       idx = cursor_to_offset(buffer, row, col)
       n = text.length
       keyword_rx = keyword_char_regex(editor, buffer, window)
+
+      # Vim-like `e`: if already on the end of a word, move to the next word's end.
+      if idx < n
+        cur_cls = char_class(text[idx], keyword_rx)
+        next_cls = (idx + 1 < n) ? char_class(text[idx + 1], keyword_rx) : nil
+        idx += 1 if cur_cls != :space && next_cls != cur_cls
+      end
+
       while idx < n && char_class(text[idx], keyword_rx) == :space
         idx += 1
       end
@@ -1852,6 +1956,30 @@ module RuVim
       ctx.window.clamp_to_buffer(ctx.buffer)
     end
 
+    def place_cursor_line_in_window(ctx, where:, count:)
+      if count
+        target_row = [[normalized_count(count) - 1, 0].max, ctx.buffer.line_count - 1].min
+        ctx.window.cursor_y = target_row
+        ctx.window.clamp_to_buffer(ctx.buffer)
+      end
+
+      height = current_view_height(ctx)
+      max_row_offset = [ctx.buffer.line_count - height, 0].max
+      desired =
+        case where
+        when :top
+          ctx.window.cursor_y
+        when :center
+          ctx.window.cursor_y - (height / 2)
+        when :bottom
+          ctx.window.cursor_y - height + 1
+        else
+          ctx.window.row_offset
+        end
+      ctx.window.row_offset = [[desired, 0].max, max_row_offset].min
+      ctx.window.clamp_to_buffer(ctx.buffer)
+    end
+
     def cursor_to_offset(buffer, row, col)
       offset = 0
       row.times { |r| offset += buffer.line_length(r) + 1 }
@@ -2226,6 +2354,192 @@ module RuVim
         "",
         *text.to_s.scan(/.{1,78}(?:\s+|$)|.{1,78}/).map(&:rstrip)
       ]
+    end
+
+    def parse_bindings_args(argv)
+      mode_filter = nil
+      sort = "key"
+
+      Array(argv).each do |raw|
+        token = raw.to_s.strip
+        next if token.empty?
+
+        if token.include?("=")
+          key, value = token.split("=", 2).map(&:strip)
+          case key.downcase
+          when "sort"
+            sort = parse_bindings_sort(value)
+          else
+            raise RuVim::CommandError, "Unknown option for :bindings: #{key}"
+          end
+          next
+        end
+
+        raise RuVim::CommandError, "Too many positional args for :bindings" if mode_filter
+
+        mode_filter = parse_bindings_mode_filter(token)
+      end
+
+      [mode_filter, sort]
+    end
+
+    def parse_bindings_sort(raw)
+      token = raw.to_s.strip.downcase
+      case token
+      when "", "key", "keys" then "key"
+      when "command", "cmd" then "command"
+      else
+        raise RuVim::CommandError, "Unknown sort for :bindings: #{raw}"
+      end
+    end
+
+    def parse_bindings_mode_filter(raw)
+      return nil if raw.nil? || raw.to_s.strip.empty?
+
+      token = raw.to_s.strip.downcase
+      case token
+      when "n", "normal" then :normal
+      when "i", "insert" then :insert
+      when "v", "visual", "visual_char" then :visual_char
+      when "vl", "visual_line" then :visual_line
+      when "vb", "visual_block", "x" then :visual_block
+      when "o", "operator", "operator_pending" then :operator_pending
+      when "c", "cmdline", "command", "command_line" then :command_line
+      else
+        raise RuVim::CommandError, "Unknown mode for :bindings: #{raw}"
+      end
+    end
+
+    def bindings_buffer_lines(editor, entries, mode_filter:, sort:)
+      buffer = editor.current_buffer
+      filetype = buffer.options["filetype"].to_s
+      filetype = nil if filetype.empty?
+
+      lines = [
+        "Bindings",
+        "",
+        "Buffer: #{buffer.display_name}",
+        "Filetype: #{filetype || '-'}",
+        "Mode filter: #{mode_filter || 'all'}",
+        "Sort: #{sort}",
+        ""
+      ]
+
+      any = false
+      %i[buffer filetype app].each do |layer|
+        layer_entries = entries.select { |e| e.layer == layer }
+        next if layer_entries.empty?
+
+        any = true
+        lines << "Layer: #{layer}"
+        append_binding_entries_grouped!(lines, layer_entries, layer:, sort:)
+        lines << ""
+      end
+
+      lines << "(no bindings)" unless any
+      lines
+    end
+
+    def append_binding_entries_grouped!(lines, entries, layer:, sort:)
+      groups = entries.group_by do |e|
+        if layer == :app && e.scope == :global
+          [:global, nil]
+        elsif e.mode
+          [:mode, e.mode]
+        else
+          [:plain, nil]
+        end
+      end
+
+      groups.keys.sort_by { |kind, mode| binding_group_sort_key(kind, mode) }.each do |kind, mode|
+        group_entries = groups[[kind, mode]]
+        next if group_entries.nil? || group_entries.empty?
+
+        if kind == :global
+          lines << "  [global]"
+        elsif mode
+          lines << "  [#{mode}]"
+        end
+
+        group_entries = sort_binding_entries(group_entries, sort:)
+        parts = group_entries.map { |entry| binding_entry_display_parts(entry) }
+        rhs_width = parts.map { |_, rhs, _| rhs.length }.max || 0
+        parts.each do |lhs, rhs, desc|
+          lines << format_binding_entry_line(lhs, rhs, desc, rhs_width:)
+        end
+      end
+    end
+
+    def binding_group_sort_key(kind, mode)
+      rank =
+        case kind
+        when :plain then 0
+        when :mode then 1
+        when :global then 2
+        else 9
+        end
+      [rank, binding_mode_order_index(mode), mode.to_s]
+    end
+
+    def binding_mode_order_index(mode)
+      return -1 if mode.nil?
+
+      order = {
+        normal: 0,
+        insert: 1,
+        visual_char: 2,
+        visual_line: 3,
+        visual_block: 4,
+        operator_pending: 5,
+        command_line: 6
+      }
+      order.fetch(mode.to_sym, 99)
+    end
+
+    def sort_binding_entries(entries, sort:)
+      case sort.to_s
+      when "command"
+        entries.sort_by do |e|
+          [e.id.to_s, format_binding_tokens(e.tokens), e.bang ? 1 : 0, e.argv.inspect, e.kwargs.inspect]
+        end
+      else
+        entries
+      end
+    end
+
+    def binding_entry_display_parts(entry)
+      lhs = format_binding_tokens(entry.tokens)
+      rhs = entry.id.to_s
+      rhs += "!" if entry.bang
+      rhs += " argv=#{entry.argv.inspect}" unless entry.argv.nil? || entry.argv.empty?
+      rhs += " kwargs=#{entry.kwargs.inspect}" unless entry.kwargs.nil? || entry.kwargs.empty?
+      desc = binding_command_desc(entry.id)
+      [lhs, rhs, desc.to_s]
+    end
+
+    def format_binding_entry_line(lhs, rhs, desc, rhs_width:)
+      line = "    #{lhs.ljust(18)} #{rhs.ljust(rhs_width)}"
+      line += "    #{desc}" unless desc.to_s.empty?
+      line
+    end
+
+    def format_binding_tokens(tokens)
+      Array(tokens).map { |t| format_binding_token(t) }.join
+    end
+
+    def format_binding_token(token)
+      case token.to_s
+      when "\e" then "<Esc>"
+      when "\t" then "<Tab>"
+      when "\r" then "<CR>"
+      else token.to_s
+      end
+    end
+
+    def binding_command_desc(command_id)
+      RuVim::CommandRegistry.instance.fetch(command_id).desc.to_s
+    rescue StandardError
+      ""
     end
 
     def paste_charwise(ctx, text, before:, count:)

@@ -1,5 +1,6 @@
 require_relative "test_helper"
 require "tmpdir"
+require "fileutils"
 
 class AppCompletionTest < Minitest::Test
   def setup
@@ -48,6 +49,35 @@ class AppCompletionTest < Minitest::Test
 
       assert_includes matches, File.join(dir, "a.rb")
       refute_includes matches, File.join(dir, "a.o")
+    end
+  end
+
+  def test_path_completion_returns_relative_match_without_dot_slash_prefix
+    Dir.mktmpdir("ruvim-complete-rel") do |dir|
+      Dir.chdir(dir) do
+        FileUtils.mkdir_p("lib")
+
+        matches = @app.send(:path_completion_candidates, "li")
+
+        assert_includes matches, "lib/"
+      end
+    end
+  end
+
+  def test_path_completion_sorts_hidden_entries_after_visible_by_default
+    Dir.mktmpdir("ruvim-complete-hidden") do |dir|
+      FileUtils.mkdir_p(File.join(dir, ".git"))
+      File.write(File.join(dir, "aaa.txt"), "")
+      File.write(File.join(dir, "bbb.txt"), "")
+
+      matches = @app.send(:path_completion_candidates, File.join(dir, ""))
+
+      assert_includes matches, File.join(dir, ".git/")
+      visible_idx = matches.index(File.join(dir, "aaa.txt"))
+      hidden_idx = matches.index(File.join(dir, ".git/"))
+      refute_nil visible_idx
+      refute_nil hidden_idx
+      assert_operator visible_idx, :<, hidden_idx
     end
   end
 
@@ -101,6 +131,49 @@ class AppCompletionTest < Minitest::Test
       @app.send(:command_line_complete)
       assert([a, b].any? { |p| cmd.text.end_with?(p) })
     end
+  end
+
+  def test_command_line_completion_full_cycles_across_original_match_set
+    @editor.materialize_intro_buffer!
+    @editor.set_option("wildmode", "full", scope: :global)
+
+    Dir.mktmpdir("ruvim-wild-full") do |dir|
+      FileUtils.mkdir_p(File.join(dir, ".git"))
+      a = File.join(dir, "aa.txt")
+      b = File.join(dir, "ab.txt")
+      File.write(a, "")
+      File.write(b, "")
+
+      @editor.enter_command_line_mode(":")
+      cmd = @editor.command_line
+      cmd.replace_text("e #{File.join(dir, "a")}")
+
+      @app.send(:command_line_complete)
+      first = cmd.text.dup
+      @app.send(:command_line_complete)
+      second = cmd.text.dup
+
+      refute_equal first, second
+      assert([a, b].any? { |p| first.end_with?(p) })
+      assert([a, b].any? { |p| second.end_with?(p) })
+    end
+  end
+
+  def test_command_line_completion_menu_is_not_limited_by_pumheight
+    @editor.materialize_intro_buffer!
+    @editor.set_option("wildmode", "list", scope: :global)
+    @editor.set_option("pumheight", 1, scope: :global)
+
+    @editor.enter_command_line_mode(":")
+    cmd = @editor.command_line
+    cmd.replace_text("se")
+
+    @app.send(:command_line_complete)
+
+    assert_equal "se", cmd.text
+    assert_includes @editor.message, "set"
+    assert_includes @editor.message, "setlocal"
+    assert_includes @editor.message, "setglobal"
   end
 
   def test_insert_completion_respects_completeopt_noselect_and_pumheight

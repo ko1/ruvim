@@ -33,6 +33,53 @@ class DispatcherTest < Minitest::Test
     assert_includes body, "Write current buffer"
   end
 
+  def test_dispatch_ex_bindings_lists_buffer_filetype_and_app_layers
+    keymaps = @app.instance_variable_get(:@keymaps)
+    @editor.current_buffer.options["filetype"] = "ruby"
+    keymaps.bind_buffer(@editor.current_buffer.id, "Q", "ui.clear_message")
+    keymaps.bind_filetype("ruby", "K", "cursor.up", mode: :normal)
+
+    @dispatcher.dispatch_ex(@editor, "bindings")
+
+    assert_equal "[Bindings]", @editor.message
+    assert_equal :help, @editor.current_buffer.kind
+    body = @editor.current_buffer.lines.join("\n")
+    assert_includes body, "Layer: buffer"
+    assert_includes body, "Layer: filetype"
+    assert_includes body, "Layer: app"
+    assert_operator body.index("Layer: buffer"), :<, body.index("Layer: filetype")
+    assert_operator body.index("Layer: filetype"), :<, body.index("Layer: app")
+    assert_includes body, "Q"
+    assert_includes body, "K"
+    assert_includes body, "gg"
+    assert_includes body, "f"
+    assert_includes body, "normal.find_char_forward_start"
+    assert_includes body, "Move to start of buffer"
+    assert_includes body, "Start char find forward"
+    assert_includes body, "Clear message"
+  end
+
+  def test_dispatch_ex_bindings_sort_command_sorts_within_group_by_command_id
+    keymaps = @app.instance_variable_get(:@keymaps)
+    keymaps.bind_buffer(@editor.current_buffer.id, "K", "ui.clear_message")
+    keymaps.bind_buffer(@editor.current_buffer.id, "Q", "cursor.up")
+
+    @dispatcher.dispatch_ex(@editor, "bindings sort=command")
+
+    body = @editor.current_buffer.lines.join("\n")
+    assert_includes body, "Sort: command"
+
+    buffer_section = body.split("Layer: buffer", 2).last
+    refute_nil buffer_section
+    buffer_section = buffer_section.split("Layer: app", 2).first.to_s
+
+    up_idx = buffer_section.index("cursor.up")
+    clear_idx = buffer_section.index("ui.clear_message")
+    refute_nil up_idx
+    refute_nil clear_idx
+    assert_operator up_idx, :<, clear_idx
+  end
+
   def test_dispatch_ex_command_and_ruby
     @dispatcher.dispatch_ex(@editor, "command Hi help")
     assert_equal "Defined :Hi", @editor.message

@@ -165,4 +165,17 @@ class AppMotionTest < Minitest::Test
     press("h", "h")
     assert_equal 4, @editor.current_window.cursor_x
   end
+
+  def test_e_moves_to_next_word_end_when_already_on_word_end
+    b = @editor.current_buffer
+    b.replace_all_lines!(["one two three"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 2 # end of "one"
+
+    press("e")
+    assert_equal 6, @editor.current_window.cursor_x # end of "two"
+
+    press("e")
+    assert_equal 12, @editor.current_window.cursor_x # end of "three"
+  end
 end

@@ -51,4 +51,17 @@ class AppDotRepeatTest < Minitest::Test
 
     assert_equal "xxcd", @buffer.line_at(0)
   end
+
+  def test_dot_repeats_substitute_char
+    @buffer.replace_all_lines!(["abcd"])
+    @win.cursor_x = 0
+
+    press("s")
+    @app.send(:handle_key, "X")
+    @app.send(:handle_key, :escape)
+    press("l")
+    press(".")
+
+    assert_equal "XbXd", @buffer.line_at(0)
+  end
 end

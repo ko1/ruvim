@@ -1,6 +1,7 @@
 require_relative "test_helper"
 require "tempfile"
 require "stringio"
+require "tmpdir"
 
 class AppStartupTest < Minitest::Test
   def test_startup_ex_command_runs_after_boot
@@ -305,6 +306,48 @@ class AppStartupTest < Minitest::Test
         ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = prev_prefix
         app&.send(:shutdown_background_readers!)
       end
+    end
+  end
+
+  def test_command_line_history_persists_in_xdg_state_home
+    Dir.mktmpdir("ruvim-history-xdg") do |dir|
+      prev_xdg = ENV["XDG_STATE_HOME"]
+      prev_home = ENV["HOME"]
+      ENV["XDG_STATE_HOME"] = dir
+      ENV["HOME"] = dir
+
+      app1 = RuVim::App.new(clean: true)
+      app1.send(:push_command_line_history, ":", "set number")
+      app1.send(:push_command_line_history, "/", "foo")
+      app1.send(:push_command_line_history, "?", "bar")
+      app1.send(:save_command_line_history!)
+
+      path = File.join(dir, "ruvim", "history.json")
+      assert_equal true, File.file?(path)
+
+      app2 = RuVim::App.new(clean: true)
+      hist = app2.instance_variable_get(:@cmdline_history)
+      assert_equal ["set number"], hist[":"]
+      assert_equal ["foo"], hist["/"]
+      assert_equal ["bar"], hist["?"]
+    ensure
+      ENV["XDG_STATE_HOME"] = prev_xdg
+      ENV["HOME"] = prev_home
+    end
+  end
+
+  def test_command_line_history_path_falls_back_to_home_dot_ruvim
+    Dir.mktmpdir("ruvim-history-home") do |dir|
+      prev_xdg = ENV["XDG_STATE_HOME"]
+      prev_home = ENV["HOME"]
+      ENV.delete("XDG_STATE_HOME")
+      ENV["HOME"] = dir
+
+      app = RuVim::App.new(clean: true)
+      assert_equal File.join(dir, ".ruvim", "history.json"), app.send(:command_line_history_file_path)
+    ensure
+      ENV["XDG_STATE_HOME"] = prev_xdg
+      ENV["HOME"] = prev_home
     end
   end
 end

@@ -1,5 +1,7 @@
 # RuVim キーバインディング一覧
 
+実行時の現在有効な binding 一覧は `:bindings` で表示できます（layer: `buffer` / `filetype` / `app`）。
+
 ## Normal mode
 
 - `h` : 左へ移動

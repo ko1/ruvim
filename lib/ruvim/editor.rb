@@ -53,7 +53,7 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler
 
     def initialize
       @buffers = {}
@@ -78,6 +78,8 @@ module RuVim
       @running = true
       @stdin_stream_stop_handler = nil
       @open_path_handler = nil
+      @keymap_manager = nil
+      @app_action_handler = nil
       @global_options = default_global_options
       @command_line = CommandLine.new
       @last_search = nil
@@ -148,6 +150,14 @@ module RuVim
       return false unless handler
 
       handler.call
+      true
+    end
+
+    def invoke_app_action(name, **kwargs)
+      handler = @app_action_handler
+      return false unless handler
+
+      handler.call(name.to_sym, **kwargs)
       true
     end
 

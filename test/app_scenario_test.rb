@@ -79,6 +79,79 @@ class AppScenarioTest < Minitest::Test
     assert_equal ["bc", "bc", "bc"], @editor.current_buffer.lines
   end
 
+  def test_s_substitutes_char_and_enters_insert_mode
+    @editor.current_buffer.replace_all_lines!(["abcd"])
+    @editor.current_window.cursor_x = 1
+
+    feed("s", "X", :escape)
+
+    assert_equal ["aXcd"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_z_commands_reposition_current_line_in_window
+    @editor.current_buffer.replace_all_lines!((1..20).map { |i| "line#{i}" })
+    @editor.current_window_view_height_hint = 5
+    @editor.current_window.cursor_y = 10
+
+    feed("z", "t")
+    assert_equal 10, @editor.current_window.row_offset
+
+    feed("z", "z")
+    assert_equal 8, @editor.current_window.row_offset
+
+    feed("z", "b")
+    assert_equal 6, @editor.current_window.row_offset
+  end
+
+  def test_j_joins_next_line_trimming_indent
+    @editor.current_buffer.replace_all_lines!(["foo", "  bar", "baz"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("J")
+
+    assert_equal ["foo bar", "baz"], @editor.current_buffer.lines
+    assert_equal 3, @editor.current_window.cursor_x
+  end
+
+  def test_uppercase_aliases_d_c_s_x_y_and_tilde
+    @editor.current_buffer.replace_all_lines!(["abcd"])
+    @editor.current_window.cursor_x = 2
+    feed("X")
+    assert_equal ["acd"], @editor.current_buffer.lines
+
+    @editor.current_buffer.replace_all_lines!(["abcd"])
+    @editor.current_window.cursor_x = 1
+    feed("D")
+    assert_equal ["a"], @editor.current_buffer.lines
+
+    @editor.current_buffer.replace_all_lines!(["abcd"])
+    @editor.current_window.cursor_x = 1
+    feed("C", "X", :escape)
+    assert_equal ["aX"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+
+    @editor.current_buffer.replace_all_lines!(["Abcd"])
+    @editor.current_window.cursor_x = 0
+    feed("~")
+    assert_equal ["abcd"], @editor.current_buffer.lines
+    assert_equal 1, @editor.current_window.cursor_x
+
+    @editor.current_buffer.replace_all_lines!(["hello"])
+    @editor.current_window.cursor_x = 0
+    feed("Y")
+    reg = @editor.get_register("\"")
+    assert_equal :linewise, reg[:type]
+    assert_equal "hello\n", reg[:text]
+
+    @editor.current_buffer.replace_all_lines!(["hello"])
+    @editor.current_window.cursor_x = 0
+    feed("S", "x", :escape)
+    assert_equal ["x"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+  end
+
   def test_expandtab_and_autoindent_in_insert_mode
     @editor.set_option("expandtab", true, scope: :buffer)
     @editor.set_option("tabstop", 4, scope: :buffer)
@@ -371,7 +444,7 @@ class AppScenarioTest < Minitest::Test
     @editor.current_buffer.replace_all_lines!(["a", "b"])
     @editor.current_window.cursor_y = 0
 
-    feed("z")
+    feed("_")
     assert @editor.message_error?
     assert_match(/Unknown key:/, @editor.message)
 

@@ -1,3 +1,6 @@
+require "json"
+require "fileutils"
+
 module RuVim
   class App
     LARGE_FILE_ASYNC_THRESHOLD_BYTES = 64 * 1024 * 1024
@@ -49,6 +52,9 @@ module RuVim
       @editor.restricted_mode = @restricted_mode
       @editor.stdin_stream_stop_handler = method(:stdin_stream_stop_command)
       @editor.open_path_handler = method(:open_path_with_large_file_support)
+      @editor.keymap_manager = @keymaps
+      @editor.app_action_handler = method(:handle_editor_app_action)
+      load_command_line_history!
 
       startup_mark("init.start")
       register_builtins!
@@ -113,6 +119,7 @@ module RuVim
       end
     ensure
       shutdown_background_readers!
+      save_command_line_history!
     end
 
     def run_startup_actions!(actions, log_prefix: "startup")
@@ -195,6 +202,9 @@ module RuVim
       register_internal_unless(cmd, "cursor.page_down.half", call: :cursor_page_down_half, desc: "Move half page down")
       register_internal_unless(cmd, "window.scroll_up.line", call: :window_scroll_up_line, desc: "Scroll window up one line")
       register_internal_unless(cmd, "window.scroll_down.line", call: :window_scroll_down_line, desc: "Scroll window down one line")
+      register_internal_unless(cmd, "window.cursor_line_top", call: :window_cursor_line_top, desc: "Put cursor line at top")
+      register_internal_unless(cmd, "window.cursor_line_center", call: :window_cursor_line_center, desc: "Put cursor line at center")
+      register_internal_unless(cmd, "window.cursor_line_bottom", call: :window_cursor_line_bottom, desc: "Put cursor line at bottom")
       register_internal_unless(cmd, "cursor.line_start", call: :cursor_line_start, desc: "Move to column 1")
       register_internal_unless(cmd, "cursor.line_end", call: :cursor_line_end, desc: "Move to end of line")
       register_internal_unless(cmd, "cursor.first_nonblank", call: :cursor_first_nonblank, desc: "Move to first nonblank")
@@ -224,6 +234,9 @@ module RuVim
       register_internal_unless(cmd, "mode.search_forward", call: :enter_search_forward_mode, desc: "Enter / search")
       register_internal_unless(cmd, "mode.search_backward", call: :enter_search_backward_mode, desc: "Enter ? search")
       register_internal_unless(cmd, "buffer.delete_char", call: :delete_char, desc: "Delete char under cursor")
+      register_internal_unless(cmd, "buffer.substitute_char", call: :substitute_char, desc: "Substitute char(s)")
+      register_internal_unless(cmd, "buffer.swapcase_char", call: :swapcase_char, desc: "Swap case under cursor")
+      register_internal_unless(cmd, "buffer.join_lines", call: :join_lines, desc: "Join lines")
       register_internal_unless(cmd, "buffer.delete_line", call: :delete_line, desc: "Delete current line")
       register_internal_unless(cmd, "buffer.delete_motion", call: :delete_motion, desc: "Delete by motion")
       register_internal_unless(cmd, "buffer.change_motion", call: :change_motion, desc: "Change by motion")
@@ -253,6 +266,23 @@ module RuVim
       register_internal_unless(cmd, "buffer.replace_char", call: :replace_char, desc: "Replace single char")
       register_internal_unless(cmd, "file.goto_under_cursor", call: :file_goto_under_cursor, desc: "Open file under cursor")
       register_internal_unless(cmd, "ui.clear_message", call: :clear_message, desc: "Clear message")
+      register_internal_unless(cmd, "normal.register_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_register_pending_start) }, desc: "Select register for next operation")
+      register_internal_unless(cmd, "normal.operator_delete_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :delete) }, desc: "Start delete operator")
+      register_internal_unless(cmd, "normal.operator_yank_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :yank) }, desc: "Start yank operator")
+      register_internal_unless(cmd, "normal.operator_change_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :change) }, desc: "Start change operator")
+      register_internal_unless(cmd, "normal.replace_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_replace_pending_start) }, desc: "Start replace-char pending")
+      register_internal_unless(cmd, "normal.find_char_forward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "f") }, desc: "Start char find forward")
+      register_internal_unless(cmd, "normal.find_char_backward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "F") }, desc: "Start char find backward")
+      register_internal_unless(cmd, "normal.find_till_forward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "t") }, desc: "Start till-char find forward")
+      register_internal_unless(cmd, "normal.find_till_backward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "T") }, desc: "Start till-char find backward")
+      register_internal_unless(cmd, "normal.find_repeat", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_repeat, reverse: false) }, desc: "Repeat last f/t/F/T")
+      register_internal_unless(cmd, "normal.find_repeat_reverse", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_repeat, reverse: true) }, desc: "Repeat last f/t/F/T in reverse")
+      register_internal_unless(cmd, "normal.change_repeat", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_change_repeat) }, desc: "Repeat last change")
+      register_internal_unless(cmd, "normal.macro_record_toggle", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_macro_record_toggle) }, desc: "Start/stop macro recording")
+      register_internal_unless(cmd, "normal.macro_play_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_macro_play_pending_start) }, desc: "Start macro play pending")
+      register_internal_unless(cmd, "normal.mark_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_mark_pending_start) }, desc: "Start mark set pending")
+      register_internal_unless(cmd, "normal.jump_mark_linewise_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_jump_pending_start, linewise: true, repeat_token: "'") }, desc: "Start linewise mark jump pending")
+      register_internal_unless(cmd, "normal.jump_mark_exact_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_jump_pending_start, linewise: false, repeat_token: "`") }, desc: "Start exact mark jump pending")
       register_internal_unless(
         cmd,
         "stdin.stream_stop",
@@ -273,6 +303,7 @@ module RuVim
       register_ex_unless(ex, "buffer", call: :buffer_switch, aliases: %w[b], desc: "Switch buffer", nargs: 1, bang: true)
       register_ex_unless(ex, "bdelete", call: :buffer_delete, aliases: %w[bd], desc: "Delete buffer", nargs: :maybe_one, bang: true)
       register_ex_unless(ex, "commands", call: :ex_commands, desc: "List Ex commands", nargs: 0)
+      register_ex_unless(ex, "bindings", call: :ex_bindings, desc: "List active key bindings", nargs: :any)
       register_ex_unless(ex, "set", call: :ex_set, desc: "Set options", nargs: :any)
       register_ex_unless(ex, "setlocal", call: :ex_setlocal, desc: "Set window/buffer local option", nargs: :any)
       register_ex_unless(ex, "setglobal", call: :ex_setglobal, desc: "Set global option", nargs: :any)
@@ -329,6 +360,31 @@ module RuVim
       @keymaps.bind(:normal, "/", "mode.search_forward")
       @keymaps.bind(:normal, "?", "mode.search_backward")
       @keymaps.bind(:normal, "x", "buffer.delete_char")
+      @keymaps.bind(:normal, "X", "buffer.delete_motion", kwargs: { motion: "h" })
+      @keymaps.bind(:normal, "s", "buffer.substitute_char")
+      @keymaps.bind(:normal, "D", "buffer.delete_motion", kwargs: { motion: "$" })
+      @keymaps.bind(:normal, "C", "buffer.change_motion", kwargs: { motion: "$" })
+      @keymaps.bind(:normal, "S", "buffer.change_line")
+      @keymaps.bind(:normal, "Y", "buffer.yank_line")
+      @keymaps.bind(:normal, "J", "buffer.join_lines")
+      @keymaps.bind(:normal, "~", "buffer.swapcase_char")
+      @keymaps.bind(:normal, "\"", "normal.register_pending_start")
+      @keymaps.bind(:normal, "d", "normal.operator_delete_start")
+      @keymaps.bind(:normal, "y", "normal.operator_yank_start")
+      @keymaps.bind(:normal, "c", "normal.operator_change_start")
+      @keymaps.bind(:normal, "r", "normal.replace_pending_start")
+      @keymaps.bind(:normal, "f", "normal.find_char_forward_start")
+      @keymaps.bind(:normal, "F", "normal.find_char_backward_start")
+      @keymaps.bind(:normal, "t", "normal.find_till_forward_start")
+      @keymaps.bind(:normal, "T", "normal.find_till_backward_start")
+      @keymaps.bind(:normal, ";", "normal.find_repeat")
+      @keymaps.bind(:normal, ",", "normal.find_repeat_reverse")
+      @keymaps.bind(:normal, ".", "normal.change_repeat")
+      @keymaps.bind(:normal, "q", "normal.macro_record_toggle")
+      @keymaps.bind(:normal, "@", "normal.macro_play_pending_start")
+      @keymaps.bind(:normal, "m", "normal.mark_pending_start")
+      @keymaps.bind(:normal, "'", "normal.jump_mark_linewise_pending_start")
+      @keymaps.bind(:normal, "`", "normal.jump_mark_exact_pending_start")
       @keymaps.bind(:normal, "p", "buffer.paste_after")
       @keymaps.bind(:normal, "P", "buffer.paste_before")
       @keymaps.bind(:normal, "u", "buffer.undo")
@@ -341,6 +397,9 @@ module RuVim
       @keymaps.bind(:normal, ["<C-b>"], "cursor.page_up.default")
       @keymaps.bind(:normal, ["<C-e>"], "window.scroll_down.line")
       @keymaps.bind(:normal, ["<C-y>"], "window.scroll_up.line")
+      @keymaps.bind(:normal, "zt", "window.cursor_line_top")
+      @keymaps.bind(:normal, "zz", "window.cursor_line_center")
+      @keymaps.bind(:normal, "zb", "window.cursor_line_bottom")
       @keymaps.bind(:normal, ["<C-c>"], "stdin.stream_stop")
       @keymaps.bind(:normal, "n", "search.next")
       @keymaps.bind(:normal, "N", "search.prev")
@@ -392,6 +451,36 @@ module RuVim
       return if key == :ctrl_c
 
       @editor.clear_message
+    end
+
+    def handle_editor_app_action(name, **kwargs)
+      case name.to_sym
+      when :normal_register_pending_start
+        start_register_pending
+      when :normal_operator_start
+        start_operator_pending((kwargs[:name] || kwargs["name"]).to_sym)
+      when :normal_replace_pending_start
+        start_replace_pending
+      when :normal_find_pending_start
+        start_find_pending((kwargs[:token] || kwargs["token"]).to_s)
+      when :normal_find_repeat
+        repeat_last_find(reverse: !!(kwargs[:reverse] || kwargs["reverse"]))
+      when :normal_change_repeat
+        repeat_last_change
+      when :normal_macro_record_toggle
+        toggle_macro_recording_or_start_pending
+      when :normal_macro_play_pending_start
+        start_macro_play_pending
+      when :normal_mark_pending_start
+        start_mark_pending
+      when :normal_jump_pending_start
+        start_jump_pending(
+          linewise: !!(kwargs[:linewise] || kwargs["linewise"]),
+          repeat_token: (kwargs[:repeat_token] || kwargs["repeat_token"]).to_s
+        )
+      else
+        raise RuVim::CommandError, "Unknown app action: #{name}"
+      end
     end
 
     def handle_normal_key(key)
@@ -448,43 +537,7 @@ module RuVim
     end
 
     def handle_normal_direct_token(token)
-      case token
-      when "\""
-        start_register_pending
-      when "d"
-        start_operator_pending(:delete)
-      when "y"
-        start_operator_pending(:yank)
-      when "c"
-        start_operator_pending(:change)
-      when "r"
-        start_replace_pending
-      when "f", "F", "t", "T"
-        start_find_pending(token)
-      when ";"
-        repeat_last_find(reverse: false)
-      when ","
-        repeat_last_find(reverse: true)
-      when "."
-        repeat_last_change
-      when "q"
-        if @editor.macro_recording?
-          stop_macro_recording
-        else
-          start_macro_record_pending
-        end
-      when "@"
-        start_macro_play_pending
-      when "m"
-        start_mark_pending
-      when "'"
-        start_jump_pending(linewise: true, repeat_token: "'")
-      when "`"
-        start_jump_pending(linewise: false, repeat_token: "`")
-      else
-        return false
-      end
-      true
+      false
     end
 
     def resolve_normal_key_sequence
@@ -504,6 +557,7 @@ module RuVim
         clear_pending_key_timeout
         matched_keys = @pending_keys.dup
         repeat_count = @editor.pending_count
+        @pending_keys = []
         invocation = dup_invocation(match.invocation)
         invocation.count = repeat_count
         @dispatcher.dispatch(@editor, invocation)
@@ -992,6 +1046,14 @@ module RuVim
       @editor.echo("q")
     end
 
+    def toggle_macro_recording_or_start_pending
+      if @editor.macro_recording?
+        stop_macro_recording
+      else
+        start_macro_record_pending
+      end
+    end
+
     def finish_macro_record_pending(token)
       @macro_record_pending = false
       if token == "\e"
@@ -1191,9 +1253,9 @@ module RuVim
       return if (@dot_replay_depth || 0).positive?
 
       case invocation.id
-      when "buffer.delete_char", "buffer.paste_after", "buffer.paste_before"
+      when "buffer.delete_char", "buffer.delete_motion", "buffer.join_lines", "buffer.swapcase_char", "buffer.paste_after", "buffer.paste_before"
         record_last_change_keys(count_prefixed_keys(count, matched_keys))
-      when "mode.insert", "mode.append", "mode.append_line_end", "mode.insert_nonblank", "mode.open_below", "mode.open_above"
+      when "mode.insert", "mode.append", "mode.append_line_end", "mode.insert_nonblank", "mode.open_below", "mode.open_above", "buffer.substitute_char", "buffer.change_motion", "buffer.change_line"
         begin_dot_change_capture(count_prefixed_keys(count, matched_keys)) if @editor.mode == :insert
       end
     end
@@ -1351,6 +1413,66 @@ module RuVim
       @cmdline_history_index = nil
     end
 
+    def load_command_line_history!
+      path = command_line_history_file_path
+      return unless path
+      return unless File.file?(path)
+
+      raw = File.read(path)
+      data = JSON.parse(raw)
+      return unless data.is_a?(Hash)
+
+      loaded = Hash.new { |h, k| h[k] = [] }
+      data.each do |prefix, items|
+        key = prefix.to_s
+        next unless [":", "/", "?"].include?(key)
+        next unless items.is_a?(Array)
+
+        hist = loaded[key]
+        items.each do |item|
+          text = item.to_s
+          next if text.empty?
+
+          hist.delete(text)
+          hist << text
+        end
+        hist.shift while hist.length > 100
+      end
+      @cmdline_history = loaded
+    rescue StandardError => e
+      verbose_log(1, "history load error: #{e.message}")
+    end
+
+    def save_command_line_history!
+      path = command_line_history_file_path
+      return unless path
+
+      payload = {
+        ":" => Array(@cmdline_history[":"]).map(&:to_s).last(100),
+        "/" => Array(@cmdline_history["/"]).map(&:to_s).last(100),
+        "?" => Array(@cmdline_history["?"]).map(&:to_s).last(100)
+      }
+
+      FileUtils.mkdir_p(File.dirname(path))
+      tmp = "#{path}.tmp"
+      File.write(tmp, JSON.pretty_generate(payload) + "\n")
+      File.rename(tmp, path)
+    rescue StandardError => e
+      verbose_log(1, "history save error: #{e.message}")
+    end
+
+    def command_line_history_file_path
+      xdg_state_home = ENV["XDG_STATE_HOME"].to_s
+      if !xdg_state_home.empty?
+        return File.join(xdg_state_home, "ruvim", "history.json")
+      end
+
+      home = ENV["HOME"].to_s
+      return nil if home.empty?
+
+      File.join(home, ".ruvim", "history.json")
+    end
+
     def command_line_history_move(delta)
       cmd = @editor.command_line
       hist = @cmdline_history[cmd.prefix]
@@ -1379,7 +1501,7 @@ module RuVim
       ctx = ex_completion_context(cmd)
       return unless ctx
 
-      matches = ex_completion_candidates(ctx)
+      matches = reusable_command_line_completion_matches(cmd, ctx) || ex_completion_candidates(ctx)
       case matches.length
       when 0
         clear_command_line_completion
@@ -1391,6 +1513,29 @@ module RuVim
         apply_wildmode_completion(cmd, ctx, matches)
       end
       update_incsearch_preview_if_needed
+    end
+
+    def reusable_command_line_completion_matches(cmd, ctx)
+      state = @cmdline_completion
+      return nil unless state
+      return nil unless state[:prefix] == cmd.prefix
+      return nil unless state[:kind] == ctx[:kind]
+      return nil unless state[:command] == ctx[:command]
+      return nil unless state[:arg_index] == ctx[:arg_index]
+      return nil unless state[:token_start] == ctx[:token_start]
+
+      before_text = cmd.text[0...ctx[:token_start]].to_s
+      after_text = cmd.text[ctx[:token_end]..].to_s
+      return nil unless state[:before_text] == before_text
+      return nil unless state[:after_text] == after_text
+
+      matches = Array(state[:matches]).map(&:to_s)
+      return nil if matches.empty?
+
+      current_token = cmd.text[ctx[:token_start]...ctx[:token_end]].to_s
+      return nil unless current_token.empty? || matches.include?(current_token) || common_prefix(matches).start_with?(current_token) || current_token.start_with?(common_prefix(matches))
+
+      matches
     end
 
     def clear_command_line_completion
@@ -1465,13 +1610,56 @@ module RuVim
     def show_command_line_completion_menu(matches, selected:, force:)
       return unless force || @editor.effective_option("wildmenu")
 
-      limit = [@editor.effective_option("pumheight").to_i, 1].max
-      items = matches.first(limit).each_with_index.map do |m, i|
+      items = matches.each_with_index.map do |m, i|
         idx = i
         idx == selected ? "[#{m}]" : m
       end
-      items << "..." if matches.length > limit
-      @editor.echo(items.join(" "))
+      @editor.echo(compose_command_line_completion_menu(items))
+    end
+
+    def compose_command_line_completion_menu(items)
+      parts = Array(items).map(&:to_s)
+      return "" if parts.empty?
+
+      width = command_line_completion_menu_width
+      width = [width.to_i, 1].max
+      out = +""
+      shown = 0
+
+      parts.each_with_index do |item, idx|
+        token = shown.zero? ? item : " #{item}"
+        if out.empty? && token.length > width
+          out = token[0, width]
+          shown = 1
+          break
+        end
+        break if out.length + token.length > width
+
+        out << token
+        shown = idx + 1
+      end
+
+      if shown < parts.length
+        ellipsis = (out.empty? ? "..." : " ...")
+        if out.length + ellipsis.length <= width
+          out << ellipsis
+        elsif width >= 3
+          out = out[0, width - 3] + "..."
+        else
+          out = "." * width
+        end
+      end
+
+      out
+    end
+
+    def command_line_completion_menu_width
+      return 80 unless defined?(@terminal) && @terminal && @terminal.respond_to?(:winsize)
+
+      _rows, cols = @terminal.winsize
+      [cols.to_i, 1].max
+    rescue StandardError
+      80
     end
 
     def common_prefix(strings)
@@ -1952,14 +2140,26 @@ module RuVim
         else
           File.dirname(input)
         end
-      base_dir = "." if base_dir == "."
       partial = input.end_with?("/") ? "" : File.basename(input)
-      pattern = input.empty? ? "*" : File.join(base_dir, "#{partial}*")
-      Dir.glob(pattern, File::FNM_DOTMATCH).sort.filter_map do |p|
+      pattern =
+        if input.empty?
+          "*"
+        elsif base_dir == "."
+          "#{partial}*"
+        else
+          File.join(base_dir, "#{partial}*")
+        end
+      partial_starts_with_dot = partial.start_with?(".")
+      entries = Dir.glob(pattern, File::FNM_DOTMATCH).filter_map do |p|
         next if [".", ".."].include?(File.basename(p))
         next unless p.start_with?(input) || input.empty?
         next if wildignore_path?(p)
         File.directory?(p) ? "#{p}/" : p
+      end
+      entries.sort_by do |p|
+        base = File.basename(p.to_s.sub(%r{/\z}, ""))
+        hidden_rank = (!partial_starts_with_dot && base.start_with?(".")) ? 1 : 0
+        [hidden_rank, p]
       end
     rescue StandardError
       []

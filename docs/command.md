@@ -75,6 +75,16 @@
 - 形式: `:commands`
 - Ex コマンド一覧（alias 含む）を read-only バッファに表示
 
+### `:bindings`
+
+- 形式: `:bindings [mode]`
+- 現在バッファに対して有効な key binding 一覧を read-only バッファに表示
+- layer ごとに表示:
+  - `buffer`
+  - `filetype`
+  - `app`
+- `mode` は任意（例: `normal`, `insert`, `visual_line`, `command_line`。短縮形 `n`, `i`, `v`, `c` なども可）
+
 ### quickfix / location list（最小）
 
 - `:vimgrep /pattern/`

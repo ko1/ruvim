@@ -314,6 +314,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `:e[!] [path]` / `:edit[!] [path]`
 - `:help [topic]`
 - `:commands`
+- `:bindings [mode]`
 - `:command[!] <Name> <ex-body>`
 - `:ruby <code>` / `:rb <code>`
 - `:!<command>`
@@ -358,6 +359,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `:e!`（引数なし）は現在ファイルの再読込（undo/redo クリア）
 - `:buffer!`, `:bnext!`, `:bprev!` は未保存変更があっても切替
 - `:w!` は現状 `:w` と同等に受理（権限昇格などは未実装）
+- `:bindings` は current buffer 文脈の有効 key binding を layer 別（`buffer`, `filetype`, `app`）に一覧表示
+  - 任意で mode filter を受ける（例 `:bindings normal`）
 - 大きいファイルを開くときは、閾値以上で段階読み込みになる場合がある
   - status line に `[load/live]`（失敗時 `[load/error]`）
   - デフォルト実装は先頭 `8MB` を先に表示し、残りをバックグラウンド読み込み後に反映
