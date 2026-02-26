@@ -156,6 +156,7 @@ module RuVim
 
     def enter_insert_mode(ctx, **)
       materialize_intro_buffer_if_needed(ctx)
+      ensure_modifiable_for_insert!(ctx)
       ctx.buffer.begin_change_group
       ctx.editor.enter_insert_mode
       ctx.editor.echo("-- INSERT --")
@@ -180,6 +181,7 @@ module RuVim
 
     def open_line_below(ctx, **)
       materialize_intro_buffer_if_needed(ctx)
+      ensure_modifiable_for_insert!(ctx)
       y = ctx.window.cursor_y
       x = ctx.buffer.line_length(y)
       ctx.buffer.begin_change_group
@@ -193,6 +195,7 @@ module RuVim
 
     def open_line_above(ctx, **)
       materialize_intro_buffer_if_needed(ctx)
+      ensure_modifiable_for_insert!(ctx)
       y = ctx.window.cursor_y
       ctx.buffer.begin_change_group
       _new_y, new_x = ctx.buffer.insert_newline(y, 0)
@@ -1954,6 +1957,10 @@ module RuVim
     def materialize_intro_buffer_if_needed(ctx)
       ctx.editor.materialize_intro_buffer!
       nil
+    end
+
+    def ensure_modifiable_for_insert!(ctx)
+      raise RuVim::CommandError, "Buffer is not modifiable" unless ctx.buffer.modifiable?
     end
 
     def maybe_autowrite_before_switch(ctx)

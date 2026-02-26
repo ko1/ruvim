@@ -1,13 +1,21 @@
 module RuVim
   class App
-    def initialize(path: nil, paths: nil, stdin: STDIN, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+      startup_paths = Array(paths || path).compact
+      @ui_stdin = ui_stdin || stdin
+      @stdin_stream_mode = !!stdin_stream_mode
+      @stdin_stream_source = @stdin_stream_mode ? stdin : nil
       @editor = Editor.new
-      @terminal = Terminal.new(stdin:, stdout:)
-      @input = Input.new(stdin:)
+      @terminal = Terminal.new(stdin: @ui_stdin, stdout:)
+      @input = Input.new(stdin: @ui_stdin)
       @screen = Screen.new(terminal: @terminal)
       @dispatcher = Dispatcher.new
       @keymaps = KeymapManager.new
       @signal_r, @signal_w = IO.pipe
+      @stream_event_queue = nil
+      @stream_reader_thread = nil
+      @stream_buffer_id = nil
+      @stream_stop_requested = false
       @cmdline_history = Hash.new { |h, k| h[k] = [] }
       @cmdline_history_index = nil
       @cmdline_completion = nil
@@ -33,6 +41,7 @@ module RuVim
       @startup_open_layout = startup_open_layout
       @startup_open_count = startup_open_count
       @editor.restricted_mode = @restricted_mode
+      @editor.stdin_stream_stop_handler = method(:stdin_stream_stop_command)
 
       startup_mark("init.start")
       register_builtins!
@@ -48,8 +57,10 @@ module RuVim
       install_signal_handlers
       startup_mark("signals.installed")
 
-      startup_paths = Array(paths || path).compact
-      if startup_paths.empty?
+      if @stdin_stream_mode && startup_paths.empty?
+        verbose_log(1, "startup: stdin stream buffer")
+        prepare_stdin_stream_buffer!
+      elsif startup_paths.empty?
         verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
       else
@@ -64,12 +75,14 @@ module RuVim
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
+      start_stdin_stream_reader! if @stream_buffer_id
       write_startuptime_log!
     end
 
     def run
       @terminal.with_ui do
         loop do
+          @needs_redraw = true if drain_stream_events!
           if @needs_redraw
             @screen.render(@editor)
             @needs_redraw = false
@@ -91,6 +104,8 @@ module RuVim
           @needs_redraw = true
         end
       end
+    ensure
+      shutdown_stream_reader!
     end
 
     def run_startup_actions!(actions, log_prefix: "startup")
@@ -231,6 +246,12 @@ module RuVim
       register_internal_unless(cmd, "buffer.replace_char", call: :replace_char, desc: "Replace single char")
       register_internal_unless(cmd, "file.goto_under_cursor", call: :file_goto_under_cursor, desc: "Open file under cursor")
       register_internal_unless(cmd, "ui.clear_message", call: :clear_message, desc: "Clear message")
+      register_internal_unless(
+        cmd,
+        "stdin.stream_stop",
+        call: ->(ctx, **) { ctx.editor.stdin_stream_stop_or_cancel! },
+        desc: "Stop stdin follow stream (or cancel pending state)"
+      )
 
       register_ex_unless(ex, "w", call: :file_write, aliases: %w[write], desc: "Write current buffer", nargs: :maybe_one, bang: true)
       register_ex_unless(ex, "q", call: :app_quit, aliases: %w[quit], desc: "Quit", nargs: 0, bang: true)
@@ -313,6 +334,7 @@ module RuVim
       @keymaps.bind(:normal, ["<C-b>"], "cursor.page_up.default")
       @keymaps.bind(:normal, ["<C-e>"], "window.scroll_down.line")
       @keymaps.bind(:normal, ["<C-y>"], "window.scroll_up.line")
+      @keymaps.bind(:normal, ["<C-c>"], "stdin.stream_stop")
       @keymaps.bind(:normal, "n", "search.next")
       @keymaps.bind(:normal, "N", "search.prev")
       @keymaps.bind(:normal, "*", "search.word_forward")
@@ -330,7 +352,7 @@ module RuVim
       clear_stale_message_before_key(key)
       @skip_record_for_current_key = false
       append_dot_change_capture_key(key)
-      if key == :ctrl_c
+      if key == :ctrl_c && @editor.mode != :normal
         handle_ctrl_c
         track_mode_transition(mode_before)
         record_macro_key_if_needed(key)
@@ -789,6 +811,7 @@ module RuVim
       when :ctrl_o then "<C-o>"
       when :ctrl_w then "<C-w>"
       when :ctrl_l then "<C-l>"
+      when :ctrl_c then "<C-c>"
       when :left then "<Left>"
       when :right then "<Right>"
       when :up then "<Up>"
@@ -2125,6 +2148,178 @@ module RuVim
       @editor.tabnew(path:)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
+    end
+
+    def prepare_stdin_stream_buffer!
+      buf = @editor.current_buffer
+      if buf.intro_buffer?
+        @editor.materialize_intro_buffer!
+        buf = @editor.current_buffer
+      end
+
+      buf.replace_all_lines!([""])
+      buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
+      buf.modified = false
+      buf.stream_state = :live
+      buf.options["filetype"] = "text"
+      @stream_stop_requested = false
+      @stream_event_queue = Queue.new
+      @stream_buffer_id = buf.id
+      move_window_to_stream_end!(@editor.current_window, buf)
+      @editor.echo("[stdin] follow")
+    end
+
+    def stdin_stream_stop_command
+      return if stop_stdin_stream!
+
+      handle_normal_ctrl_c
+    end
+
+    def stop_stdin_stream!
+      buf = @editor.buffers[@stream_buffer_id]
+      return false unless buf&.kind == :stream
+      return false unless (buf.stream_state || :live) == :live
+
+      @stream_stop_requested = true
+      io = @stdin_stream_source
+      @stdin_stream_source = nil
+      begin
+        io.close if io && io.respond_to?(:close) && !(io.respond_to?(:closed?) && io.closed?)
+      rescue StandardError
+        nil
+      end
+      if @stream_reader_thread&.alive?
+        @stream_reader_thread.kill
+        @stream_reader_thread.join(0.05)
+      end
+      @stream_reader_thread = nil
+
+      buf.stream_state = :closed
+      @editor.echo("[stdin] closed")
+      notify_signal_wakeup
+      true
+    end
+
+    def start_stdin_stream_reader!
+      return unless @stdin_stream_source
+      return unless @stream_event_queue
+      return if @stream_reader_thread&.alive?
+
+      @stream_stop_requested = false
+      io = @stdin_stream_source
+      @stream_reader_thread = Thread.new do
+        loop do
+          chunk = io.readpartial(4096)
+          next if chunk.nil? || chunk.empty?
+
+          @stream_event_queue << { type: :data, data: Buffer.decode_text(chunk) }
+          notify_signal_wakeup
+        end
+      rescue EOFError
+        unless @stream_stop_requested
+          @stream_event_queue << { type: :eof }
+          notify_signal_wakeup
+        end
+      rescue IOError => e
+        unless @stream_stop_requested
+          @stream_event_queue << { type: :error, error: e.message.to_s }
+          notify_signal_wakeup
+        end
+      rescue StandardError => e
+        unless @stream_stop_requested
+          @stream_event_queue << { type: :error, error: e.message.to_s }
+          notify_signal_wakeup
+        end
+      end
+    end
+
+    def drain_stream_events!
+      return false unless @stream_event_queue
+
+      changed = false
+      loop do
+        event = @stream_event_queue.pop(true)
+        case event[:type]
+        when :data
+          changed ||= apply_stream_chunk!(event[:data])
+        when :eof
+          if (buf = @editor.buffers[@stream_buffer_id])
+            buf.stream_state = :closed
+          end
+          @editor.echo("[stdin] EOF")
+          changed = true
+        when :error
+          next if ignore_stream_shutdown_error?(event[:error])
+          if (buf = @editor.buffers[@stream_buffer_id])
+            buf.stream_state = :error
+          end
+          @editor.echo_error("[stdin] stream error: #{event[:error]}")
+          changed = true
+        end
+      end
+    rescue ThreadError
+      changed
+    end
+
+    def apply_stream_chunk!(text)
+      return false if text.to_s.empty?
+
+      buf = @editor.buffers[@stream_buffer_id]
+      return false unless buf
+
+      follow_window_ids = @editor.windows.values.filter_map do |win|
+        next unless win.buffer_id == buf.id
+        next unless stream_window_following_end?(win, buf)
+
+        win.id
+      end
+
+      buf.append_stream_text!(text)
+
+      follow_window_ids.each do |win_id|
+        win = @editor.windows[win_id]
+        move_window_to_stream_end!(win, buf) if win
+      end
+
+      true
+    end
+
+    def stream_window_following_end?(win, buf)
+      return false unless win
+
+      last_row = buf.line_count - 1
+      win.cursor_y >= last_row
+    end
+
+    def move_window_to_stream_end!(win, buf)
+      return unless win && buf
+
+      last_row = buf.line_count - 1
+      win.cursor_y = last_row
+      win.cursor_x = buf.line_length(last_row)
+      win.clamp_to_buffer(buf)
+    end
+
+    def shutdown_stream_reader!
+      thread = @stream_reader_thread
+      @stream_reader_thread = nil
+      @stream_stop_requested = true
+      return unless thread
+      return unless thread.alive?
+
+      thread.kill
+      thread.join(0.05)
+    rescue StandardError
+      nil
+    end
+
+    def ignore_stream_shutdown_error?(message)
+      buf = @editor.buffers[@stream_buffer_id]
+      return false unless buf&.kind == :stream
+      return false unless (buf.stream_state || :live) == :closed
+
+      msg = message.to_s.downcase
+      msg.include?("stream closed") || msg.include?("closed in another thread")
     end
 
     def move_cursor_to_line(line_number)

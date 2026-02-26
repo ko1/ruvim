@@ -101,6 +101,19 @@ class ScreenTest < Minitest::Test
     assert_includes out, "boom"
   end
 
+  def test_status_line_shows_stream_state_for_stdin_buffer
+    editor = RuVim::Editor.new
+    buf = editor.add_virtual_buffer(kind: :stream, name: "[stdin]", lines: [""], readonly: true, modifiable: false)
+    buf.stream_state = :closed
+    editor.add_window(buffer_id: buf.id)
+
+    term = TerminalStub.new([6, 60])
+    screen = RuVim::Screen.new(terminal: term)
+    line = screen.send(:status_line, editor, 60)
+
+    assert_includes line, "[stdin/closed]"
+  end
+
   def test_render_uses_dim_and_brighter_line_number_gutter_colors
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

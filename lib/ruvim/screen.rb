@@ -646,11 +646,20 @@ module RuVim
 
       path = buffer.display_name
       mod = buffer.modified? ? " [+]" : ""
+      stream = stream_status_token(buffer)
       msg = editor.message_error? ? "" : editor.message.to_s
-      left = "#{mode} #{path}#{mod}"
+      left = "#{mode} #{path}#{mod}#{stream}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1} "
       body_width = [width - right.length, 0].max
       "#{compose_status_body(left, msg, body_width)}#{right}"
+    end
+
+    def stream_status_token(buffer)
+      return "" unless buffer.respond_to?(:stream_state)
+      return "" unless buffer.kind == :stream
+
+      state = (buffer.stream_state || :live).to_s
+      " [stdin/#{state}]"
     end
 
     def compose_status_body(left, msg, width)

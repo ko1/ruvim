@@ -69,4 +69,14 @@ class BufferTest < Minitest::Test
     assert_equal true, text.valid_encoding?
     assert_equal "日本語\nabc", text
   end
+
+  def test_append_stream_text_updates_lines_without_marking_modified
+    b = RuVim::Buffer.new(id: 1, lines: [""])
+    b.append_stream_text!("a\n")
+    b.append_stream_text!("b")
+    b.append_stream_text!("\n\nc\n")
+
+    assert_equal ["a", "b", "", "c", ""], b.lines
+    refute b.modified?
+  end
 end

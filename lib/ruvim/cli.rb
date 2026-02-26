@@ -46,10 +46,20 @@ module RuVim
         raise ParseError, "config file not found: #{opts.config_path}"
       end
 
+      ui_stdin = stdin
+      stdin_stream_mode = false
+      if stdin.respond_to?(:tty?) && !stdin.tty?
+        ui_stdin = IO.console
+        raise ParseError, "no controlling terminal available for interactive UI" unless ui_stdin
+        stdin_stream_mode = opts.files.empty?
+      end
+
       app = RuVim::App.new(
         path: opts.files.first,
         paths: opts.files,
         stdin: stdin,
+        ui_stdin: ui_stdin,
+        stdin_stream_mode: stdin_stream_mode,
         stdout: stdout,
         pre_config_actions: opts.pre_config_actions,
         startup_actions: opts.startup_actions,

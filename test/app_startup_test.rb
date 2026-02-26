@@ -206,4 +206,32 @@ class AppStartupTest < Minitest::Test
       assert_match(/startup_actions\.done/, text)
     end
   end
+
+  def test_stdin_stream_mode_uses_stream_buffer_and_appends_input
+    app = RuVim::App.new(
+      clean: true,
+      stdin: StringIO.new("line1\nline2\n"),
+      ui_stdin: StringIO.new,
+      stdin_stream_mode: true
+    )
+    editor = app.instance_variable_get(:@editor)
+
+    20.times do
+      app.send(:drain_stream_events!)
+      thread = app.instance_variable_get(:@stream_reader_thread)
+      break unless thread&.alive?
+      sleep 0.005
+    end
+
+    buf = editor.current_buffer
+    assert_equal :stream, buf.kind
+    assert_equal "[stdin]", buf.display_name
+    assert_equal true, buf.readonly?
+    assert_equal false, buf.modifiable?
+    assert_includes [:live, :closed], buf.stream_state
+    assert_equal ["line1", "line2", ""], buf.lines
+    assert_match(/\[stdin\] (follow|EOF)/, editor.message)
+  ensure
+    app&.send(:shutdown_stream_reader!)
+  end
 end

@@ -1,6 +1,7 @@
 require_relative "test_helper"
 require "fileutils"
 require "tmpdir"
+require "stringio"
 
 class AppScenarioTest < Minitest::Test
   def setup
@@ -216,6 +217,42 @@ class AppScenarioTest < Minitest::Test
 
     assert_equal ["a", "b"], @editor.current_buffer.lines
     assert_equal [1, 0], [@editor.current_window.cursor_y, @editor.current_window.cursor_x]
+  end
+
+  def test_nomodifiable_buffer_edit_key_does_not_crash
+    @editor.current_buffer.replace_all_lines!(["hello"])
+    @editor.current_buffer.modifiable = false
+    @editor.current_buffer.readonly = true
+
+    @app.send(:handle_key, "x")
+
+    assert_equal ["hello"], @editor.current_buffer.lines
+    assert_match(/not modifiable/i, @editor.message)
+  end
+
+  def test_nomodifiable_buffer_insert_mode_is_rejected
+    @editor.current_buffer.replace_all_lines!(["hello"])
+    @editor.current_buffer.modifiable = false
+    @editor.current_buffer.readonly = true
+
+    @app.send(:handle_key, "i")
+
+    assert_equal :normal, @editor.mode
+    assert_equal ["hello"], @editor.current_buffer.lines
+    assert_match(/not modifiable/i, @editor.message)
+  end
+
+  def test_normal_ctrl_c_stops_stdin_stream_via_default_binding
+    stream = StringIO.new("hello\n")
+    @app.instance_variable_set(:@stdin_stream_source, stream)
+    @app.send(:prepare_stdin_stream_buffer!)
+
+    @app.send(:handle_key, :ctrl_c)
+
+    assert_equal :closed, @editor.current_buffer.stream_state
+    assert_equal :normal, @editor.mode
+    assert_equal true, stream.closed?
+    assert_match(/\[stdin\] closed/, @editor.message)
   end
 
   def test_backspace_indent_allows_deleting_autoindent_before_insert_start

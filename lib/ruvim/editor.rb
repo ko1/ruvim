@@ -53,7 +53,7 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler
 
     def initialize
       @buffers = {}
@@ -76,6 +76,7 @@ module RuVim
       @restricted_mode = false
       @current_window_view_height_hint = 1
       @running = true
+      @stdin_stream_stop_handler = nil
       @global_options = default_global_options
       @command_line = CommandLine.new
       @last_search = nil
@@ -139,6 +140,14 @@ module RuVim
 
     def current_buffer
       @buffers.fetch(current_window.buffer_id)
+    end
+
+    def stdin_stream_stop_or_cancel!
+      handler = @stdin_stream_stop_handler
+      return false unless handler
+
+      handler.call
+      true
     end
 
     def option_def(name)

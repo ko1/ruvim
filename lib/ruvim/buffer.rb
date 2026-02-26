@@ -4,6 +4,7 @@ module RuVim
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
+    attr_accessor :stream_state
 
     def self.from_file(id:, path:)
       lines =
@@ -54,6 +55,7 @@ module RuVim
       @modified = false
       @readonly = !!readonly
       @modifiable = !!modifiable
+      @stream_state = nil
       @undo_stack = []
       @redo_stack = []
       @change_group_depth = 0
@@ -108,6 +110,7 @@ module RuVim
       @name = name
       @readonly = !!readonly
       @modifiable = !!modifiable
+      @stream_state = nil unless @kind == :stream
       self
     end
 
@@ -117,6 +120,7 @@ module RuVim
       @path = nil
       @readonly = false
       @modifiable = true
+      @stream_state = nil
       @lines = [""]
       @modified = false
       @undo_stack.clear
@@ -327,6 +331,20 @@ module RuVim
       @lines = Array(new_lines).map(&:dup)
       @lines = [""] if @lines.empty?
       @modified = true
+    end
+
+    # Append externally-streamed text without touching undo history or modifiable state.
+    def append_stream_text!(text)
+      chunk = text.to_s
+      return [@lines.length - 1, @lines[-1].length] if chunk.empty?
+
+      parts = chunk.split("\n", -1)
+      head = parts.shift || ""
+      @lines[-1] = @lines[-1].to_s + head
+      @lines.concat(parts)
+      @lines = [""] if @lines.empty?
+      @modified = false
+      [@lines.length - 1, @lines[-1].length]
     end
 
     def write_to(path = nil)
