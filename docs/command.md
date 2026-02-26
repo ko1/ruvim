@@ -19,6 +19,12 @@
 - `-c {cmd}`
 - `+{cmd}`, `+{line}`, `+`
 
+補足（現状挙動）:
+
+- `cmd | ruvim`
+  - `stdin` を follow stream として開く（`[stdin]` バッファ）
+  - Normal mode の `Ctrl-c` で stream 停止（上流プロセスには直接 `SIGINT` は送らない）
+
 ## Ex コマンド（builtin）
 
 ### `:w` / `:write`
@@ -48,6 +54,11 @@
 - 引数なし: 現在ファイルを再読込
 - 未保存変更がある場合は `!` なしで拒否
 - `:e!` は未保存変更を破棄して開き直す（undo/redo もクリア）
+- 大きいファイル（閾値以上）は段階読み込みになる場合がある
+  - 読み込み中は status line に `[load/live]`
+  - デフォルトでは先頭 `8MB` を先に表示して、残りを後から追加
+  - 閾値: `RUVIM_ASYNC_FILE_THRESHOLD_BYTES`
+  - 先読みサイズ: `RUVIM_ASYNC_FILE_PREFIX_BYTES`
 
 ### `:help`
 

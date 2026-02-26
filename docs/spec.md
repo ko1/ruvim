@@ -211,6 +211,13 @@ RuVim::ExCommandRegistry.instance.register(
 - `+{cmd}`, `+{line}`, `+`
   - 起動後の Ex 実行 / 行ジャンプ / 最終行ジャンプ
 
+補足（現状実装）:
+
+- `stdin` が non-TTY で、起動引数ファイルがない場合は `stdin` を follow stream として開く
+  - バッファ名は `[stdin]`
+  - status line に `[stdin/live]`, `[stdin/closed]`, `[stdin/error]` を表示
+  - Normal mode の `Ctrl-c` はデフォルトバインドで `stdin` stream stop（上流 PID へ直接 signal は送らない）
+
 起動時コマンド（`-c`, `+...`）は、初期 buffer / file open / intro screen 構築の後に実行します。
 `--cmd` はそれより前で、user config 読み込み前に実行します。
 
@@ -351,6 +358,12 @@ RuVim::ExCommandRegistry.instance.register(
 - `:e!`（引数なし）は現在ファイルの再読込（undo/redo クリア）
 - `:buffer!`, `:bnext!`, `:bprev!` は未保存変更があっても切替
 - `:w!` は現状 `:w` と同等に受理（権限昇格などは未実装）
+- 大きいファイルを開くときは、閾値以上で段階読み込みになる場合がある
+  - status line に `[load/live]`（失敗時 `[load/error]`）
+  - デフォルト実装は先頭 `8MB` を先に表示し、残りをバックグラウンド読み込み後に反映
+  - 環境変数:
+    - `RUVIM_ASYNC_FILE_THRESHOLD_BYTES`
+    - `RUVIM_ASYNC_FILE_PREFIX_BYTES`
 
 ### `:command`（現状仕様）
 
