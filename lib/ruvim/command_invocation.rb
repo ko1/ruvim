@@ -6,7 +6,7 @@ module RuVim
       @id = id
       @argv = argv || []
       @kwargs = kwargs || {}
-      @count = count || 1
+      @count = count
       @bang = !!bang
       @raw_keys = raw_keys
     end

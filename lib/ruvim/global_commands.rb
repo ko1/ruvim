@@ -5,7 +5,7 @@ module RuVim
   class GlobalCommands
     include Singleton
 
-    def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: 1)
+    def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: nil)
       case spec_call
       when Symbol, String
         public_send(spec_call.to_sym, ctx, argv: argv, kwargs: kwargs, bang: bang, count: count)
@@ -23,11 +23,11 @@ module RuVim
     end
 
     def cursor_up(ctx, count:, **)
-      ctx.window.move_up(ctx.buffer, count)
+      ctx.window.move_up(ctx.buffer, normalized_count(count))
     end
 
     def cursor_down(ctx, count:, **)
-      ctx.window.move_down(ctx.buffer, count)
+      ctx.window.move_down(ctx.buffer, normalized_count(count))
     end
 
     def cursor_page_up(ctx, kwargs:, count:, **)
@@ -91,7 +91,7 @@ module RuVim
 
     def cursor_buffer_start(ctx, count:, **)
       record_jump(ctx)
-      target_row = [count.to_i - 1, 0].max
+      target_row = [normalized_count(count).to_i - 1, 0].max
       target_row = [target_row, ctx.buffer.line_count - 1].min
       ctx.window.cursor_y = target_row
       cursor_first_nonblank(ctx)
@@ -99,11 +99,7 @@ module RuVim
 
     def cursor_buffer_end(ctx, count:, **)
       record_jump(ctx)
-      if count && count > 1
-        target_row = [count - 1, ctx.buffer.line_count - 1].min
-      else
-        target_row = ctx.buffer.line_count - 1
-      end
+      target_row = count.nil? ? (ctx.buffer.line_count - 1) : [normalized_count(count) - 1, ctx.buffer.line_count - 1].min
       ctx.window.cursor_y = target_row
       cursor_first_nonblank(ctx)
     end
@@ -272,11 +268,13 @@ module RuVim
     end
 
     def tab_next(ctx, count:, **)
+      count = normalized_count(count)
       ctx.editor.tabnext(count)
       ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
     end
 
     def tab_prev(ctx, count:, **)
+      count = normalized_count(count)
       ctx.editor.tabprev(count)
       ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
     end
@@ -298,6 +296,7 @@ module RuVim
 
     def delete_char(ctx, count:, **)
       materialize_intro_buffer_if_needed(ctx)
+      count = normalized_count(count)
       ctx.buffer.begin_change_group
       deleted = +""
       count.times do
@@ -313,6 +312,7 @@ module RuVim
 
     def delete_line(ctx, count:, **)
       materialize_intro_buffer_if_needed(ctx)
+      count = normalized_count(count)
       ctx.buffer.begin_change_group
       deleted_lines = []
       count.times { deleted_lines << ctx.buffer.delete_line(ctx.window.cursor_y) }
@@ -436,6 +436,7 @@ module RuVim
 
     def replace_char(ctx, argv:, count:, **)
       materialize_intro_buffer_if_needed(ctx)
+      count = normalized_count(count)
       ch = argv[0].to_s
       raise RuVim::CommandError, "replace requires a character" if ch.empty?
 
@@ -456,6 +457,7 @@ module RuVim
     end
 
     def yank_line(ctx, count:, **)
+      count = normalized_count(count)
       start = ctx.window.cursor_y
       text = ctx.buffer.line_block_text(start, count)
       store_yank_register(ctx, text:, type: :linewise)
@@ -686,12 +688,14 @@ module RuVim
     end
 
     def buffer_next(ctx, count:, bang:, **)
+      count = normalized_count(count)
       target = ctx.editor.current_buffer.id
       count.times { target = ctx.editor.next_buffer_id_from(target, 1) }
       switch_buffer_id(ctx, target, bang:)
     end
 
     def buffer_prev(ctx, count:, bang:, **)
+      count = normalized_count(count)
       target = ctx.editor.current_buffer.id
       count.times { target = ctx.editor.next_buffer_id_from(target, -1) }
       switch_buffer_id(ctx, target, bang:)
@@ -1411,6 +1415,7 @@ module RuVim
       flat = cursor_to_offset(buffer, row, col)
       idx = flat
       keyword_rx = keyword_char_regex(editor, buffer, window)
+      count = normalized_count(count)
       count.times do
         idx = next_word_start_offset(text, idx, keyword_rx)
         return nil unless idx
@@ -1422,7 +1427,7 @@ module RuVim
       buffer = ctx.buffer
       row = ctx.window.cursor_y
       col = ctx.window.cursor_x
-      count = 1 if count.to_i <= 0
+      count = normalized_count(count)
       target = { row:, col: }
       count.times do
         target =
@@ -1884,6 +1889,7 @@ module RuVim
       lines = text.sub(/\n\z/, "").split("\n", -1)
       return if lines.empty?
 
+      count = normalized_count(count)
       insert_at = before ? ctx.window.cursor_y : (ctx.window.cursor_y + 1)
       ctx.buffer.begin_change_group
       count.times { ctx.buffer.insert_lines_at(insert_at, lines) }
@@ -1957,6 +1963,12 @@ module RuVim
     def materialize_intro_buffer_if_needed(ctx)
       ctx.editor.materialize_intro_buffer!
       nil
+    end
+
+    def normalized_count(count, default: 1)
+      n = count.nil? ? default : count.to_i
+      n = default if n <= 0
+      n
     end
 
     def ensure_modifiable_for_insert!(ctx)
@@ -2219,6 +2231,7 @@ module RuVim
     end
 
     def paste_charwise(ctx, text, before:, count:)
+      count = normalized_count(count)
       y = ctx.window.cursor_y
       x = ctx.window.cursor_x
       insert_col = before ? x : [x + 1, ctx.buffer.line_length(y)].min
@@ -2249,7 +2262,7 @@ module RuVim
     end
 
     def move_to_search(ctx, pattern:, direction:, count:)
-      count = 1 if count.to_i <= 0
+      count = normalized_count(count)
       regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
       count.times do
         match = find_next_match(ctx.buffer, ctx.window, regex, direction: direction)

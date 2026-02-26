@@ -372,6 +372,8 @@ module RuVim
       track_mode_transition(mode_before)
       load_current_ftplugin!
       record_macro_key_if_needed(key)
+    rescue RuVim::CommandError => e
+      @editor.echo_error(e.message)
     end
 
     def clear_stale_message_before_key(key)
@@ -484,7 +486,7 @@ module RuVim
       when :pending, :ambiguous
         if match.status == :ambiguous && match.invocation
           inv = dup_invocation(match.invocation)
-          inv.count = @editor.pending_count || 1
+          inv.count = @editor.pending_count
           @pending_ambiguous_invocation = inv
         else
           @pending_ambiguous_invocation = nil
@@ -494,7 +496,7 @@ module RuVim
       when :match
         clear_pending_key_timeout
         matched_keys = @pending_keys.dup
-        repeat_count = @editor.pending_count || 1
+        repeat_count = @editor.pending_count
         invocation = dup_invocation(match.invocation)
         invocation.count = repeat_count
         @dispatcher.dispatch(@editor, invocation)
@@ -654,7 +656,7 @@ module RuVim
 
       if id
         clear_pending_key_timeout
-        count = @editor.pending_count || 1
+        count = @editor.pending_count
         @dispatcher.dispatch(@editor, CommandInvocation.new(id:, count: count))
       else
         clear_pending_key_timeout
@@ -766,7 +768,7 @@ module RuVim
         up: "cursor.up",
         down: "cursor.down"
       }.fetch(key)
-      inv = CommandInvocation.new(id:, count: @editor.pending_count || 1)
+      inv = CommandInvocation.new(id:, count: @editor.pending_count)
       @dispatcher.dispatch(@editor, inv)
       @editor.pending_count = nil
       @pending_keys = []
@@ -776,7 +778,7 @@ module RuVim
       id = (key == :pageup ? "cursor.page_up" : "cursor.page_down")
       inv = CommandInvocation.new(
         id: id,
-        count: @editor.pending_count || 1,
+        count: @editor.pending_count,
         kwargs: { page_lines: current_page_step_lines }
       )
       @dispatcher.dispatch(@editor, inv)
@@ -870,6 +872,20 @@ module RuVim
       end
     end
 
+    def handle_normal_ctrl_c
+      clear_pending_key_timeout
+      @editor.pending_count = nil
+      @pending_keys = []
+      @operator_pending = nil
+      @replace_pending = nil
+      @register_pending = false
+      @mark_pending = false
+      @jump_pending = nil
+      @macro_record_pending = false
+      @macro_play_pending = false
+      @editor.clear_message
+    end
+
     def finish_insert_change_group
       @editor.current_buffer.end_change_group
     end
@@ -894,7 +910,7 @@ module RuVim
     end
 
     def start_operator_pending(name)
-      @operator_pending = { name:, count: (@editor.pending_count || 1) }
+      @operator_pending = { name:, count: @editor.pending_count }
       @editor.pending_count = nil
       @pending_keys = []
       @editor.echo(name == :delete ? "d" : name.to_s)
@@ -1016,7 +1032,7 @@ module RuVim
         return
       end
 
-      count = @editor.pending_count || 1
+      count = @editor.pending_count
       @editor.pending_count = nil
       play_macro(name, count:)
     end
@@ -1038,7 +1054,7 @@ module RuVim
       @last_macro_name = reg
       @macro_play_stack << reg
       @suspend_macro_recording_depth = (@suspend_macro_recording_depth || 0) + 1
-      count.times do
+      [count.to_i, 1].max.times do
         keys.each { |k| handle_key(dup_macro_runtime_key(k)) }
       end
       @editor.echo("@#{reg}")
@@ -1127,7 +1143,7 @@ module RuVim
     end
 
     def start_replace_pending
-      @replace_pending = { count: (@editor.pending_count || 1) }
+      @replace_pending = { count: @editor.pending_count }
       @editor.pending_count = nil
       @pending_keys = []
       @editor.echo("r")
@@ -1215,7 +1231,7 @@ module RuVim
       @find_pending = {
         direction: (token == "f" || token == "t") ? :forward : :backward,
         till: (token == "t" || token == "T"),
-        count: (@editor.pending_count || 1)
+        count: @editor.pending_count
       }
       @editor.pending_count = nil
       @pending_keys = []
@@ -1260,7 +1276,7 @@ module RuVim
         else
           last[:direction]
         end
-      count = @editor.pending_count || 1
+      count = @editor.pending_count
       @editor.pending_count = nil
       @pending_keys = []
       moved = perform_find_on_line(char: last[:char], direction:, till: last[:till], count:)
@@ -1274,7 +1290,7 @@ module RuVim
       pos = win.cursor_x
       target = nil
 
-      count.times do
+      [count.to_i, 1].max.times do
         idx =
           if direction == :forward
             line.index(char, pos + 1)

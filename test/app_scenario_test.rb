@@ -255,6 +255,17 @@ class AppScenarioTest < Minitest::Test
     assert_match(/\[stdin\] closed/, @editor.message)
   end
 
+  def test_g_and_1g_distinguish_implicit_and_explicit_count
+    @editor.current_buffer.replace_all_lines!(%w[a b c d])
+    @editor.current_window.cursor_y = 1
+
+    feed("G")
+    assert_equal 3, @editor.current_window.cursor_y
+
+    feed("1", "G")
+    assert_equal 0, @editor.current_window.cursor_y
+  end
+
   def test_backspace_indent_allows_deleting_autoindent_before_insert_start
     @editor.set_option("backspace", "indent,eol", scope: :global)
     @editor.current_buffer.replace_all_lines!(["  abc"])
