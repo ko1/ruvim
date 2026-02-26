@@ -234,4 +234,77 @@ class AppStartupTest < Minitest::Test
   ensure
     app&.send(:shutdown_stream_reader!)
   end
+
+  def test_large_file_threshold_uses_async_loader
+    prev = ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"]
+    app = nil
+    Tempfile.create(["ruvim-large-async", ".txt"]) do |f|
+      begin
+        f.write("a\nb\nc\n")
+        f.flush
+
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = "1"
+        app = RuVim::App.new(clean: true)
+        editor = app.instance_variable_get(:@editor)
+
+        buf = editor.open_path(f.path)
+        assert_match(/loading/i, editor.message)
+        assert_includes [:live, :closed], buf.loading_state
+        assert_equal false, buf.modifiable?
+
+        100.times do
+          app.send(:drain_stream_events!)
+          break if buf.loading_state != :live
+          state = app.instance_variable_get(:@async_file_loads)[buf.id]
+          break unless state && state[:thread]&.alive?
+          sleep 0.005
+        end
+        app.send(:drain_stream_events!)
+
+        assert_equal :closed, buf.loading_state
+        assert_equal true, buf.modifiable?
+        assert_equal %w[a b c], buf.lines
+        assert_match(/#{Regexp.escape(f.path)}/, editor.message)
+      ensure
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev
+        app&.send(:shutdown_background_readers!)
+      end
+    end
+  end
+
+  def test_very_large_file_shows_prefix_then_appends_rest
+    prev_async = ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"]
+    prev_prefix = ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"]
+    app = nil
+    Tempfile.create(["ruvim-large-prefix", ".txt"]) do |f|
+      begin
+        f.write("ab\ncd\nef\n")
+        f.flush
+
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = "1"
+        ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = "4"
+        app = RuVim::App.new(clean: true)
+        editor = app.instance_variable_get(:@editor)
+
+        buf = editor.open_path(f.path)
+        assert_equal :live, buf.loading_state
+        assert_equal ["ab", "c"], buf.lines
+        assert_match(/showing first/i, editor.message)
+
+        100.times do
+          app.send(:drain_stream_events!)
+          break if buf.loading_state != :live
+          sleep 0.005
+        end
+        app.send(:drain_stream_events!)
+
+        assert_equal :closed, buf.loading_state
+        assert_equal %w[ab cd ef], buf.lines
+      ensure
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev_async
+        ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = prev_prefix
+        app&.send(:shutdown_background_readers!)
+      end
+    end
+  end
 end

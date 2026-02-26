@@ -1,5 +1,10 @@
 module RuVim
   class App
+    LARGE_FILE_ASYNC_THRESHOLD_BYTES = 64 * 1024 * 1024
+    LARGE_FILE_STAGED_PREFIX_BYTES = 8 * 1024 * 1024
+    ASYNC_FILE_READ_CHUNK_BYTES = 1 * 1024 * 1024
+    ASYNC_FILE_EVENT_FLUSH_BYTES = 4 * 1024 * 1024
+
     def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       startup_paths = Array(paths || path).compact
       @ui_stdin = ui_stdin || stdin
@@ -16,6 +21,7 @@ module RuVim
       @stream_reader_thread = nil
       @stream_buffer_id = nil
       @stream_stop_requested = false
+      @async_file_loads = {}
       @cmdline_history = Hash.new { |h, k| h[k] = [] }
       @cmdline_history_index = nil
       @cmdline_completion = nil
@@ -42,6 +48,7 @@ module RuVim
       @startup_open_count = startup_open_count
       @editor.restricted_mode = @restricted_mode
       @editor.stdin_stream_stop_handler = method(:stdin_stream_stop_command)
+      @editor.open_path_handler = method(:open_path_with_large_file_support)
 
       startup_mark("init.start")
       register_builtins!
@@ -105,7 +112,7 @@ module RuVim
         end
       end
     ensure
-      shutdown_stream_reader!
+      shutdown_background_readers!
     end
 
     def run_startup_actions!(actions, log_prefix: "startup")
@@ -2154,8 +2161,7 @@ module RuVim
 
     def open_path_in_split!(path, layout:)
       @editor.split_current_window(layout:)
-      buf = @editor.add_buffer_from_file(path)
-      @editor.switch_to_buffer(buf.id)
+      @editor.open_path(path)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
     end
@@ -2164,6 +2170,132 @@ module RuVim
       @editor.tabnew(path:)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
+    end
+
+    def open_path_with_large_file_support(path)
+      return @editor.open_path_sync(path) unless should_open_path_async?(path)
+      return @editor.open_path_sync(path) unless can_start_async_file_load?
+
+      open_path_asynchronously!(path)
+    end
+
+    def should_open_path_async?(path)
+      p = path.to_s
+      return false if p.empty?
+      return false unless File.file?(p)
+
+      File.size(p) >= large_file_async_threshold_bytes
+    rescue StandardError
+      false
+    end
+
+    def can_start_async_file_load?
+      @async_file_loads.empty?
+    end
+
+    def large_file_async_threshold_bytes
+      raw = ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"]
+      n = raw.to_i if raw
+      return n if n && n.positive?
+
+      LARGE_FILE_ASYNC_THRESHOLD_BYTES
+    end
+
+    def open_path_asynchronously!(path)
+      file_size = File.size(path)
+      buf = @editor.add_empty_buffer(path: path)
+      @editor.switch_to_buffer(buf.id)
+      buf.loading_state = :live
+      buf.modified = false
+
+      ensure_stream_event_queue!
+      io = File.open(path, "rb")
+      state = { path: path, io: io, thread: nil, ended_with_newline: false }
+      staged_prefix_bytes = async_file_staged_prefix_bytes
+      staged_mode = file_size > staged_prefix_bytes
+      if staged_mode
+        prefix = io.read(staged_prefix_bytes) || "".b
+        unless prefix.empty?
+          buf.append_stream_text!(Buffer.decode_text(prefix))
+          state[:ended_with_newline] = prefix.end_with?("\n")
+        end
+      end
+
+      if io.eof?
+        buf.finalize_async_file_load!(ended_with_newline: state[:ended_with_newline])
+        buf.loading_state = :closed
+        @editor.echo("\"#{path}\" #{buf.line_count}L")
+        io.close unless io.closed?
+        return buf
+      end
+
+      @async_file_loads[buf.id] = state
+      state[:thread] = start_async_file_loader_thread(buf.id, io, bulk_once: staged_mode)
+
+      size_mb = file_size.fdiv(1024 * 1024)
+      if staged_mode
+        @editor.echo(format("\"%s\" loading... (showing first %.0fMB of %.1fMB)", path, staged_prefix_bytes.fdiv(1024 * 1024), size_mb))
+      else
+        @editor.echo(format("\"%s\" loading... (%.1fMB)", path, size_mb))
+      end
+      buf
+    rescue StandardError
+      @async_file_loads.delete(buf.id) if buf
+      raise
+    end
+
+    def async_file_staged_prefix_bytes
+      raw = ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"]
+      n = raw.to_i if raw
+      return n if n && n.positive?
+
+      LARGE_FILE_STAGED_PREFIX_BYTES
+    end
+
+    def start_async_file_loader_thread(buffer_id, io, bulk_once: false)
+      Thread.new do
+        if bulk_once
+          rest = io.read || "".b
+          unless rest.empty?
+            @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(rest) }
+            notify_signal_wakeup
+          end
+          @stream_event_queue << { type: :file_eof, buffer_id: buffer_id, ended_with_newline: rest.end_with?("\n") }
+          notify_signal_wakeup
+          next
+        end
+
+        ended_with_newline = false
+        pending_text = +""
+        loop do
+          chunk = io.readpartial(ASYNC_FILE_READ_CHUNK_BYTES)
+          next if chunk.nil? || chunk.empty?
+
+          ended_with_newline = chunk.end_with?("\n")
+          pending_text << Buffer.decode_text(chunk)
+          next if pending_text.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
+
+          @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
+          pending_text = +""
+          notify_signal_wakeup
+        end
+      rescue EOFError
+        unless pending_text.empty?
+          @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
+          notify_signal_wakeup
+        end
+        @stream_event_queue << { type: :file_eof, buffer_id: buffer_id, ended_with_newline: ended_with_newline }
+        notify_signal_wakeup
+      rescue StandardError => e
+        @stream_event_queue << { type: :file_error, buffer_id: buffer_id, error: e.message.to_s }
+        notify_signal_wakeup
+      ensure
+        begin
+          io.close unless io.closed?
+        rescue StandardError
+          nil
+        end
+      end
     end
 
     def prepare_stdin_stream_buffer!
@@ -2179,7 +2311,7 @@ module RuVim
       buf.stream_state = :live
       buf.options["filetype"] = "text"
       @stream_stop_requested = false
-      @stream_event_queue = Queue.new
+      ensure_stream_event_queue!
       @stream_buffer_id = buf.id
       move_window_to_stream_end!(@editor.current_window, buf)
       @editor.echo("[stdin] follow")
@@ -2218,7 +2350,7 @@ module RuVim
 
     def start_stdin_stream_reader!
       return unless @stdin_stream_source
-      return unless @stream_event_queue
+      ensure_stream_event_queue!
       return if @stream_reader_thread&.alive?
 
       @stream_stop_requested = false
@@ -2257,7 +2389,7 @@ module RuVim
         event = @stream_event_queue.pop(true)
         case event[:type]
         when :data
-          changed ||= apply_stream_chunk!(event[:data])
+          changed = apply_stream_chunk!(event[:data]) || changed
         when :eof
           if (buf = @editor.buffers[@stream_buffer_id])
             buf.stream_state = :closed
@@ -2271,6 +2403,12 @@ module RuVim
           end
           @editor.echo_error("[stdin] stream error: #{event[:error]}")
           changed = true
+        when :file_data
+          changed = apply_async_file_chunk!(event[:buffer_id], event[:data]) || changed
+        when :file_eof
+          changed = finish_async_file_load!(event[:buffer_id], ended_with_newline: event[:ended_with_newline]) || changed
+        when :file_error
+          changed = fail_async_file_load!(event[:buffer_id], event[:error]) || changed
         end
       end
     rescue ThreadError
@@ -2297,6 +2435,42 @@ module RuVim
         move_window_to_stream_end!(win, buf) if win
       end
 
+      true
+    end
+
+    def apply_async_file_chunk!(buffer_id, text)
+      return false if text.to_s.empty?
+
+      buf = @editor.buffers[buffer_id]
+      return false unless buf
+
+      buf.append_stream_text!(text)
+      true
+    end
+
+    def finish_async_file_load!(buffer_id, ended_with_newline:)
+      state = @async_file_loads.delete(buffer_id)
+      buf = @editor.buffers[buffer_id]
+      return false unless buf
+
+      buf.finalize_async_file_load!(ended_with_newline: !!ended_with_newline)
+      buf.loading_state = :closed
+
+      current_win = @editor.current_window rescue nil
+      if current_win&.buffer_id == buffer_id
+        loaded_name = (state && state[:path]) || buf.display_name
+        @editor.echo("\"#{loaded_name}\" #{buf.line_count}L")
+      end
+      true
+    end
+
+    def fail_async_file_load!(buffer_id, error)
+      state = @async_file_loads.delete(buffer_id)
+      buf = @editor.buffers[buffer_id]
+      if buf
+        buf.loading_state = :error
+      end
+      @editor.echo_error("\"#{(state && state[:path]) || (buf && buf.display_name) || buffer_id}\" load error: #{error}")
       true
     end
 
@@ -2329,6 +2503,31 @@ module RuVim
       nil
     end
 
+    def shutdown_async_file_loaders!
+      loaders = @async_file_loads
+      @async_file_loads = {}
+      loaders.each_value do |state|
+        io = state[:io]
+        thread = state[:thread]
+        begin
+          io.close if io && !io.closed?
+        rescue StandardError
+          nil
+        end
+        next unless thread&.alive?
+
+        thread.kill
+        thread.join(0.05)
+      rescue StandardError
+        nil
+      end
+    end
+
+    def shutdown_background_readers!
+      shutdown_stream_reader!
+      shutdown_async_file_loaders!
+    end
+
     def ignore_stream_shutdown_error?(message)
       buf = @editor.buffers[@stream_buffer_id]
       return false unless buf&.kind == :stream
@@ -2336,6 +2535,10 @@ module RuVim
 
       msg = message.to_s.downcase
       msg.include?("stream closed") || msg.include?("closed in another thread")
+    end
+
+    def ensure_stream_event_queue!
+      @stream_event_queue ||= Queue.new
     end
 
     def move_cursor_to_line(line_number)

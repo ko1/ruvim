@@ -4,7 +4,7 @@ module RuVim
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
-    attr_accessor :stream_state
+    attr_accessor :stream_state, :loading_state
 
     def self.from_file(id:, path:)
       lines =
@@ -56,6 +56,7 @@ module RuVim
       @readonly = !!readonly
       @modifiable = !!modifiable
       @stream_state = nil
+      @loading_state = nil
       @undo_stack = []
       @redo_stack = []
       @change_group_depth = 0
@@ -82,7 +83,7 @@ module RuVim
     end
 
     def modifiable?
-      @modifiable
+      @modifiable && @loading_state != :live
     end
 
     def modifiable=(value)
@@ -111,6 +112,7 @@ module RuVim
       @readonly = !!readonly
       @modifiable = !!modifiable
       @stream_state = nil unless @kind == :stream
+      @loading_state = nil
       self
     end
 
@@ -121,6 +123,7 @@ module RuVim
       @readonly = false
       @modifiable = true
       @stream_state = nil
+      @loading_state = nil
       @lines = [""]
       @modified = false
       @undo_stack.clear
@@ -345,6 +348,15 @@ module RuVim
       @lines = [""] if @lines.empty?
       @modified = false
       [@lines.length - 1, @lines[-1].length]
+    end
+
+    def finalize_async_file_load!(ended_with_newline:)
+      if ended_with_newline && @lines.length > 1 && @lines[-1] == ""
+        @lines.pop
+      end
+      @lines = [""] if @lines.empty?
+      @modified = false
+      self
     end
 
     def write_to(path = nil)

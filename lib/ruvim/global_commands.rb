@@ -644,9 +644,7 @@ module RuVim
         end
       end
 
-      new_buffer = ctx.editor.add_buffer_from_file(path)
-      ctx.editor.switch_to_buffer(new_buffer.id)
-      ctx.editor.echo(File.exist?(path) ? "\"#{path}\" #{new_buffer.line_count}L" : "\"#{path}\" [New File]")
+      ctx.editor.open_path(path)
     end
 
     def file_goto_under_cursor(ctx, **)
