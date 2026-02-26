@@ -11,6 +11,7 @@ module RuVim
       end
 
       code = ch.ord
+      return 1 if code <= 0xA0 && !code.zero?
       return cached_codepoint_width(code) if codepoint_cacheable?(code)
 
       uncached_codepoint_width(code)
