@@ -101,6 +101,23 @@ class ScreenTest < Minitest::Test
     assert_includes out, "boom"
   end
 
+  def test_render_uses_dim_and_brighter_line_number_gutter_colors
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["foo", "bar"])
+    editor.set_option("number", true, scope: :window, window: win, buffer: buf)
+    win.cursor_y = 1
+
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+    out = term.writes.last
+
+    assert_includes out, "\e[90m"
+    assert_includes out, "\e[37m"
+  end
+
   def test_render_reuses_syntax_highlight_cache_for_same_line
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

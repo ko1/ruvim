@@ -311,7 +311,7 @@ module RuVim
         if buffer_row < buffer.line_count
           render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
         else
-          line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
+          render_gutter_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
         end
       end
     end
@@ -321,7 +321,7 @@ module RuVim
       row_idx = window.row_offset
       while rows.length < height
         if row_idx >= buffer.line_count
-          rows << (line_number_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w))
+          rows << (render_gutter_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w))
           next
         end
 
@@ -330,7 +330,7 @@ module RuVim
         segments.each_with_index do |seg, seg_i|
           break if rows.length >= height
 
-          gutter = line_number_prefix(editor, window, buffer, seg_i.zero? ? row_idx : nil, gutter_w)
+          gutter = render_gutter_prefix(editor, window, buffer, seg_i.zero? ? row_idx : nil, gutter_w)
           rows << gutter + render_text_segment(line, editor, buffer_row: row_idx, window:, buffer:, width: content_w,
                                                source_col_start: seg[:source_col_start], display_prefix: seg[:display_prefix])
         end
@@ -508,7 +508,7 @@ module RuVim
     def render_window_row(editor, window, buffer, buffer_row, gutter_w:, content_w:)
       line = buffer.line_at(buffer_row)
       line = line[window.col_offset..] || ""
-      prefix = line_number_prefix(editor, window, buffer, buffer_row, gutter_w)
+      prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
       body = render_text_line(line, editor, buffer_row:, window:, buffer:, width: content_w)
       prefix + body
     end
@@ -550,6 +550,15 @@ module RuVim
           "0"
         end
       sign + num.rjust([num_width - 1, 0].max) + (num_width.positive? ? " " : "")
+    end
+
+    def render_gutter_prefix(editor, window, buffer, buffer_row, width)
+      prefix = line_number_prefix(editor, window, buffer, buffer_row, width)
+      return prefix if prefix.empty?
+      return prefix if buffer_row.nil?
+
+      current_line = (buffer_row == window.cursor_y)
+      "#{line_number_fg_seq(editor, current_line: current_line)}#{prefix}\e[m"
     end
 
     def sign_column_width(editor, window, buffer)
@@ -607,6 +616,14 @@ module RuVim
 
     def cursorline_bg_seq(editor)
       truecolor_enabled?(editor) ? "\e[48;2;58;58;58m" : "\e[48;5;236m"
+    end
+
+    def line_number_fg_seq(editor, current_line: false)
+      if truecolor_enabled?(editor)
+        current_line ? "\e[38;2;190;190;190m" : "\e[38;2;120;120;120m"
+      else
+        current_line ? "\e[37m" : "\e[90m"
+      end
     end
 
     def truecolor_enabled?(editor)
