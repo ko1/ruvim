@@ -83,9 +83,13 @@ imap "jk", "ui.clear_message"
 
 - 用途:
   - 汎用のキーバインド定義
+  - `mode: nil` で最下位フォールバック map を定義
 - 登録先:
   - `mode:` を指定した場合: その mode の map
   - `mode: nil` の場合: `global map`（最下位フォールバック）
+- 実用上の目安:
+  - 通常は `nmap` / `imap` を使う方が分かりやすい
+  - `map_global` は「複数 mode で共有したい」「フォールバックを置きたい」場合向け
 - 例:
 
 ```ruby
@@ -205,6 +209,10 @@ ex_command_call "Hello", "user.hello", desc: "Run hello"
 4. `global map`（`map_global(..., mode: nil)`）
 
 同じキーが複数定義されている場合、上にあるものが優先されます。
+
+補足:
+- `map_global(..., mode: nil)` は最後に評価されるため、普段の設定では出番は少なめです。
+- まず `nmap` / `imap` で定義し、必要なときだけ `map_global` を使うのがおすすめです。
 
 ## `command` と `ex_command` の違い
 
