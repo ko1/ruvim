@@ -2,10 +2,12 @@ module RuVim
   class Screen
     DEFAULT_TABSTOP = 2
     SYNTAX_CACHE_LIMIT = 2048
+    WRAP_SEGMENTS_CACHE_LIMIT = 1024
     def initialize(terminal:)
       @terminal = terminal
       @last_frame = nil
       @syntax_color_cache = {}
+      @wrapped_segments_cache = {}
     end
 
     def invalidate_cache!
@@ -37,6 +39,9 @@ module RuVim
           scrolloff: editor.effective_option("scrolloff", window: win, buffer: buf),
           sidescrolloff: editor.effective_option("sidescrolloff", window: win, buffer: buf)
         )
+        if wrap_enabled?(editor, win, buf)
+          ensure_visible_under_wrap(editor, win, buf, height: [rect[:height], 1].max, content_w: content_width)
+        end
       end
 
       frame = build_frame(editor, rows:, cols:, text_rows:, text_cols:, rects:)
@@ -334,6 +339,33 @@ module RuVim
       rows
     end
 
+    def ensure_visible_under_wrap(editor, window, buffer, height:, content_w:)
+      return if height.to_i <= 0 || buffer.line_count <= 0
+
+      window.row_offset = [[window.row_offset.to_i, 0].max, buffer.line_count - 1].min
+      return if window.cursor_y < window.row_offset
+
+      cursor_line = buffer.line_at(window.cursor_y)
+      cursor_segs = wrapped_segments_for_line(editor, window, buffer, cursor_line, width: content_w)
+      cursor_seg_index = wrapped_segment_index(cursor_segs, window.cursor_x)
+
+      visual_rows_before = 0
+      row = window.row_offset
+      while row < window.cursor_y
+        visual_rows_before += wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+        row += 1
+      end
+
+      cursor_visual_row = visual_rows_before + cursor_seg_index
+      while cursor_visual_row >= height && window.row_offset < window.cursor_y
+        dropped = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(window.row_offset), width: content_w).length
+        window.row_offset += 1
+        cursor_visual_row -= dropped
+      end
+    rescue StandardError
+      nil
+    end
+
     def wrap_enabled?(editor, window, buffer)
       !!editor.effective_option("wrap", window:, buffer:)
     end
@@ -345,15 +377,25 @@ module RuVim
       linebreak = !!editor.effective_option("linebreak", window:, buffer:)
       showbreak = editor.effective_option("showbreak", window:, buffer:).to_s
       breakindent = !!editor.effective_option("breakindent", window:, buffer:)
-      indent_prefix = breakindent ? wrapped_indent_prefix(line, tabstop:, max_width: [width - RuVim::DisplayWidth.display_width(showbreak, tabstop:), 0].max) : ""
+      line = line.to_s
+      return [{ source_col_start: 0, display_prefix: "" }] if line.empty?
 
+      cache_key = [line.object_id, line.length, line.hash, width, tabstop, linebreak, showbreak, breakindent]
+      if (cached = @wrapped_segments_cache[cache_key])
+        return cached
+      end
+
+      indent_prefix = breakindent ? wrapped_indent_prefix(line, tabstop:, max_width: [width - RuVim::DisplayWidth.display_width(showbreak, tabstop:), 0].max) : ""
+      segs = compute_wrapped_segments(line, width:, tabstop:, linebreak:, showbreak:, indent_prefix:)
+      @wrapped_segments_cache[cache_key] = segs
+      @wrapped_segments_cache.shift while @wrapped_segments_cache.length > WRAP_SEGMENTS_CACHE_LIMIT
+      segs
+    end
+
+    def compute_wrapped_segments(line, width:, tabstop:, linebreak:, showbreak:, indent_prefix:)
       segs = []
       start_col = 0
       first = true
-      line = line.to_s
-      if line.empty?
-        return [{ source_col_start: 0, display_prefix: "" }]
-      end
 
       while start_col < line.length
         display_prefix = first ? "" : "#{showbreak}#{indent_prefix}"
@@ -361,7 +403,7 @@ module RuVim
         avail = [width - prefix_w, 1].max
         cells, = RuVim::TextMetrics.clip_cells_for_width(line[start_col..].to_s, avail, source_col_start: start_col, tabstop:)
         if cells.empty?
-          segs << { source_col_start: start_col, display_prefix: display_prefix }
+          segs << { source_col_start: start_col, display_prefix: display_prefix }.freeze
           break
         end
 
@@ -372,7 +414,7 @@ module RuVim
           end
         end
 
-        segs << { source_col_start: start_col, display_prefix: display_prefix }
+        segs << { source_col_start: start_col, display_prefix: display_prefix }.freeze
         next_start = cells.last.source_col.to_i + 1
         if linebreak
           next_start += 1 while next_start < line.length && line[next_start] == " "
@@ -383,7 +425,20 @@ module RuVim
         first = false
       end
 
-      segs
+      segs.freeze
+    end
+
+    def wrapped_segment_index(segs, cursor_x)
+      x = cursor_x.to_i
+      seg_index = 0
+      segs.each_with_index do |seg, i|
+        nxt = segs[i + 1]
+        if nxt.nil? || x < nxt[:source_col_start]
+          seg_index = i
+          break
+        end
+      end
+      seg_index
     end
 
     def linebreak_break_index(cells, line)
@@ -634,14 +689,7 @@ module RuVim
           row += 1
         end
         segs = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
-        seg_index = 0
-        segs.each_with_index do |seg, i|
-          nxt = segs[i + 1]
-          if nxt.nil? || window.cursor_x < nxt[:source_col_start]
-            seg_index = i
-            break
-          end
-        end
+        seg_index = wrapped_segment_index(segs, window.cursor_x)
         seg = segs[seg_index] || { source_col_start: 0, display_prefix: "" }
         row = rect[:top] + visual_rows_before + seg_index
         seg_prefix_w = RuVim::DisplayWidth.display_width(seg[:display_prefix].to_s, tabstop:)

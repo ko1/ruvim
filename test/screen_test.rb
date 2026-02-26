@@ -132,6 +132,40 @@ class ScreenTest < Minitest::Test
     assert_equal 1, calls
   end
 
+  def test_render_reuses_wrap_segment_cache_for_same_line
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["x" * 400])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    calls = [0, 0]
+    render_index = 0
+    mod = RuVim::TextMetrics.singleton_class
+    verbose, $VERBOSE = $VERBOSE, nil
+    mod.alias_method(:__orig_clip_cells_for_width_for_screen_test, :clip_cells_for_width)
+    mod.define_method(:clip_cells_for_width) do |*args, **kwargs|
+      calls[render_index] += 1
+      __orig_clip_cells_for_width_for_screen_test(*args, **kwargs)
+    end
+
+    begin
+      render_index = 0
+      screen.render(editor)
+      render_index = 1
+      screen.render(editor)
+    ensure
+      mod.alias_method(:clip_cells_for_width, :__orig_clip_cells_for_width_for_screen_test)
+      mod.remove_method(:__orig_clip_cells_for_width_for_screen_test) rescue nil
+      $VERBOSE = verbose
+    end
+
+    assert_operator calls[1], :<, calls[0]
+  end
+
   def test_render_text_line_with_cursor_search_and_syntax_highlights_fits_width
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer
@@ -285,5 +319,27 @@ class ScreenTest < Minitest::Test
     row2 = frame[:lines][2].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
     assert_includes row2, ">"
     assert_match(/\s>|\>\s/, row2)
+  end
+
+  def test_wrap_keeps_cursor_visible_after_very_long_previous_line
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["x" * 200, "tail"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    win.cursor_y = 1
+    win.cursor_x = 0
+
+    term = TerminalStub.new([6, 8]) # text_rows=4, content width ~8 (no gutter)
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    assert_equal 1, win.row_offset
+
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    row, _col = screen.send(:cursor_screen_position, editor, text_rows, rects)
+    assert_equal 1, row
   end
 end
