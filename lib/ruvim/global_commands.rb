@@ -740,9 +740,10 @@ module RuVim
         return
       end
 
-      path = resolve_gf_path(ctx, token)
+      target = parse_gf_target(token)
+      path = resolve_gf_path(ctx, target[:path])
       unless path
-        ctx.editor.echo_error("File not found: #{token}")
+        ctx.editor.echo_error("File not found: #{target[:path]}")
         return
       end
 
@@ -754,6 +755,7 @@ module RuVim
       end
 
       ctx.editor.open_path(path)
+      move_cursor_to_gf_line(ctx, target[:line]) if target[:line]
     end
 
     def buffer_list(ctx, **)
@@ -2126,7 +2128,7 @@ module RuVim
       return nil if line.empty?
 
       x = [[window.cursor_x, 0].max, [line.length - 1, 0].max].min
-      file_char = /[[:alnum:]_\.\/~-]/
+      file_char = /[[:alnum:]_\.\/~:-]/
       if line[x] !~ file_char
         left = x - 1
         right = x + 1
@@ -2144,6 +2146,25 @@ module RuVim
       s -= 1 while s.positive? && line[s - 1] =~ file_char
       e += 1 while e < line.length && line[e] =~ file_char
       line[s...e]
+    end
+
+    def parse_gf_target(token)
+      raw = token.to_s
+      if (m = /\A(.+):(\d+)\z/.match(raw))
+        return { path: m[1], line: m[2].to_i } unless m[1].end_with?(":")
+      end
+      { path: raw, line: nil }
+    end
+
+    def move_cursor_to_gf_line(ctx, line_no)
+      line = line_no.to_i
+      return if line <= 0
+
+      w = ctx.editor.current_window
+      b = ctx.editor.current_buffer
+      w.cursor_y = [line - 1, b.line_count - 1].min
+      w.cursor_x = 0
+      w.clamp_to_buffer(b)
     end
 
     def resolve_gf_path(ctx, token)

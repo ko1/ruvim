@@ -51,6 +51,19 @@ module RuVim
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil }
     }.freeze
+    SHEBANG_FILETYPE_RULES = [
+      [/\Aruby(?:\d+(?:\.\d+)*)?\z/, "ruby"],
+      [/\Apython(?:\d+(?:\.\d+)*)?\z/, "python"],
+      ["node", "javascript"],
+      ["nodejs", "javascript"],
+      ["deno", "javascript"],
+      ["bash", "sh"],
+      ["sh", "sh"],
+      ["zsh", "sh"],
+      ["ksh", "sh"],
+      ["dash", "sh"],
+      [/\Aperl(?:\d+(?:\.\d+)*)?\z/, "perl"]
+    ].freeze
 
     attr_reader :buffers, :windows
     attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler
@@ -233,7 +246,7 @@ module RuVim
       base = File.basename(p)
       return "ruby" if %w[Gemfile Rakefile Guardfile].include?(base)
 
-      {
+      ext_ft = {
         ".rb" => "ruby",
         ".rake" => "ruby",
         ".ru" => "ruby",
@@ -253,6 +266,9 @@ module RuVim
         ".css" => "css",
         ".sh" => "sh"
       }[File.extname(base).downcase]
+      return ext_ft if ext_ft
+
+      detect_filetype_from_shebang(p)
     end
 
     def registers
@@ -1002,6 +1018,55 @@ module RuVim
     end
 
     private
+
+    def detect_filetype_from_shebang(path)
+      line = read_first_line(path)
+      return nil unless line.start_with?("#!")
+
+      cmd = shebang_command_name(line)
+      return nil if cmd.nil? || cmd.empty?
+
+      rule = SHEBANG_FILETYPE_RULES.find do |matcher, _filetype|
+        matcher.is_a?(Regexp) ? matcher.match?(cmd) : matcher.to_s == cmd
+      end
+      rule && rule[1]
+    rescue StandardError
+      nil
+    end
+
+    def read_first_line(path)
+      return "" unless path && !path.empty?
+      return "" unless File.file?(path)
+
+      File.open(path, "rb") do |f|
+        (f.gets || "").to_s.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+      end
+    rescue StandardError
+      ""
+    end
+
+    def shebang_command_name(line)
+      src = line.to_s.sub(/\A#!/, "").strip
+      return nil if src.empty?
+
+      tokens = src.split(/\s+/)
+      return nil if tokens.empty?
+
+      prog = tokens[0].to_s
+      if File.basename(prog) == "env"
+        i = 1
+        while i < tokens.length && tokens[i].start_with?("-")
+          if tokens[i] == "-S"
+            i += 1
+            break
+          end
+          i += 1
+        end
+        prog = tokens[i].to_s
+      end
+
+      File.basename(prog.to_s)
+    end
 
     def default_global_options
       OPTION_DEFS.each_with_object({}) { |(k, v), h| h[k] = v[:default] }

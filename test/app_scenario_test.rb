@@ -402,6 +402,23 @@ class AppScenarioTest < Minitest::Test
     end
   end
 
+  def test_gf_supports_file_with_line_number_suffix
+    Dir.mktmpdir("ruvim-gf-line") do |dir|
+      target = File.join(dir, "foo.rb")
+      File.write(target, "line1\nline2\nline3\n")
+      @editor.current_buffer.path = File.join(dir, "main.txt")
+      @editor.current_buffer.replace_all_lines!(["foo.rb:3"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 3
+      @editor.set_option("hidden", true, scope: :global)
+
+      feed("g", "f")
+
+      assert_equal File.expand_path(target), File.expand_path(@editor.current_buffer.path)
+      assert_equal 2, @editor.current_window.cursor_y
+    end
+  end
+
   def test_showmatch_message_respects_matchtime_and_clears
     @editor.set_option("showmatch", true, scope: :global)
     @editor.set_option("matchtime", 1, scope: :global) # 0.1 sec

@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "tmpdir"
 
 class EditorRegisterTest < Minitest::Test
   def test_named_register_and_append_register
@@ -60,5 +61,27 @@ class EditorRegisterTest < Minitest::Test
     editor = RuVim::Editor.new
     buffer = editor.add_empty_buffer(path: "/tmp/example.rb")
     assert_equal "ruby", buffer.options["filetype"]
+  end
+
+  def test_detect_filetype_from_shebang_when_extension_is_missing
+    editor = RuVim::Editor.new
+    Dir.mktmpdir("ruvim-shebang-ft") do |dir|
+      path = File.join(dir, "script")
+      File.binwrite(path, "#!/usr/bin/env ruby\nputs :ok\n")
+
+      buffer = editor.add_buffer_from_file(path)
+      assert_equal "ruby", buffer.options["filetype"]
+    end
+  end
+
+  def test_detect_filetype_from_env_shebang_with_dash_s
+    editor = RuVim::Editor.new
+    Dir.mktmpdir("ruvim-shebang-envs") do |dir|
+      path = File.join(dir, "tool")
+      File.binwrite(path, "#!/usr/bin/env -S python3 -u\nprint('ok')\n")
+
+      buffer = editor.add_buffer_from_file(path)
+      assert_equal "python", buffer.options["filetype"]
+    end
   end
 end
