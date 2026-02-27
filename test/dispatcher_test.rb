@@ -91,6 +91,20 @@ class DispatcherTest < Minitest::Test
     assert_equal "ruby: 3", @editor.message
   end
 
+  def test_dispatch_ex_commands_shows_description_and_bound_keys
+    keymaps = @app.instance_variable_get(:@keymaps)
+    keymaps.bind(:normal, "K", "editor.buffer_next")
+
+    @dispatcher.dispatch_ex(@editor, "commands")
+
+    assert_equal "[Commands]", @editor.message
+    assert_equal :help, @editor.current_buffer.kind
+    body = @editor.current_buffer.lines.join("\n")
+    assert_includes body, "bnext"
+    assert_includes body, "Next buffer"
+    assert_includes body, "keys: K"
+  end
+
   def test_dispatch_ex_ruby_captures_stdout_and_stderr_into_virtual_buffer
     @dispatcher.dispatch_ex(@editor, "ruby STDOUT.puts(%q[out]); STDERR.puts(%q[err]); 42")
 

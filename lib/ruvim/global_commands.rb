@@ -1003,10 +1003,19 @@ module RuVim
     end
 
     def ex_commands(ctx, **)
-      items = RuVim::ExCommandRegistry.instance.all.map do |spec|
+      rows = RuVim::ExCommandRegistry.instance.all.map do |spec|
         alias_text = spec.aliases.empty? ? "" : " (#{spec.aliases.join(', ')})"
         source = spec.source == :user ? " [user]" : ""
-        "#{spec.name}#{alias_text}#{source}"
+        name = "#{spec.name}#{alias_text}#{source}"
+        desc = spec.desc.to_s
+        keys = ex_command_binding_labels(ctx.editor, spec)
+        [name, desc, keys]
+      end
+      name_width = rows.map { |name, _desc, _keys| name.length }.max || 0
+      items = rows.map do |name, desc, keys|
+        line = "#{name.ljust(name_width)}  #{desc}"
+        line += "  keys: #{keys.join(', ')}" unless keys.empty?
+        line
       end
       ctx.editor.show_help_buffer!(title: "[Commands]", lines: ["Ex commands", "", *items])
     end
@@ -2540,6 +2549,47 @@ module RuVim
       RuVim::CommandRegistry.instance.fetch(command_id).desc.to_s
     rescue StandardError
       ""
+    end
+
+    def ex_command_binding_labels(editor, ex_spec)
+      keymaps = editor.keymap_manager
+      return [] unless keymaps
+
+      command_ids = command_ids_for_ex_callable(ex_spec.call)
+      return [] if command_ids.empty?
+
+      entries = keymaps.binding_entries_for_context(editor).select do |entry|
+        entry.layer == :app && command_ids.include?(entry.id.to_s)
+      end
+      entries.sort_by do |entry|
+        [binding_mode_order_index(entry.mode), entry.scope == :global ? 1 : 0, format_binding_tokens(entry.tokens)]
+      end.map do |entry|
+        format_ex_command_binding_label(entry)
+      end.uniq
+    end
+
+    def command_ids_for_ex_callable(callable)
+      RuVim::CommandRegistry.instance.all.filter_map do |spec|
+        spec.id if same_command_callable?(spec.call, callable)
+      end
+    end
+
+    def same_command_callable?(a, b)
+      if (a.is_a?(Symbol) || a.is_a?(String)) && (b.is_a?(Symbol) || b.is_a?(String))
+        return a.to_sym == b.to_sym
+      end
+      a.equal?(b)
+    end
+
+    def format_ex_command_binding_label(entry)
+      lhs = format_binding_tokens(entry.tokens)
+      if entry.scope == :global
+        "global:#{lhs}"
+      elsif entry.mode && entry.mode.to_sym != :normal
+        "#{entry.mode}:#{lhs}"
+      else
+        lhs
+      end
     end
 
     def paste_charwise(ctx, text, before:, count:)
