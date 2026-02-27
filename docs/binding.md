@@ -75,6 +75,7 @@
 - `gf` : カーソル下のファイル名を開く（最小。`path` / `suffixesadd` を参照）
   - `file:line` 形式なら開いた後に `line` 行目へ移動
 - `Esc` : メッセージ/保留入力のクリア
+- `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動
 - `PageUp` / `PageDown` : 画面単位で移動（概ね表示高さ - 1 行）
 - `Enter` : quickfix / location list バッファ上では選択項目へジャンプ（一覧ウィンドウから元の編集ウィンドウへ戻る）
@@ -93,6 +94,7 @@
 - `Ctrl-p` : buffer words 補完（前候補）
 - `Esc` : Normal mode に戻る
 - `Ctrl-c` : Normal mode に戻る
+- `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動
 - `PageUp` / `PageDown` : 画面単位で移動
 
@@ -106,6 +108,7 @@
 - `d` : 選択範囲を delete
 - `i` / `a` + object : text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c` : Normal mode に戻る
+- `Ctrl-z` : shell へ suspend（`fg` で復帰）
 
 ## Command-line mode
 
@@ -117,6 +120,7 @@
 - `Tab` (`Ctrl-i`) : Ex 補完（`:` prefix 時、コマンド名/一部引数の文脈対応）
 - `Esc` : キャンセル
 - `Ctrl-c` : キャンセル
+- `Ctrl-z` : shell へ suspend（`fg` で復帰）
 
 ### prefix 別の Enter 動作
 
@@ -131,4 +135,5 @@
 - keymap 解決順（現状実装）: `filetype-local -> buffer-local -> mode-local -> global`
 - `~/.config/ruvim/init.rb`（または `$XDG_CONFIG_HOME/ruvim/init.rb`）の `nmap` / `imap` / `map_global` で上書き・追加可能
 - `Ctrl-d/u/f/b/e/y` に加えて、`矢印キー` / `PageUp` / `PageDown` も「既定挙動の前に keymap override を試す」ため `nmap "<PageDown>", ...` のように上書き可能
+- `Ctrl-z` は keymap ではなく app レベルの suspend 処理として扱う（全モード共通）
 - `~/.config/ruvim/ftplugin/<filetype>.rb`（または `$XDG_CONFIG_HOME/ruvim/ftplugin/<filetype>.rb`）では `nmap` / `imap` が filetype-local として登録される

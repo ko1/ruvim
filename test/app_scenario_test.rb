@@ -328,6 +328,40 @@ class AppScenarioTest < Minitest::Test
     assert_match(/\[stdin\] closed/, @editor.message)
   end
 
+  def test_ctrl_z_calls_terminal_suspend
+    terminal_stub = Object.new
+    terminal_stub.instance_variable_set(:@suspend_calls, 0)
+    terminal_stub.define_singleton_method(:suspend_for_tstp) do
+      @suspend_calls += 1
+    end
+    terminal_stub.define_singleton_method(:suspend_calls) { @suspend_calls }
+    @app.instance_variable_set(:@terminal, terminal_stub)
+
+    feed("i", "a", :ctrl_z)
+
+    assert_equal 1, terminal_stub.suspend_calls
+    assert_equal :insert, @editor.mode
+    assert_equal ["a"], @editor.current_buffer.lines
+  end
+
+  def test_ctrl_z_invalidates_screen_cache_for_full_redraw_after_fg
+    terminal_stub = Object.new
+    terminal_stub.define_singleton_method(:suspend_for_tstp) {}
+    @app.instance_variable_set(:@terminal, terminal_stub)
+
+    screen_stub = Object.new
+    screen_stub.instance_variable_set(:@invalidated, false)
+    screen_stub.define_singleton_method(:invalidate_cache!) do
+      @invalidated = true
+    end
+    screen_stub.define_singleton_method(:invalidated?) { @invalidated }
+    @app.instance_variable_set(:@screen, screen_stub)
+
+    feed(:ctrl_z)
+
+    assert_equal true, screen_stub.invalidated?
+  end
+
   def test_g_and_1g_distinguish_implicit_and_explicit_count
     @editor.current_buffer.replace_all_lines!(%w[a b c d])
     @editor.current_window.cursor_y = 1

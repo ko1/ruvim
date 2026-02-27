@@ -30,6 +30,7 @@ module RuVim
       return :ctrl_v if ch == "\u0016"
       return :ctrl_w if ch == "\u0017"
       return :ctrl_y if ch == "\u0019"
+      return :ctrl_z if ch == "\u001a"
       return :enter if ch == "\r" || ch == "\n"
       return :backspace if ch == "\u007f" || ch == "\b"
 

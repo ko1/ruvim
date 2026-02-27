@@ -24,6 +24,10 @@
 - `cmd | ruvim`
   - `stdin` を follow stream として開く（`[stdin]` バッファ）
   - Normal mode の `Ctrl-c` で stream 停止（上流プロセスには直接 `SIGINT` は送らない）
+- `Ctrl-z`
+  - 全モード共通で shell へ suspend（`SIGTSTP`）
+  - suspend 前に terminal を cooked + main screen へ戻す
+  - `fg` 復帰後は alt screen を再有効化し、画面を全面再描画する
 
 ## Ex コマンド（builtin）
 
@@ -286,6 +290,7 @@
 - `buffer.visual_delete`
 - blockwise は最小実装（矩形選択 + `y/d`）
 - blockwise の text object 選択 / paste の Vim 互換挙動は未対応
+- `Ctrl-z` で shell へ suspend（`fg` で復帰）
 
 ## repeat（Normal mode）
 
@@ -331,6 +336,7 @@
 
 - `Screen` は行キャッシュを使った簡易差分描画を行う
 - `SIGWINCH` + self-pipe + `IO.select` で入力待機中でもリサイズに即追従
+- `Ctrl-z` suspend/`fg` 復帰後は `Screen` キャッシュを破棄し、全面再描画する
 - command-line は履歴と Ex 補完（コマンド名 + 一部引数の文脈補完）を持つ
 - Insert mode は `Ctrl-n` / `Ctrl-p` の buffer words 補完を持つ
 - 文字幅は `DisplayWidth` の近似実装（tab 展開 + 一部全角幅2）

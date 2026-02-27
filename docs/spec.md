@@ -217,6 +217,10 @@ RuVim::ExCommandRegistry.instance.register(
   - バッファ名は `[stdin]`
   - status line に `[stdin/live]`, `[stdin/closed]`, `[stdin/error]` を表示
   - Normal mode の `Ctrl-c` はデフォルトバインドで `stdin` stream stop（上流 PID へ直接 signal は送らない）
+- `Ctrl-z` は全モード共通で suspend
+  - suspend 前に terminal を cooked + main screen に戻す
+  - `SIGTSTP` を自身に送って停止
+  - `fg` 復帰後に raw + alt screen を再有効化して再描画
 
 起動時コマンド（`-c`, `+...`）は、初期 buffer / file open / intro screen 構築の後に実行します。
 `--cmd` はそれより前で、user config 読み込み前に実行します。
@@ -270,6 +274,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `N`: 直前検索を逆方向に繰り返し
 - `1..9` + 動作: count（例: `3j`, `2x`）
 - 矢印キー: 移動
+- `Ctrl-z`: shell へ suspend（`fg` で復帰）
 
 ### Insert mode
 
@@ -280,6 +285,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `Esc`: Normal mode に戻る
 - `Ctrl-c`: Normal mode に戻る（終了しない）
 - 矢印キー: 移動
+- `Ctrl-z`: shell へ suspend（`fg` で復帰）
 
 ### Visual mode（現状）
 
@@ -291,6 +297,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `d`: 選択範囲を delete
 - `i`/`a` + object: text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c`: Normal mode に戻る
+- `Ctrl-z`: shell へ suspend（`fg` で復帰）
 - blockwise の text object 選択 / paste の Vim 互換挙動は未対応
 
 ### Command-line mode
@@ -304,6 +311,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `Tab` (`Ctrl-i`) で Ex 補完
   - コマンド名
   - 一部引数（path / buffer / option）
+- `Ctrl-z` で shell へ suspend（`fg` で復帰）
 
 ## Ex コマンド仕様（現状 builtin）
 
@@ -449,6 +457,12 @@ ANSI エスケープシーケンスによる再描画です。
 - self-pipe (`IO.pipe`) で resize 通知を `select` 待ちへ伝播
 - 入力待機は `stdin + resize通知` を `IO.select` で待つ
 - 描画ごとに `winsize` を再取得して viewport を再計算
+
+### suspend / resume（現状）
+
+- `Ctrl-z` 入力は app レベルで処理し、モードに関係なく suspend する
+- suspend 時は terminal を cooked + main screen に戻してから `SIGTSTP` を送る
+- `fg` 復帰時は alt screen を再有効化し、`Screen` キャッシュを破棄して全面再描画する
 
 ### Command-line 改善（現状）
 

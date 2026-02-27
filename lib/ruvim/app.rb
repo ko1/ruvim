@@ -418,6 +418,11 @@ module RuVim
       clear_stale_message_before_key(key)
       @skip_record_for_current_key = false
       append_dot_change_capture_key(key)
+      if key == :ctrl_z
+        suspend_to_shell
+        track_mode_transition(mode_before)
+        return
+      end
       if key == :ctrl_c && @editor.mode != :normal
         handle_ctrl_c
         track_mode_transition(mode_before)
@@ -945,6 +950,14 @@ module RuVim
       @macro_record_pending = false
       @macro_play_pending = false
       @editor.clear_message
+    end
+
+    def suspend_to_shell
+      @terminal.suspend_for_tstp
+      @screen.invalidate_cache! if @screen.respond_to?(:invalidate_cache!)
+      @needs_redraw = true
+    rescue StandardError => e
+      @editor.echo_error("suspend failed: #{e.message}")
     end
 
     def finish_insert_change_group

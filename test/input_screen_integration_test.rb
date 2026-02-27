@@ -79,4 +79,13 @@ class InputScreenIntegrationTest < Minitest::Test
       assert_equal :up, input.read_key(timeout: 0.2)
     end
   end
+
+  def test_input_reads_ctrl_z
+    stdin = FakeTTY.new("\u001a")
+    input = RuVim::Input.new(stdin: stdin)
+
+    with_fake_select do
+      assert_equal :ctrl_z, input.read_key(timeout: 0.2)
+    end
+  end
 end
