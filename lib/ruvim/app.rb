@@ -2440,6 +2440,10 @@ module RuVim
       list = Array(paths).compact
       return if list.empty?
 
+      # Remove the bootstrap empty buffer and reset the ID counter
+      # so the first file gets buffer id 1 (Vim-like behavior).
+      evict_bootstrap_buffer!
+
       # Initialize arglist with all paths
       @editor.set_arglist(list)
 
@@ -2456,8 +2460,22 @@ module RuVim
       when :tab
         rest.each { |p| open_path_in_tab!(p) }
       else
-        # No multi-file layout mode yet; ignore extras if called directly.
+        # Load remaining files as buffers (Vim-like behavior).
+        rest.each { |p| @editor.add_buffer_from_file(p) }
       end
+    end
+
+    # Remove the bootstrap empty buffer before opening real files,
+    # resetting the buffer ID counter so the first file gets id 1.
+    def evict_bootstrap_buffer!
+      bid = @editor.buffer_ids.find do |id|
+        b = @editor.buffers[id]
+        b.path.nil? && !b.modified? && b.line_count <= 1 && b.kind == :file
+      end
+      return unless bid
+
+      @editor.buffers.delete(bid)
+      @editor.instance_variable_set(:@next_buffer_id, 1)
     end
 
     def open_path_in_split!(path, layout:)

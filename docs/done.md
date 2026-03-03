@@ -37,6 +37,7 @@
 - `:ruby` / `:rb`
 - バッファ管理コマンド（`:ls`, `:buffers`, `:bnext`, `:bprev`, `:buffer`, `#`）
 - arglist（引数リスト）管理コマンド（`:args`, `:next`, `:prev`, `:first`, `:last`）
+- 複数ファイル起動時に全ファイルをバッファとして読み込む（`:ls` に表示）
 - キーマップのレイヤー化（mode/global/buffer/filetype）
 - option system（global / buffer-local / window-local, `:set` 系）
 - ファイルタイプ検出と ftplugin

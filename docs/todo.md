@@ -85,7 +85,7 @@
 - session file（`-S [session]` placeholder 実体化）
 - `wrap` / `linebreak` / `breakindent` / `showbreak` の整合性
 - `wildmenu` / `completeopt` / `pumheight` の UI コンポーネント寄せ
-- arglist（複数ファイル通常起動 + `:args/:next/:prev`）
+- arglist 残件（`:args/:next/:prev` の挙動精度向上）
 
 ### この順番の理由（依存）
 

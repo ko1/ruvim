@@ -451,6 +451,7 @@ RuVim::ExCommandRegistry.instance.register(
 
 - `Editor#arglist` と `Editor#arglist_index` を保持
 - 起動時に複数ファイル引数があるとarglistが初期化される
+- 複数ファイル起動時、レイアウトオプション未指定でも全ファイルをバッファとして読み込む（`:ls` に表示される）
 - `:args` : arglistを表示（現在の引数は `[filename]` で表示）
 - `:next` / `:prev` : arglist内を移動
 - `:first` / `:last` : arglistの最初/最後に移動
