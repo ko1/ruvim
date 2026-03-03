@@ -76,15 +76,19 @@ module RuVim
       lines = {}
       render_window_area(editor, lines, rects, text_rows:, text_cols:)
 
-      status_row = text_rows + 1
-      lines[status_row] = "\e[7m#{truncate(status_line(editor, cols), cols)}\e[m"
-      lines[status_row + 1] = ""
+      if editor.hit_enter_active? && editor.hit_enter_lines
+        render_hit_enter_overlay(editor, lines, text_rows:, cols:)
+      else
+        status_row = text_rows + 1
+        lines[status_row] = "\e[7m#{truncate(status_line(editor, cols), cols)}\e[m"
+        lines[status_row + 1] = ""
 
-      if editor.command_line_active?
-        cmd = editor.command_line
-        lines[status_row + 1] = truncate("#{cmd.prefix}#{cmd.text}", cols)
-      elsif editor.message_error?
-        lines[status_row + 1] = error_message_line(editor.message.to_s, cols)
+        if editor.command_line_active?
+          cmd = editor.command_line
+          lines[status_row + 1] = truncate("#{cmd.prefix}#{cmd.text}", cols)
+        elsif editor.message_error?
+          lines[status_row + 1] = error_message_line(editor.message.to_s, cols)
+        end
       end
 
       {
@@ -93,6 +97,24 @@ module RuVim
         lines: lines,
         rects: rects
       }
+    end
+
+    def render_hit_enter_overlay(editor, lines, text_rows:, cols:)
+      msg_lines = editor.hit_enter_lines
+      prompt = "Press ENTER or type command to continue"
+      # Total rows available: text_rows (text area) + 1 (status) + 1 (command) = text_rows + 2
+      total_rows = text_rows + 2
+      # We need msg_lines.length rows for messages + 1 row for the prompt
+      overlay_count = msg_lines.length + 1
+      start_row = [total_rows - overlay_count + 1, 1].max
+      msg_lines.each_with_index do |line, i|
+        row_no = start_row + i
+        break if row_no > total_rows
+        lines[row_no] = truncate(line.to_s, cols)
+      end
+      prompt_row = start_row + msg_lines.length
+      prompt_row = [prompt_row, total_rows].min
+      lines[prompt_row] = "\e[7m#{truncate(prompt, cols)}\e[m"
     end
 
     def render_window_area(editor, lines, rects, text_rows:, text_cols:)
@@ -759,6 +781,16 @@ module RuVim
 
     def cursor_screen_position(editor, text_rows, rects)
       window = editor.current_window
+
+      if editor.hit_enter_active? && editor.hit_enter_lines
+        total_rows = text_rows + 2
+        msg_count = editor.hit_enter_lines.length
+        prompt_row = [total_rows - msg_count, 1].max + msg_count
+        prompt_row = [prompt_row, total_rows].min
+        prompt_text = "Press ENTER or type command to continue"
+        col = [prompt_text.length + 1, total_rows].min
+        return [prompt_row, col]
+      end
 
       if editor.command_line_active?
         row = text_rows + 2

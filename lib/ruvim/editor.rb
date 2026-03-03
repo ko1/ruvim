@@ -113,6 +113,7 @@ module RuVim
       @location_lists = Hash.new { |h, k| h[k] = { items: [], index: nil } }
       @arglist = []
       @arglist_index = 0
+      @hit_enter_lines = nil
     end
 
     def running?
@@ -541,6 +542,34 @@ module RuVim
     def exit_rich_mode
       @rich_state = nil
       enter_normal_mode
+    end
+
+    def hit_enter_active?
+      @mode == :hit_enter
+    end
+
+    def hit_enter_lines
+      @hit_enter_lines
+    end
+
+    def enter_hit_enter_mode(lines)
+      @mode = :hit_enter
+      @hit_enter_lines = Array(lines)
+      @pending_count = nil
+    end
+
+    def exit_hit_enter_mode
+      @hit_enter_lines = nil
+      enter_normal_mode
+    end
+
+    def echo_multiline(lines)
+      lines = Array(lines)
+      if lines.length <= 1
+        echo(lines.first.to_s)
+      else
+        enter_hit_enter_mode(lines)
+      end
     end
 
     def add_empty_buffer(path: nil)

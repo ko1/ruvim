@@ -516,4 +516,127 @@ class AppScenarioTest < Minitest::Test
     assert_equal "", @editor.message
     assert_equal 1, @editor.current_window.cursor_y
   end
+
+  # --- hit-enter prompt tests ---
+
+  def test_ls_with_multiple_buffers_enters_hit_enter_mode
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+
+    assert_equal :hit_enter, @editor.mode
+    assert_instance_of Array, @editor.hit_enter_lines
+    assert_operator @editor.hit_enter_lines.length, :>=, 2
+  end
+
+  def test_ls_with_single_buffer_uses_normal_echo
+    @dispatcher.dispatch_ex(@editor, "ls")
+
+    refute_equal :hit_enter, @editor.mode
+    refute_nil @editor.message
+    refute @editor.message.to_s.empty?
+  end
+
+  def test_hit_enter_dismiss_with_enter
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed(:enter)
+
+    assert_equal :normal, @editor.mode
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_hit_enter_dismiss_with_escape
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed(:escape)
+
+    assert_equal :normal, @editor.mode
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_hit_enter_dismiss_with_ctrl_c
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed(:ctrl_c)
+
+    assert_equal :normal, @editor.mode
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_hit_enter_colon_enters_command_line
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed(":")
+
+    assert_equal :command_line, @editor.mode
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_hit_enter_slash_enters_search
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed("/")
+
+    assert_equal :command_line, @editor.mode
+    assert_equal "/", @editor.command_line_prefix
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_hit_enter_question_enters_reverse_search
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+    assert_equal :hit_enter, @editor.mode
+
+    feed("?")
+
+    assert_equal :command_line, @editor.mode
+    assert_equal "?", @editor.command_line_prefix
+    assert_nil @editor.hit_enter_lines
+  end
+
+  def test_args_with_multiple_files_enters_hit_enter_mode
+    @editor.set_arglist(["a.rb", "b.rb", "c.rb"])
+    @dispatcher.dispatch_ex(@editor, "args")
+
+    assert_equal :hit_enter, @editor.mode
+    assert_instance_of Array, @editor.hit_enter_lines
+    assert_equal 3, @editor.hit_enter_lines.length
+    assert_match(/\[a\.rb\]/, @editor.hit_enter_lines[0])
+  end
+
+  def test_args_with_single_file_uses_normal_echo
+    @editor.set_arglist(["a.rb"])
+    @dispatcher.dispatch_ex(@editor, "args")
+
+    refute_equal :hit_enter, @editor.mode
+  end
+
+  def test_set_no_args_enters_hit_enter_mode
+    @dispatcher.dispatch_ex(@editor, "set")
+
+    # option_snapshot returns many options, so always > 1 line
+    assert_equal :hit_enter, @editor.mode
+    assert_instance_of Array, @editor.hit_enter_lines
+    assert_operator @editor.hit_enter_lines.length, :>, 1
+  end
+
+  def test_ls_format_shows_vim_style_output
+    @editor.add_empty_buffer(path: "second.rb")
+    @dispatcher.dispatch_ex(@editor, "ls")
+
+    lines = @editor.hit_enter_lines
+    # Each line should contain the buffer id and name
+    assert_match(/1.*\[No Name\]/, lines[0])
+    assert_match(/2.*"second\.rb"/, lines[1])
+  end
 end

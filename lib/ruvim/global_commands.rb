@@ -763,14 +763,17 @@ module RuVim
       alt_id = ctx.editor.alternate_buffer_id
       items = ctx.editor.buffer_ids.map do |id|
         b = ctx.editor.buffers.fetch(id)
-        flags = ""
-        flags << "%" if id == current_id
-        flags << "#" if id == alt_id
-        flags << "+" if b.modified?
-        path = b.path || "[No Name]"
-        "#{id}#{flags} #{path}"
+        indicator = id == current_id ? "%a" : "  "
+        indicator = "# " if id == alt_id && id != current_id
+        mod = b.modified? ? "+" : " "
+        name = b.path ? "\"#{b.path}\"" : "[No Name]"
+        line_info = "line #{b.respond_to?(:cursor_line) ? b.cursor_line : 0}"
+        # Find the window showing this buffer to get cursor line
+        win = ctx.editor.windows.values.find { |w| w.buffer_id == id }
+        line_info = "line #{win ? win.cursor_y + 1 : 0}"
+        "%3d %s %s %-30s %s" % [id, indicator, mod, name, line_info]
       end
-      ctx.editor.echo(items.join(" | "))
+      ctx.editor.echo_multiline(items)
     end
 
     def buffer_next(ctx, count:, bang:, **)
@@ -877,8 +880,17 @@ module RuVim
     def ex_define_command(ctx, argv:, bang:, **)
       registry = RuVim::ExCommandRegistry.instance
       if argv.empty?
-        items = registry.all.select { |spec| spec.source == :user }.map(&:name)
-        ctx.editor.echo(items.empty? ? "No user commands" : "User commands: #{items.join(', ')}")
+        user_cmds = registry.all.select { |spec| spec.source == :user }
+        if user_cmds.empty?
+          ctx.editor.echo("No user commands")
+        else
+          header = "    Name        Definition"
+          items = [header] + user_cmds.map { |spec|
+            body = spec.respond_to?(:body) ? spec.body.to_s : spec.name.to_s
+            "    %-12s%s" % [spec.name, body]
+          }
+          ctx.editor.echo_multiline(items)
+        end
         return
       end
 
@@ -2351,7 +2363,7 @@ module RuVim
         items = editor.option_snapshot(window: ctx.window, buffer: ctx.buffer).map do |opt|
           format_option_value(opt[:name], opt[:effective])
         end
-        ctx.editor.echo(items.join(" "))
+        ctx.editor.echo_multiline(items)
         return
       end
 
@@ -2919,6 +2931,8 @@ module RuVim
       total
     end
 
+    public
+
     def arglist_show(ctx, **)
       arglist = ctx.editor.arglist
       if arglist.empty?
@@ -2928,11 +2942,13 @@ module RuVim
 
       current_index = ctx.editor.arglist_index
       items = arglist.map.with_index do |path, i|
-        prefix = i == current_index ? "[" : " "
-        suffix = i == current_index ? "]" : " "
-        "#{prefix}#{path}#{suffix}"
+        if i == current_index
+          "[#{path}]"
+        else
+          " #{path}"
+        end
       end
-      ctx.editor.echo(items.join(" "))
+      ctx.editor.echo_multiline(items)
     end
 
     def arglist_next(ctx, count:, **)

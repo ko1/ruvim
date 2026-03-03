@@ -69,6 +69,7 @@
 - エラー表示の改善（最下段・強調表示）
 - PageUp / PageDown 対応
 - `:q` の window/tab/app クローズ挙動を Vim 寄りに調整
+- hit-enter prompt（複数行メッセージ表示: `:ls`, `:args`, `:set`, `:command`）
 
 ## Unicode / 日本語 / 表示幅 / 座標系
 

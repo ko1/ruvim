@@ -443,6 +443,8 @@ module RuVim
       end
 
       case @editor.mode
+      when :hit_enter
+        handle_hit_enter_key(key)
       when :insert
         handle_insert_key(key)
       when :command_line
@@ -464,6 +466,7 @@ module RuVim
     def clear_stale_message_before_key(key)
       return if @editor.message.to_s.empty?
       return if @editor.command_line_active?
+      return if @editor.hit_enter_active?
 
       # Keep the error visible while the user is still dismissing/cancelling;
       # otherwise, the next operation replaces the command-line area naturally.
@@ -943,6 +946,20 @@ module RuVim
       buffer.visual_delete
     ].freeze
 
+    def handle_hit_enter_key(key)
+      token = normalize_key_token(key)
+      case token
+      when ":"
+        @editor.exit_hit_enter_mode
+        @editor.enter_command_line_mode(":")
+      when "/", "?"
+        @editor.exit_hit_enter_mode
+        @editor.enter_command_line_mode(token)
+      else
+        @editor.exit_hit_enter_mode
+      end
+    end
+
     def handle_rich_key(key)
       token = normalize_key_token(key)
       if token == "\e"
@@ -959,6 +976,8 @@ module RuVim
 
     def handle_ctrl_c
       case @editor.mode
+      when :hit_enter
+        @editor.exit_hit_enter_mode
       when :insert
         finish_insert_change_group
         finish_dot_change_capture

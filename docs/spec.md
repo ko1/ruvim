@@ -324,6 +324,22 @@ RuVim::ExCommandRegistry.instance.register(
   - 一部引数（path / buffer / option）
 - `Ctrl-z` で shell へ suspend（`fg` で復帰）
 
+### Hit-enter prompt（複数行メッセージ表示）
+
+`:ls` や `:set`（引数なし）など、複数行にわたる出力を行うコマンドの結果を表示するモード。
+
+- 画面下部にメッセージ行をオーバーレイ描画
+- 最下行に「Press ENTER or type command to continue」を反転表示
+- ステータスラインは非表示（Vim と同様）
+- 対象コマンド: `:ls` / `:buffers`, `:args`, `:set`（引数なし）, `:command`（引数なし）
+- 1行以下の出力時は通常の `echo` を使用
+
+#### キー操作
+
+- `Enter` / `Space` / `Escape` / `Ctrl-C` / その他のキー → dismiss（通常モードに戻る）
+- `:` → dismiss して Command-line mode に入る
+- `/` / `?` → dismiss して検索 Command-line mode に入る
+
 ## Ex コマンド仕様（現状 builtin）
 
 - `:w [path]` / `:write [path]`
