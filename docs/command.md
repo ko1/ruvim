@@ -107,6 +107,16 @@
   - `:grep`, `:make`, `:cfile`, `:lgrep` は未実装
   - 一覧バッファ上で `Enter` からのジャンプは未実装
 
+### `:rich`
+
+- 形式: `:rich [format]`
+- Rich View を開く / 閉じる（トグル）
+- `format` に `tsv` または `csv` を指定可能（省略時は filetype / 内容から自動判定）
+- Rich View バッファは read-only の仮想バッファで、元バッファの内容をテーブル整形して表示
+- 区切り文字は ` | `（スペース+パイプ+スペース）
+- 列幅は画面に見えている行だけから計算（大規模ファイルでも高速）
+- `:q` で閉じて元バッファに戻る
+
 ### `:command`
 
 - 形式: `:command Name ex_body`
@@ -274,6 +284,7 @@
 - `editor.buffer_prev`
 - `buffer.replace_char`
 - `ui.clear_message`
+- `rich.toggle`
 
 ## 検索コマンド（Normal mode）
 

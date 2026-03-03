@@ -306,6 +306,10 @@ module RuVim
     end
 
     def plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      if RuVim::RichView.active?(buffer)
+        return rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      end
+
       Array.new(height) do |dy|
         buffer_row = window.row_offset + dy
         if buffer_row < buffer.line_count
@@ -313,6 +317,52 @@ module RuVim
         else
           render_gutter_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w)
         end
+      end
+    end
+
+    def rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+      raw_lines = []
+      height.times do |dy|
+        row = window.row_offset + dy
+        raw_lines << (row < buffer.line_count ? buffer.line_at(row) : nil)
+      end
+
+      non_nil = raw_lines.compact
+      formatted = RuVim::RichView.render_visible_lines(buffer, non_nil)
+      fmt_idx = 0
+
+      Array.new(height) do |dy|
+        buffer_row = window.row_offset + dy
+        prefix = render_gutter_prefix(editor, window, buffer, buffer_row < buffer.line_count ? buffer_row : nil, gutter_w)
+        if buffer_row < buffer.line_count
+          line = formatted[fmt_idx] || ""
+          fmt_idx += 1
+          body = render_rich_view_line(line, editor, window:, buffer:, width: content_w, col_offset: window.col_offset)
+          prefix + body
+        else
+          prefix + pad_plain_display("~", content_w)
+        end
+      end
+    end
+
+    def render_rich_view_line(text, editor, window:, buffer:, width:, col_offset:)
+      tabstop = tabstop_for(editor, window, buffer)
+      # Rich view lines have no tabs (already formatted), but handle col_offset for horizontal scroll
+      visible = text[col_offset..] || ""
+      dw = RuVim::DisplayWidth.display_width(visible, tabstop: tabstop)
+      if dw > width
+        # Truncate to fit
+        truncated = +""
+        col = 0
+        visible.each_char do |ch|
+          cw = RuVim::DisplayWidth.cell_width(ch, col: col, tabstop: tabstop)
+          break if col + cw > width
+          truncated << ch
+          col += cw
+        end
+        truncated + " " * [width - col, 0].max
+      else
+        visible + " " * [width - dw, 0].max
       end
     end
 

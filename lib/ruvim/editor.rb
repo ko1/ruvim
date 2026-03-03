@@ -268,7 +268,9 @@ module RuVim
         ".txt" => "text",
         ".html" => "html",
         ".css" => "css",
-        ".sh" => "sh"
+        ".sh" => "sh",
+        ".tsv" => "tsv",
+        ".csv" => "csv"
       }[File.extname(base).downcase]
       return ext_ft if ext_ft
 

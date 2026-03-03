@@ -331,6 +331,8 @@ module RuVim
       register_ex_unless(ex, "lgrep", call: :ex_lgrep, desc: "Search with external grep (location list)", nargs: :any)
       register_ex_unless(ex, "d", call: :ex_delete_lines, aliases: %w[delete], desc: "Delete lines", nargs: :any)
       register_ex_unless(ex, "y", call: :ex_yank_lines, aliases: %w[yank], desc: "Yank lines", nargs: :any)
+      register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
+      register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
     end
 
     def bind_default_keys!
@@ -417,6 +419,7 @@ module RuVim
       @keymaps.bind(:normal, "g*", "search.word_forward_partial")
       @keymaps.bind(:normal, "g#", "search.word_backward_partial")
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
+      @keymaps.bind(:normal, "gr", "rich.toggle")
       @keymaps.bind(:normal, ["<PageUp>"], "cursor.page_up.default")
       @keymaps.bind(:normal, ["<PageDown>"], "cursor.page_down.default")
       @keymaps.bind(:normal, "\e", "ui.clear_message")

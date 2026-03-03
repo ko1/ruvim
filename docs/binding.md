@@ -74,6 +74,7 @@
 - `g*` / `g#` : カーソル下の単語を部分一致検索（前/後）
 - `gf` : カーソル下のファイル名を開く（最小。`path` / `suffixesadd` を参照）
   - `file:line` 形式なら開いた後に `line` 行目へ移動
+- `gr` : Rich View をトグル（TSV/CSV をテーブル整形表示）
 - `Esc` : メッセージ/保留入力のクリア
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動

@@ -1199,6 +1199,15 @@ module RuVim
       ctx.editor.echo("#{count} line(s) yanked")
     end
 
+    def ex_rich(ctx, argv: [], **)
+      format = argv.first
+      RuVim::RichView.toggle!(ctx.editor, format: format)
+    end
+
+    def rich_toggle(ctx, **)
+      RuVim::RichView.toggle!(ctx.editor)
+    end
+
     def submit_search(ctx, pattern:, direction:)
       text = pattern.to_s
       if text.empty?
