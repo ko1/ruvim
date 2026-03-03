@@ -313,6 +313,152 @@ class RichViewTest < Minitest::Test
     assert_equal [], result
   end
 
+  # --- TableRenderer helper method tests ---
+
+  def test_compute_col_widths_basic
+    lines = ["a\tbb\tccc", "dddd\te\tf"]
+    widths = RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+    assert_equal [4, 2, 3], widths
+  end
+
+  def test_compute_col_widths_single_column
+    lines = ["abc", "def"]
+    assert_nil RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+  end
+
+  def test_compute_col_widths_empty
+    assert_nil RuVim::RichView::TableRenderer.compute_col_widths([], delimiter: "\t")
+  end
+
+  def test_compute_col_widths_cjk
+    lines = ["名前\t年齢", "Alice\t30"]
+    widths = RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+    # 名前 = 4 display cols, Alice = 5 → max = 5
+    # 年齢 = 4 display cols, 30 = 2 → max = 4
+    assert_equal [5, 4], widths
+  end
+
+  def test_format_line_basic
+    col_widths = [4, 2, 3]
+    result = RuVim::RichView::TableRenderer.format_line("a\tbb\tccc", delimiter: "\t", col_widths: col_widths)
+    assert_equal "a    | bb | ccc", result
+  end
+
+  def test_format_line_consistency_with_render_visible
+    lines = ["a\tbb\tccc", "dddd\te\tf"]
+    rendered = RuVim::RichView::TableRenderer.render_visible(lines, delimiter: "\t")
+    col_widths = RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+    lines.each_with_index do |line, i|
+      formatted = RuVim::RichView::TableRenderer.format_line(line, delimiter: "\t", col_widths: col_widths)
+      assert_equal rendered[i], formatted, "format_line should match render_visible for line #{i}"
+    end
+  end
+
+  def test_raw_to_formatted_char_index_first_field
+    # Raw: "Hello\tWorld\tFoo"
+    col_widths = [10, 10, 5]
+    r = RuVim::RichView::TableRenderer
+    # 'H' at raw 0 → formatted 0
+    assert_equal 0, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 0, delimiter: "\t", col_widths: col_widths)
+    # 'o' at raw 4 → formatted 4
+    assert_equal 4, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 4, delimiter: "\t", col_widths: col_widths)
+    # End of first field at raw 5 → formatted 5 (just past 'o', still in padded area)
+    assert_equal 5, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 5, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_char_index_second_field
+    col_widths = [10, 10, 5]
+    r = RuVim::RichView::TableRenderer
+    # 'W' at raw 6 → formatted 10 (col_widths[0]) + 3 (separator) = 13
+    assert_equal 13, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 6, delimiter: "\t", col_widths: col_widths)
+    # 'd' at raw 10 → formatted 13 + 4 = 17
+    assert_equal 17, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 10, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_char_index_third_field
+    col_widths = [10, 10, 5]
+    r = RuVim::RichView::TableRenderer
+    # 'F' at raw 12 → formatted 10 + 3 + 10 + 3 = 26
+    assert_equal 26, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 12, delimiter: "\t", col_widths: col_widths)
+    # Last 'o' at raw 14 → formatted 26 + 2 = 28
+    assert_equal 28, r.raw_to_formatted_char_index("Hello\tWorld\tFoo", 14, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_alignment_across_rows
+    # When different rows map col_offset to different fields, the formatted
+    # positions should still be aligned (same column structure).
+    lines = ["Short\tField\tEnd", "LongerField\tF\tEnd"]
+    col_widths = RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+    r = RuVim::RichView::TableRenderer
+
+    # Format both lines and verify separator positions match
+    f0 = r.format_line(lines[0], delimiter: "\t", col_widths: col_widths)
+    f1 = r.format_line(lines[1], delimiter: "\t", col_widths: col_widths)
+    assert_equal RuVim::DisplayWidth.display_width(f0), RuVim::DisplayWidth.display_width(f1)
+
+    # Map cursor at "End" field start for both lines — should give same formatted position
+    # Line 0: "Short\tField\tEnd" → raw 12 is 'E' in End
+    # Line 1: "LongerField\tF\tEnd" → raw 14 is 'E' in End
+    fi0 = r.raw_to_formatted_char_index(lines[0], 12, delimiter: "\t", col_widths: col_widths)
+    fi1 = r.raw_to_formatted_char_index(lines[1], 14, delimiter: "\t", col_widths: col_widths)
+    assert_equal fi0, fi1, "Same column start should map to same formatted position"
+  end
+
+  def test_raw_to_formatted_char_index_cjk
+    # CJK fields: "太郎" is 2 chars but 4 display cols
+    col_widths = [5, 4]
+    r = RuVim::RichView::TableRenderer
+    # "太郎\t30" → formatted: "太郎 " (2+1 pad) + " | " (3) + "30  " (2+2 pad)
+    # Character counts: field "太郎"(2) + pad(1) + separator(3) = 6
+    # So "3" at raw 3 → formatted 6
+    assert_equal 6, r.raw_to_formatted_char_index("太郎\t30", 3, delimiter: "\t", col_widths: col_widths)
+    # "0" at raw 4 → formatted 7
+    assert_equal 7, r.raw_to_formatted_char_index("太郎\t30", 4, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_display_col_basic
+    col_widths = [10, 10, 5]
+    r = RuVim::RichView::TableRenderer
+    # 'H' at raw 0 → display col 0
+    assert_equal 0, r.raw_to_formatted_display_col("Hello\tWorld\tFoo", 0, delimiter: "\t", col_widths: col_widths)
+    # 'o' at raw 4 → display col 4
+    assert_equal 4, r.raw_to_formatted_display_col("Hello\tWorld\tFoo", 4, delimiter: "\t", col_widths: col_widths)
+    # 'W' at raw 6 → display col 10 + 3 = 13
+    assert_equal 13, r.raw_to_formatted_display_col("Hello\tWorld\tFoo", 6, delimiter: "\t", col_widths: col_widths)
+    # 'F' at raw 12 → display col 10 + 3 + 10 + 3 = 26
+    assert_equal 26, r.raw_to_formatted_display_col("Hello\tWorld\tFoo", 12, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_display_col_cjk
+    # "太郎" = 2 chars, 4 display cols; "Alice" = 5 chars, 5 display cols → max = 5
+    # "30" = 2 chars, 2 display cols; "年齢" = 2 chars, 4 display cols → max = 4
+    col_widths = [5, 4]
+    r = RuVim::RichView::TableRenderer
+    # "太郎\t30"
+    # "太" at raw 0 → display col 0
+    assert_equal 0, r.raw_to_formatted_display_col("太郎\t30", 0, delimiter: "\t", col_widths: col_widths)
+    # "郎" at raw 1 → display col = dw("太") = 2
+    assert_equal 2, r.raw_to_formatted_display_col("太郎\t30", 1, delimiter: "\t", col_widths: col_widths)
+    # end of first field at raw 2 → display col = dw("太郎") = 4
+    assert_equal 4, r.raw_to_formatted_display_col("太郎\t30", 2, delimiter: "\t", col_widths: col_widths)
+    # "3" at raw 3 → display col = 5 (col_widths[0]) + 3 (separator) = 8
+    assert_equal 8, r.raw_to_formatted_display_col("太郎\t30", 3, delimiter: "\t", col_widths: col_widths)
+    # "0" at raw 4 → display col = 8 + dw("3") = 9
+    assert_equal 9, r.raw_to_formatted_display_col("太郎\t30", 4, delimiter: "\t", col_widths: col_widths)
+  end
+
+  def test_raw_to_formatted_display_col_alignment_across_cjk_rows
+    lines = ["太郎\t年齢", "Alice\t30"]
+    col_widths = RuVim::RichView::TableRenderer.compute_col_widths(lines, delimiter: "\t")
+    r = RuVim::RichView::TableRenderer
+    # Second field starts at same display col for both lines
+    # Line 0: "太郎\t年齢" → raw 3 is "年" → display col = col_widths[0]+3
+    # Line 1: "Alice\t30" → raw 6 is "3" → display col = col_widths[0]+3
+    dc0 = r.raw_to_formatted_display_col(lines[0], 3, delimiter: "\t", col_widths: col_widths)
+    dc1 = r.raw_to_formatted_display_col(lines[1], 6, delimiter: "\t", col_widths: col_widths)
+    assert_equal dc0, dc1, "Second field start should align across CJK and ASCII rows"
+  end
+
   # --- Filetype detection tests ---
 
   def test_detect_filetype_tsv

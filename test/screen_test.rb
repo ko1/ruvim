@@ -372,4 +372,120 @@ class ScreenTest < Minitest::Test
     row, _col = screen.send(:cursor_screen_position, editor, text_rows, rects)
     assert_equal 1, row
   end
+
+  def test_rich_mode_horizontal_scroll_preserves_column_alignment
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    # Create rows where raw lines differ in length but formatted lines are aligned
+    buf.replace_all_lines!(["Short\tSecond\tThird", "LongerField\tB\tC"])
+    buf.options["filetype"] = "tsv"
+    RuVim::RichView.open!(editor, format: "tsv")
+
+    # Move cursor to end of line (like pressing $)
+    win.cursor_y = 0
+    win.cursor_x = buf.line_length(0)
+
+    # Use a narrow terminal so that the formatted line won't fit
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    # After render, col_offset should be in formatted space.
+    # Both rendered lines should use the same col_offset, keeping separators aligned.
+    rows_key, cols_key = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows: rows_key, cols: cols_key)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows: rows_key, cols: cols_key, text_rows:, text_cols:, rects:)
+
+    # Strip ANSI and check that "|" separators are at the same column in both rows
+    row1 = frame[:lines][1].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    row2 = frame[:lines][2].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+
+    sep_positions_row1 = row1.enum_for(:scan, /\|/).map { Regexp.last_match.begin(0) }
+    sep_positions_row2 = row2.enum_for(:scan, /\|/).map { Regexp.last_match.begin(0) }
+
+    # They should have the same separator positions (column alignment preserved)
+    assert_equal sep_positions_row1, sep_positions_row2,
+                 "Separators should align: row1=#{row1.inspect} row2=#{row2.inspect}"
+  end
+
+  def test_rich_mode_cjk_horizontal_scroll_preserves_display_column_alignment
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!([
+      "色\t果物名\t産地",
+      "赤\tりんご\t青森",
+      "緑\tキウイフルーツジャム\t静岡"
+    ])
+    buf.options["filetype"] = "tsv"
+    RuVim::RichView.open!(editor, format: "tsv")
+
+    # Move to end of line to trigger horizontal scroll
+    win.cursor_y = 2
+    win.cursor_x = buf.line_length(2)
+
+    # Narrow terminal so formatted line doesn't fit
+    term = TerminalStub.new([6, 30])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    rows_key, cols_key = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows: rows_key, cols: cols_key)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows: rows_key, cols: cols_key, text_rows:, text_cols:, rects:)
+
+    # Strip ANSI, collect visible lines
+    visible_rows = (1..3).map do |r|
+      frame[:lines][r].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    end
+
+    # All rows should have separator "|" at the same display column
+    pipe_display_cols = visible_rows.map do |row|
+      col = 0
+      pipe_col = nil
+      row.each_char do |ch|
+        if ch == "|"
+          pipe_col = col
+          break
+        end
+        col += RuVim::DisplayWidth.cell_width(ch, col: col, tabstop: 2)
+      end
+      pipe_col
+    end
+
+    # Filter out rows where pipe might not be visible (scrolled away)
+    visible_pipes = pipe_display_cols.compact
+    assert(visible_pipes.length >= 2, "At least 2 rows should show a pipe separator")
+    assert_equal 1, visible_pipes.uniq.length,
+                 "Pipe separators should align at same display column: #{pipe_display_cols.inspect} in #{visible_rows.inspect}"
+  end
+
+  def test_rich_mode_cursor_visible_after_end_of_line
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["A\tB\tC", "DD\tEE\tFF"])
+    buf.options["filetype"] = "tsv"
+    RuVim::RichView.open!(editor, format: "tsv")
+
+    # Move cursor to end of raw line
+    win.cursor_y = 0
+    win.cursor_x = buf.line_length(0) # last char
+
+    # Narrow terminal
+    term = TerminalStub.new([6, 15])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    rows_key, cols_key = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows: rows_key, cols: cols_key)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    _cursor_row, cursor_col = screen.send(:cursor_screen_position, editor, text_rows, rects)
+
+    # Cursor should be within the visible area
+    assert_operator cursor_col, :>=, 1
+    assert_operator cursor_col, :<=, cols_key
+  end
 end

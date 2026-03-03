@@ -15,6 +15,8 @@ module RuVim
     end
 
     def render(editor)
+      @rich_render_info = nil
+
       rows, cols = @terminal.winsize
       text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
       text_rows = [text_rows, 1].max
@@ -30,17 +32,30 @@ module RuVim
         rect = rects[win_id]
         next unless rect
         content_width = [rect[:width] - number_column_width(editor, win, buf), 1].max
-        win.col_offset = 0 if wrap_enabled?(editor, win, buf)
-        win.ensure_visible(
-          buf,
-          height: [rect[:height], 1].max,
-          width: content_width,
-          tabstop: tabstop_for(editor, win, buf),
-          scrolloff: editor.effective_option("scrolloff", window: win, buffer: buf),
-          sidescrolloff: editor.effective_option("sidescrolloff", window: win, buffer: buf)
-        )
-        if wrap_enabled?(editor, win, buf)
-          ensure_visible_under_wrap(editor, win, buf, height: [rect[:height], 1].max, content_w: content_width)
+        if RuVim::RichView.active?(editor)
+          # Vertical scrolling only — keep raw col_offset untouched
+          win.ensure_visible(
+            buf,
+            height: [rect[:height], 1].max,
+            width: content_width,
+            tabstop: tabstop_for(editor, win, buf),
+            scrolloff: editor.effective_option("scrolloff", window: win, buffer: buf),
+            sidescrolloff: editor.effective_option("sidescrolloff", window: win, buffer: buf)
+          )
+          ensure_visible_rich(editor, win, buf, rect, content_width)
+        else
+          win.col_offset = 0 if wrap_enabled?(editor, win, buf)
+          win.ensure_visible(
+            buf,
+            height: [rect[:height], 1].max,
+            width: content_width,
+            tabstop: tabstop_for(editor, win, buf),
+            scrolloff: editor.effective_option("scrolloff", window: win, buffer: buf),
+            sidescrolloff: editor.effective_option("sidescrolloff", window: win, buffer: buf)
+          )
+          if wrap_enabled?(editor, win, buf)
+            ensure_visible_under_wrap(editor, win, buf, height: [rect[:height], 1].max, content_w: content_width)
+          end
         end
       end
 
@@ -352,6 +367,7 @@ module RuVim
       non_nil = raw_lines.compact
       formatted = RuVim::RichView.render_visible_lines(editor, non_nil)
       fmt_idx = 0
+      col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
 
       Array.new(height) do |dy|
         buffer_row = window.row_offset + dy
@@ -359,7 +375,7 @@ module RuVim
         if buffer_row < buffer.line_count
           line = formatted[fmt_idx] || ""
           fmt_idx += 1
-          body = render_rich_view_line(line, editor, window:, buffer:, width: content_w, col_offset: window.col_offset)
+          body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc)
           prefix + body
         else
           prefix + pad_plain_display("~", content_w)
@@ -367,25 +383,44 @@ module RuVim
       end
     end
 
-    def render_rich_view_line(text, editor, window:, buffer:, width:, col_offset:)
-      tabstop = tabstop_for(editor, window, buffer)
-      # Rich view lines have no tabs (already formatted), but handle col_offset for horizontal scroll
-      visible = text[col_offset..] || ""
-      dw = RuVim::DisplayWidth.display_width(visible, tabstop: tabstop)
-      if dw > width
-        # Truncate to fit
-        truncated = +""
-        col = 0
-        visible.each_char do |ch|
-          cw = RuVim::DisplayWidth.cell_width(ch, col: col, tabstop: tabstop)
-          break if col + cw > width
-          truncated << ch
-          col += cw
-        end
-        truncated + " " * [width - col, 0].max
-      else
-        visible + " " * [width - dw, 0].max
+    # Render a formatted rich-view line by skipping `skip_sc` display columns
+    # then showing the next `width` display columns.  Using screen columns
+    # instead of character indices keeps alignment correct when lines mix
+    # CJK and ASCII characters with different char-to-display-width ratios.
+    def render_rich_view_line_sc(text, width:, skip_sc:)
+      # Phase 1: skip `skip_sc` display columns
+      pos = 0
+      skipped = 0
+      text.each_char do |ch|
+        cw = RuVim::DisplayWidth.cell_width(ch, col: skipped, tabstop: 8)
+        break if skipped + cw > skip_sc
+        skipped += cw
+        pos += 1
       end
+      # If a wide char straddles the skip boundary, pad with a space
+      leading_pad = skip_sc - skipped
+
+      # Phase 2: collect `width` display columns
+      out = +""
+      col = 0
+      if leading_pad > 0
+        # The character at `pos` straddles the viewport left edge —
+        # its left part is outside and its right part is inside.
+        # We cannot display a partial wide character, so replace the
+        # visible portion with spaces and skip the character entirely.
+        out << " " * leading_pad
+        col += leading_pad
+        pos += 1
+      end
+      rest = text[pos..] || ""
+      rest.each_char do |ch|
+        cw = RuVim::DisplayWidth.cell_width(ch, col: skipped + col, tabstop: 8)
+        break if col + cw > width
+        out << ch
+        col += cw
+      end
+      out << " " * [width - col, 0].max
+      out
     end
 
     def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
@@ -436,6 +471,63 @@ module RuVim
       end
     rescue StandardError
       nil
+    end
+
+    # Compute a screen-column-based horizontal scroll offset for rich mode.
+    # Unlike normal mode (which stores a char index in window.col_offset),
+    # rich mode must scroll by display columns because CJK-padded formatted
+    # lines have different character counts for the same display width.
+    def ensure_visible_rich(editor, win, buf, rect, content_w)
+      state = editor.rich_state
+      unless state
+        @rich_render_info = nil
+        @rich_col_offset_sc = 0
+        return
+      end
+
+      delimiter = state[:delimiter]
+      height = [rect[:height], 1].max
+
+      raw_lines = height.times.map { |dy|
+        row = win.row_offset + dy
+        row < buf.line_count ? buf.line_at(row) : nil
+      }.compact
+
+      col_widths = RuVim::RichView::TableRenderer.compute_col_widths(raw_lines, delimiter: delimiter)
+      unless col_widths
+        @rich_render_info = nil
+        @rich_col_offset_sc = 0
+        return
+      end
+
+      cursor_raw_line = buf.line_at(win.cursor_y)
+      cursor_sc = RuVim::RichView::TableRenderer.raw_to_formatted_display_col(
+        cursor_raw_line, win.cursor_x, delimiter: delimiter, col_widths: col_widths
+      )
+
+      # Use persisted screen-column offset from previous frame
+      offset_sc = @rich_col_offset_sc || 0
+
+      sso = editor.effective_option("sidescrolloff", window: win, buffer: buf).to_i
+      sso = [[sso, 0].max, [content_w - 1, 0].max].min
+
+      if cursor_sc < offset_sc + sso
+        offset_sc = [cursor_sc - sso, 0].max
+      elsif cursor_sc >= offset_sc + content_w - sso
+        offset_sc = cursor_sc - content_w + sso + 1
+      end
+      offset_sc = [offset_sc, 0].max
+
+      @rich_col_offset_sc = offset_sc
+
+      if win == editor.current_window
+        @rich_render_info = {
+          col_offset_sc: offset_sc,
+          cursor_sc: cursor_sc,
+          col_widths: col_widths,
+          delimiter: delimiter
+        }
+      end
     end
 
     def wrap_enabled?(editor, window, buffer)
@@ -820,6 +912,9 @@ module RuVim
         cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) + extra_virtual
         seg_sc = RuVim::TextMetrics.screen_col_for_char_index(line, seg[:source_col_start], tabstop:)
         col = rect[:left] + gutter_w + seg_prefix_w + [cursor_sc - seg_sc, 0].max
+      elsif @rich_render_info
+        row = rect[:top] + (window.cursor_y - window.row_offset)
+        col = rect[:left] + gutter_w + [@rich_render_info[:cursor_sc] - @rich_render_info[:col_offset_sc], 0].max
       else
         row = rect[:top] + (window.cursor_y - window.row_offset)
         extra_virtual = [window.cursor_x - line.length, 0].max

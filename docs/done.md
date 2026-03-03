@@ -55,6 +55,7 @@
 - `gr` Normal mode キーバインド（トグル）
 - filetype 検出に `.tsv` / `.csv` 追加
 - Rich View → Rich mode へ変換（仮想バッファ方式から同一バッファ上のモード方式へ）
+- Rich mode の横スクロール修正（`$` で行末に移動した際の縦揃えズレを解消）
 
 ## UI / 画面描画 / 端末挙動
 

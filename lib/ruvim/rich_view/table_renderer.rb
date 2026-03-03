@@ -14,18 +14,15 @@ module RuVim
         end
       end
 
-      # Render visible lines: split by delimiter, compute column widths, pad and join.
-      # Returns an array of formatted strings.
-      def render_visible(lines, delimiter:)
-        return lines if lines.nil? || lines.empty?
+      # Compute max display width per column from visible lines.
+      # Returns an Array of column widths, or nil if single-column / empty.
+      def compute_col_widths(lines, delimiter:)
+        return nil if lines.nil? || lines.empty?
 
         rows = lines.map { |line| split_fields(line, delimiter) }
-
-        # If all rows have only 1 column, return lines as-is
         max_cols = rows.map(&:length).max
-        return lines if max_cols.nil? || max_cols <= 1
+        return nil if max_cols.nil? || max_cols <= 1
 
-        # Compute max display width per column from visible rows only
         col_widths = Array.new(max_cols, 0)
         rows.each do |fields|
           fields.each_with_index do |field, i|
@@ -33,17 +30,72 @@ module RuVim
             col_widths[i] = w if w > col_widths[i]
           end
         end
+        col_widths
+      end
 
-        rows.map do |fields|
-          padded = fields.each_with_index.map do |field, i|
-            pad_field(field, col_widths[i])
-          end
-          # Pad missing columns
-          (fields.length...max_cols).each do |i|
-            padded << " " * col_widths[i]
-          end
-          padded.join(SEPARATOR)
+      # Format a single raw line using pre-computed column widths.
+      def format_line(raw_line, delimiter:, col_widths:)
+        fields = split_fields(raw_line, delimiter)
+        padded = fields.each_with_index.map do |field, i|
+          pad_field(field, col_widths[i] || 0)
         end
+        (fields.length...col_widths.length).each do |i|
+          padded << " " * col_widths[i]
+        end
+        padded.join(SEPARATOR)
+      end
+
+      # Map a character index in the raw line to the corresponding index
+      # in the formatted line.  Needed for correct horizontal scrolling
+      # and cursor placement in rich mode.
+      def raw_to_formatted_char_index(raw_line, raw_char_index, delimiter:, col_widths:)
+        fields = split_fields(raw_line, delimiter)
+        pos = 0
+        formatted_pos = 0
+        fields.each_with_index do |field, i|
+          field_end = pos + field.length
+          if raw_char_index <= field_end
+            offset = [raw_char_index - pos, field.length].min
+            return formatted_pos + offset
+          end
+          pos = field_end + 1 # skip delimiter
+          field_dw = RuVim::DisplayWidth.display_width(field)
+          pad_chars = [(col_widths[i] || 0) - field_dw, 0].max
+          formatted_pos += field.length + pad_chars + SEPARATOR.length
+        end
+        formatted_pos
+      end
+
+      # Map a character index in the raw line to the display column
+      # in the formatted line.  Unlike raw_to_formatted_char_index (which
+      # returns a character index), this returns the screen column directly,
+      # which is needed for display-column-based horizontal scrolling.
+      def raw_to_formatted_display_col(raw_line, raw_char_index, delimiter:, col_widths:)
+        fields = split_fields(raw_line, delimiter)
+        pos = 0
+        display_col = 0
+        fields.each_with_index do |field, i|
+          field_end = pos + field.length
+          if raw_char_index <= field_end
+            offset_chars = [raw_char_index - pos, field.length].min
+            offset_dw = RuVim::DisplayWidth.display_width(field[0...offset_chars])
+            return display_col + offset_dw
+          end
+          display_col += (col_widths[i] || 0) + SEPARATOR_WIDTH
+          pos = field_end + 1
+        end
+        display_col
+      end
+
+      # Render visible lines: split by delimiter, compute column widths, pad and join.
+      # Returns an array of formatted strings.
+      def render_visible(lines, delimiter:)
+        return lines if lines.nil? || lines.empty?
+
+        col_widths = compute_col_widths(lines, delimiter:)
+        return lines unless col_widths
+
+        lines.map { |line| format_line(line, delimiter:, col_widths:) }
       end
 
       # Split a line into fields respecting the delimiter.
