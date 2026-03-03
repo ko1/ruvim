@@ -74,7 +74,7 @@
 - `g*` / `g#` : カーソル下の単語を部分一致検索（前/後）
 - `gf` : カーソル下のファイル名を開く（最小。`path` / `suffixesadd` を参照）
   - `file:line` 形式なら開いた後に `line` 行目へ移動
-- `gr` : Rich View をトグル（TSV/CSV をテーブル整形表示）
+- `gr` : Rich mode をトグル（TSV/CSV をテーブル整形表示、同一バッファ上で動作）
 - `Esc` : メッセージ/保留入力のクリア
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動
@@ -109,6 +109,14 @@
 - `d` : 選択範囲を delete
 - `i` / `a` + object : text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c` : Normal mode に戻る
+- `Ctrl-z` : shell へ suspend（`fg` で復帰）
+
+## Rich mode
+
+- Normal mode のキーバインドをほぼそのまま使える（移動・検索・yank 等）
+- バッファを変更する操作（insert/delete/change/paste/replace）はブロック
+- `Esc` : Normal mode に戻る
+- `Ctrl-c` : Normal mode に戻る
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
 
 ## Command-line mode

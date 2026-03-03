@@ -36,67 +36,53 @@ module RuVim
       end
     end
 
-    # Open a Rich View buffer for the current buffer.
-    # Returns the new rich view buffer.
+    # Enter rich mode on the current buffer (same buffer, no virtual buffer).
     def open!(editor, format: nil)
-      source_buffer = editor.current_buffer
-      format ||= detect_format(source_buffer)
+      buffer = editor.current_buffer
+      format ||= detect_format(buffer)
       raise RuVim::CommandError, "Cannot detect format for rich view" unless format
 
       renderer = @renderers[format]
       raise RuVim::CommandError, "No renderer for format: #{format}" unless renderer
 
-      lines = (0...source_buffer.line_count).map { |i| source_buffer.line_at(i) }
-
-      buffer = editor.add_virtual_buffer(
-        kind: :rich_view,
-        name: "[Rich View: #{source_buffer.display_name}]",
-        lines: lines,
-        readonly: true,
-        modifiable: false
-      )
-      buffer.options["wrap"] = false
-      buffer.options["__rich_view__"] = { format: format, delimiter: renderer.delimiter_for(format) }
-
-      editor.switch_to_buffer(buffer.id)
-      editor.echo("[Rich View: #{format}]")
-      buffer
+      delimiter = renderer.delimiter_for(format)
+      editor.enter_rich_mode(format: format, delimiter: delimiter)
+      editor.echo("[Rich: #{format}]")
     end
 
-    # Check if a buffer is a Rich View buffer.
-    def active?(buffer)
-      buffer.kind == :rich_view && !!buffer.options["__rich_view__"]
+    # Check if rich view rendering is active (persists during command-line mode).
+    def active?(editor)
+      !!editor.rich_state
     end
 
     # Render visible lines through the appropriate renderer.
     # Takes raw lines from buffer, returns formatted lines for display.
-    def render_visible_lines(buffer, lines)
-      meta = buffer.options["__rich_view__"]
-      return lines unless meta
+    def render_visible_lines(editor, lines)
+      state = editor.rich_state
+      return lines unless state
 
-      format = meta[:format]
+      format = state[:format]
       renderer = @renderers[format]
       return lines unless renderer
 
-      delimiter = meta[:delimiter]
+      delimiter = state[:delimiter]
       renderer.render_visible(lines, delimiter: delimiter)
     end
 
-    # Toggle: if current buffer is rich view, close it; otherwise open one.
+    # Toggle: if in rich mode, exit; otherwise enter.
     def toggle!(editor, format: nil)
-      if active?(editor.current_buffer)
+      if active?(editor)
         close!(editor)
       else
         open!(editor, format: format)
       end
     end
 
-    # Close the rich view buffer and return to the previous buffer.
+    # Exit rich mode and return to normal mode.
     def close!(editor)
-      buffer = editor.current_buffer
-      return unless active?(buffer)
+      return unless active?(editor)
 
-      editor.delete_buffer(buffer.id)
+      editor.exit_rich_mode
     end
 
     # Register built-in renderers

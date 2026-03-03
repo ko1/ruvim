@@ -46,13 +46,14 @@
 - block-based keymap DSL（`nmap/imap/map_global ... do |ctx, ...| end`）
 - plugin 向け `ctx.editor / ctx.buffer / ctx.window` API リファレンス（未確定 API 注記つき）
 
-## Rich View / 構造化データ表示
+## Rich mode / 構造化データ表示
 
 - Rich View フレームワーク（filetype ごとのレンダラー登録）
 - TSV/CSV テーブルレンダラー（列幅自動計算、CJK 対応、CSV quoted field パース）
 - `:rich [format]` Ex コマンド（トグル）
 - `gr` Normal mode キーバインド（トグル）
 - filetype 検出に `.tsv` / `.csv` 追加
+- Rich View → Rich mode へ変換（仮想バッファ方式から同一バッファ上のモード方式へ）
 
 ## UI / 画面描画 / 端末挙動
 

@@ -449,6 +449,8 @@ module RuVim
         handle_command_line_key(key)
       when :visual_char, :visual_line, :visual_block
         handle_visual_key(key)
+      when :rich
+        handle_rich_key(key)
       else
         handle_normal_key(key)
       end
@@ -471,6 +473,16 @@ module RuVim
     end
 
     def handle_editor_app_action(name, **kwargs)
+      if @editor.rich_mode?
+        case name.to_sym
+        when :normal_operator_start
+          op = (kwargs[:name] || kwargs["name"]).to_sym
+          return if op == :delete || op == :change
+        when :normal_replace_pending_start, :normal_change_repeat
+          return
+        end
+      end
+
       case name.to_sym
       when :normal_register_pending_start
         start_register_pending
@@ -577,6 +589,11 @@ module RuVim
         @pending_keys = []
         invocation = dup_invocation(match.invocation)
         invocation.count = repeat_count
+        if @editor.rich_mode? && rich_mode_block_command?(invocation.id)
+          @editor.pending_count = nil
+          @pending_keys = []
+          return
+        end
         @dispatcher.dispatch(@editor, invocation)
         maybe_record_simple_dot_change(invocation, matched_keys, repeat_count)
       else
@@ -915,6 +932,31 @@ module RuVim
       )
     end
 
+    # Rich mode: delegates to normal mode key handling but blocks mutating operations.
+    RICH_MODE_BLOCKED_COMMANDS = %w[
+      mode.insert mode.append mode.append_line_end mode.insert_nonblank
+      mode.open_below mode.open_above
+      buffer.delete_char buffer.delete_line buffer.delete_motion
+      buffer.change_motion buffer.change_line
+      buffer.paste_after buffer.paste_before
+      buffer.replace_char
+      buffer.visual_delete
+    ].freeze
+
+    def handle_rich_key(key)
+      token = normalize_key_token(key)
+      if token == "\e"
+        RuVim::RichView.close!(@editor)
+        return
+      end
+
+      handle_normal_key(key)
+    end
+
+    def rich_mode_block_command?(command_id)
+      RICH_MODE_BLOCKED_COMMANDS.include?(command_id.to_s)
+    end
+
     def handle_ctrl_c
       case @editor.mode
       when :insert
@@ -935,6 +977,18 @@ module RuVim
         @jump_pending = nil
         clear_pending_key_timeout
         @editor.enter_normal_mode
+      when :rich
+        clear_pending_key_timeout
+        @editor.pending_count = nil
+        @pending_keys = []
+        @operator_pending = nil
+        @replace_pending = nil
+        @register_pending = false
+        @mark_pending = false
+        @jump_pending = nil
+        @macro_record_pending = false
+        @macro_play_pending = false
+        RuVim::RichView.close!(@editor)
       else
         clear_pending_key_timeout
         @editor.pending_count = nil

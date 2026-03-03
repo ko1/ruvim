@@ -306,7 +306,7 @@ module RuVim
     end
 
     def plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
-      if RuVim::RichView.active?(buffer)
+      if RuVim::RichView.active?(editor)
         return rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
       end
 
@@ -328,7 +328,7 @@ module RuVim
       end
 
       non_nil = raw_lines.compact
-      formatted = RuVim::RichView.render_visible_lines(buffer, non_nil)
+      formatted = RuVim::RichView.render_visible_lines(editor, non_nil)
       fmt_idx = 0
 
       Array.new(height) do |dy|
@@ -417,6 +417,8 @@ module RuVim
     end
 
     def wrap_enabled?(editor, window, buffer)
+      return false if editor.rich_state
+
       !!editor.effective_option("wrap", window:, buffer:)
     end
 
@@ -691,6 +693,7 @@ module RuVim
              when :visual_char then "-- VISUAL --"
              when :visual_line then "-- VISUAL LINE --"
              when :visual_block then "-- VISUAL BLOCK --"
+             when :rich then "-- RICH --"
              else "-- NORMAL --"
              end
 

@@ -62,7 +62,7 @@ module RuVim
     rescue StandardError => e
       editor.echo_error("Error: #{e.message}")
     ensure
-      editor.enter_normal_mode
+      editor.leave_command_line if editor.mode == :command_line
     end
 
     def parse_ex(line)

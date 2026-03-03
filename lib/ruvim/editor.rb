@@ -108,6 +108,7 @@ module RuVim
       @macros = {}
       @macro_recording = nil
       @visual_state = nil
+      @rich_state = nil
       @quickfix_list = { items: [], index: nil }
       @location_lists = Hash.new { |h, k| h[k] = { items: [], index: nil } }
       @arglist = []
@@ -523,6 +524,25 @@ module RuVim
       end
     end
 
+    def rich_state
+      @rich_state
+    end
+
+    def rich_mode?
+      @mode == :rich
+    end
+
+    def enter_rich_mode(format:, delimiter:)
+      @mode = :rich
+      @pending_count = nil
+      @rich_state = { format: format, delimiter: delimiter }
+    end
+
+    def exit_rich_mode
+      @rich_state = nil
+      enter_normal_mode
+    end
+
     def add_empty_buffer(path: nil)
       id = next_buffer_id
       buffer = Buffer.new(id:, path:)
@@ -935,6 +955,7 @@ module RuVim
       @mode = :normal
       @pending_count = nil
       clear_visual
+      @rich_state = nil
     end
 
     def enter_insert_mode
@@ -950,7 +971,16 @@ module RuVim
 
     def cancel_command_line
       @command_line.clear
-      enter_normal_mode
+      leave_command_line
+    end
+
+    def leave_command_line
+      if @rich_state
+        @mode = :rich
+        @pending_count = nil
+      else
+        enter_normal_mode
+      end
     end
 
     def echo(msg)
