@@ -38,9 +38,6 @@ module RuVim
         return 0
       end
 
-      if opts.files.length > 1 && opts.startup_open_layout.nil?
-        raise ParseError, "multiple files are not supported yet"
-      end
 
       if opts.config_path && !File.file?(opts.config_path)
         raise ParseError, "config file not found: #{opts.config_path}"

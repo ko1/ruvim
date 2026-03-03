@@ -419,6 +419,15 @@ RuVim::ExCommandRegistry.instance.register(
 - バッファ切替時に直前バッファを更新
 - `:buffer #` で切替可能
 
+### arglist（引数リスト）
+
+- `Editor#arglist` と `Editor#arglist_index` を保持
+- 起動時に複数ファイル引数があるとarglistが初期化される
+- `:args` : arglistを表示（現在の引数は `[filename]` で表示）
+- `:next` / `:prev` : arglist内を移動
+- `:first` / `:last` : arglistの最初/最後に移動
+- arglist移動時にalternate bufferも更新される
+
 ## 画面描画仕様（現状）
 
 ANSI エスケープシーケンスによる再描画です。

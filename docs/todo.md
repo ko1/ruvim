@@ -120,10 +120,6 @@
 
 ### P1: Vim 運用でよく触る基盤（あると詰まりにくい）
 
-- arglist（複数ファイル通常起動 + 操作）
-  - 複数ファイル引数（通常起動）
-  - `:args`, `:next`, `:prev`, `:first`, `:last`
-  - `alternate buffer (#)` との整合
 - `Ctrl-w` window 操作の拡張
   - `Ctrl-w c`（window close）
   - `Ctrl-w o`（only / 他 window を閉じる）
