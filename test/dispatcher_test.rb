@@ -298,4 +298,250 @@ class DispatcherTest < Minitest::Test
     idx = @editor.window_order.index(@editor.current_window_id)
     assert_equal 1, idx
   end
+
+  # --- Range parser tests ---
+
+  def test_parse_range_percent
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    result = @dispatcher.parse_range("%", @editor)
+    assert_equal 0, result[:range_start]
+    assert_equal 4, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  def test_parse_range_numeric_pair
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    result = @dispatcher.parse_range("1,5", @editor)
+    assert_equal 0, result[:range_start]
+    assert_equal 4, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  def test_parse_range_dot_and_dollar
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    @editor.current_window.cursor_y = 2
+
+    result = @dispatcher.parse_range(".,$", @editor)
+    assert_equal 2, result[:range_start]
+    assert_equal 4, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  def test_parse_range_with_offset
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    @editor.current_window.cursor_y = 1
+
+    result = @dispatcher.parse_range(".+2,$-1", @editor)
+    assert_equal 3, result[:range_start]
+    assert_equal 3, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  def test_parse_range_single_address
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c"])
+    result = @dispatcher.parse_range("2", @editor)
+    assert_equal 1, result[:range_start]
+    assert_equal 1, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  def test_parse_range_returns_nil_for_no_range
+    @editor.materialize_intro_buffer!
+    result = @dispatcher.parse_range("help", @editor)
+    assert_nil result
+  end
+
+  def test_parse_range_with_rest
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    result = @dispatcher.parse_range("%s/a/b/g", @editor)
+    assert_equal 0, result[:range_start]
+    assert_equal 4, result[:range_end]
+    assert_equal "s/a/b/g", result[:rest]
+  end
+
+  def test_parse_range_mark_address
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+    @editor.current_window.cursor_y = 1
+    @editor.set_mark("a")
+    @editor.current_window.cursor_y = 3
+    @editor.set_mark("b")
+
+    result = @dispatcher.parse_range("'a,'b", @editor)
+    assert_equal 1, result[:range_start]
+    assert_equal 3, result[:range_end]
+    assert_equal "", result[:rest]
+  end
+
+  # --- Substitute parser tests ---
+
+  def test_parse_substitute_basic
+    result = @dispatcher.parse_substitute("s/foo/bar/")
+    assert_equal "foo", result[:pattern]
+    assert_equal "bar", result[:replacement]
+    assert_equal "", result[:flags_str]
+  end
+
+  def test_parse_substitute_with_flags
+    result = @dispatcher.parse_substitute("s/foo/bar/gi")
+    assert_equal "foo", result[:pattern]
+    assert_equal "bar", result[:replacement]
+    assert_equal "gi", result[:flags_str]
+  end
+
+  def test_parse_substitute_returns_nil_for_non_substitute
+    assert_nil @dispatcher.parse_substitute("help")
+    assert_nil @dispatcher.parse_substitute("set number")
+  end
+
+  # --- Substitute with range integration ---
+
+  def test_substitute_with_range
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo", "foo", "foo", "foo"])
+
+    @dispatcher.dispatch_ex(@editor, "1,3s/foo/bar/")
+
+    assert_equal "bar", @editor.current_buffer.line_at(0)
+    assert_equal "bar", @editor.current_buffer.line_at(1)
+    assert_equal "bar", @editor.current_buffer.line_at(2)
+    assert_equal "foo", @editor.current_buffer.line_at(3)
+    assert_equal "foo", @editor.current_buffer.line_at(4)
+  end
+
+  def test_substitute_percent_range
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "bar", "foo"])
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/baz/")
+
+    assert_equal "baz", @editor.current_buffer.line_at(0)
+    assert_equal "bar", @editor.current_buffer.line_at(1)
+    assert_equal "baz", @editor.current_buffer.line_at(2)
+  end
+
+  def test_substitute_ignore_case_flag
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["FOO", "foo", "Foo"])
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/gi")
+
+    assert_equal "bar", @editor.current_buffer.line_at(0)
+    assert_equal "bar", @editor.current_buffer.line_at(1)
+    assert_equal "bar", @editor.current_buffer.line_at(2)
+  end
+
+  def test_substitute_count_only_flag
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "bar", "foo baz foo"])
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/x/gn")
+
+    # n flag: count only, no changes
+    assert_equal "foo", @editor.current_buffer.line_at(0)
+    assert_equal "foo baz foo", @editor.current_buffer.line_at(2)
+    assert_match(/3 match/, @editor.message)
+  end
+
+  def test_substitute_no_range_defaults_to_whole_buffer
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["aaa", "bbb", "aaa"])
+
+    @dispatcher.dispatch_ex(@editor, "s/aaa/zzz/")
+
+    assert_equal "zzz", @editor.current_buffer.line_at(0)
+    assert_equal "bbb", @editor.current_buffer.line_at(1)
+    assert_equal "zzz", @editor.current_buffer.line_at(2)
+  end
+
+  # --- :d (delete lines) tests ---
+
+  def test_delete_lines_with_range
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+
+    @dispatcher.dispatch_ex(@editor, "2,4d")
+
+    assert_equal 2, @editor.current_buffer.line_count
+    assert_equal "a", @editor.current_buffer.line_at(0)
+    assert_equal "e", @editor.current_buffer.line_at(1)
+    assert_match(/3 line/, @editor.message)
+  end
+
+  def test_delete_lines_without_range_deletes_current
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c"])
+    @editor.current_window.cursor_y = 1
+
+    @dispatcher.dispatch_ex(@editor, "d")
+
+    assert_equal 2, @editor.current_buffer.line_count
+    assert_equal "a", @editor.current_buffer.line_at(0)
+    assert_equal "c", @editor.current_buffer.line_at(1)
+  end
+
+  # --- :y (yank lines) tests ---
+
+  def test_yank_lines_with_range
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c", "d", "e"])
+
+    @dispatcher.dispatch_ex(@editor, "1,3y")
+
+    assert_match(/3 line/, @editor.message)
+    # Buffer unchanged
+    assert_equal 5, @editor.current_buffer.line_count
+  end
+
+  def test_yank_lines_without_range_yanks_current
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["a", "b", "c"])
+    @editor.current_window.cursor_y = 1
+
+    @dispatcher.dispatch_ex(@editor, "y")
+
+    assert_match(/1 line/, @editor.message)
+    assert_equal 3, @editor.current_buffer.line_count
+  end
+
+  # --- :grep tests ---
+
+  def test_grep_populates_quickfix
+    Dir.mktmpdir("ruvim-grep") do |dir|
+      File.write(File.join(dir, "a.txt"), "hello world\ngoodbye\n")
+      File.write(File.join(dir, "b.txt"), "hello again\n")
+
+      @editor.materialize_intro_buffer!
+      @dispatcher.dispatch_ex(@editor, "grep hello #{File.join(dir, '*.txt')}")
+
+      assert_operator @editor.quickfix_items.length, :>=, 2
+      refute @editor.message_error?
+    end
+  end
+
+  def test_grep_no_matches_shows_error
+    @editor.materialize_intro_buffer!
+    @dispatcher.dispatch_ex(@editor, "grep ZZZZUNMATCHABLE /dev/null")
+
+    assert @editor.message_error?
+  end
+
+  def test_lgrep_populates_location_list
+    Dir.mktmpdir("ruvim-lgrep") do |dir|
+      File.write(File.join(dir, "c.txt"), "alpha\nbeta\nalpha\n")
+
+      @editor.materialize_intro_buffer!
+      wid = @editor.current_window_id
+      @dispatcher.dispatch_ex(@editor, "lgrep alpha #{File.join(dir, 'c.txt')}")
+
+      assert_operator @editor.location_items(wid).length, :>=, 2
+      refute @editor.message_error?
+    end
+  end
 end

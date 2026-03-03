@@ -29,22 +29,36 @@ module RuVim
         return
       end
 
-      if (sub = parse_global_substitute(line))
-        invocation = CommandInvocation.new(id: "__substitute__", kwargs: sub)
+      # Parse range prefix
+      range_result = parse_range(raw, editor)
+      rest = range_result ? range_result[:rest] : raw
+
+      # Try substitute on rest
+      if (sub = parse_substitute(rest))
+        kwargs = sub.merge(
+          range_start: range_result&.dig(:range_start),
+          range_end: range_result&.dig(:range_end)
+        )
+        invocation = CommandInvocation.new(id: "__substitute__", kwargs:)
         ctx = Context.new(editor:, invocation:)
-        @command_host.ex_substitute(ctx, **sub)
+        @command_host.ex_substitute(ctx, **kwargs)
         editor.enter_normal_mode
         return
       end
 
-      parsed = parse_ex(line)
+      parsed = parse_ex(rest)
       return if parsed.nil?
 
       spec = @ex_registry.fetch(parsed.name)
       validate_ex_args!(spec, parsed.argv, parsed.bang)
       invocation = CommandInvocation.new(id: spec.name, argv: parsed.argv, bang: parsed.bang)
       ctx = Context.new(editor:, invocation:)
-      @command_host.call(spec.call, ctx, argv: parsed.argv, bang: parsed.bang, count: 1, kwargs: {})
+      range_kwargs = {}
+      if range_result
+        range_kwargs[:range_start] = range_result[:range_start]
+        range_kwargs[:range_end] = range_result[:range_end]
+      end
+      @command_host.call(spec.call, ctx, argv: parsed.argv, bang: parsed.bang, count: 1, kwargs: range_kwargs)
     rescue StandardError => e
       editor.echo_error("Error: #{e.message}")
     ensure
@@ -66,26 +80,140 @@ module RuVim
       raise RuVim::CommandError, "Parse error: #{e.message}"
     end
 
-    def parse_global_substitute(line)
+    # Parse a substitute command: s/pat/repl/flags
+    # Returns {pattern:, replacement:, flags_str:} or nil
+    def parse_substitute(line)
       raw = line.to_s.strip
-      return nil unless raw.start_with?("%s")
-      return nil if raw.length < 4
+      return nil unless raw.match?(/\As[^a-zA-Z]/)
+      return nil if raw.length < 2
 
-      delim = raw[2]
+      delim = raw[1]
       return nil if delim.nil? || delim =~ /\s/
-      i = 3
+      i = 2
       pat, i = parse_delimited_segment(raw, i, delim)
       return nil unless pat
       rep, i = parse_delimited_segment(raw, i, delim)
       return nil unless rep
-      flags = raw[i..].to_s
+      flags_str = raw[i..].to_s
       {
         pattern: pat,
         replacement: rep,
-        global: flags.include?("g")
+        flags_str: flags_str
       }
     rescue StandardError
       nil
+    end
+
+    # Parse an address at position pos in str.
+    # Returns [resolved_line_number, new_pos] or nil.
+    def parse_address(str, pos, editor)
+      return nil if pos >= str.length
+
+      ch = str[pos]
+      base = nil
+      new_pos = pos
+
+      case ch
+      when /\d/
+        # Numeric address
+        m = str[pos..].match(/\A(\d+)/)
+        return nil unless m
+        base = m[1].to_i - 1 # convert 1-based to 0-based
+        new_pos = pos + m[0].length
+      when "."
+        base = editor.current_window.cursor_y
+        new_pos = pos + 1
+      when "$"
+        base = editor.current_buffer.line_count - 1
+        new_pos = pos + 1
+      when "'"
+        # Mark address
+        mark_ch = str[pos + 1]
+        return nil unless mark_ch
+        if mark_ch == "<" || mark_ch == ">"
+          sel = editor.visual_selection
+          if sel
+            base = mark_ch == "<" ? sel[:start_row] : sel[:end_row]
+          else
+            return nil
+          end
+        else
+          loc = editor.mark_location(mark_ch)
+          return nil unless loc
+          base = loc[:row]
+        end
+        new_pos = pos + 2
+      when "+", "-"
+        # Relative offset with implicit current line
+        base = editor.current_window.cursor_y
+        # Don't advance new_pos — the offset parsing below will handle +/-
+      else
+        return nil
+      end
+
+      # Parse trailing +N / -N offsets
+      while new_pos < str.length
+        offset_ch = str[new_pos]
+        if offset_ch == "+"
+          m = str[new_pos + 1..].to_s.match(/\A(\d+)/)
+          if m
+            base += m[1].to_i
+            new_pos += 1 + m[0].length
+          else
+            base += 1
+            new_pos += 1
+          end
+        elsif offset_ch == "-"
+          m = str[new_pos + 1..].to_s.match(/\A(\d+)/)
+          if m
+            base -= m[1].to_i
+            new_pos += 1 + m[0].length
+          else
+            base -= 1
+            new_pos += 1
+          end
+        else
+          break
+        end
+      end
+
+      # Clamp to valid range
+      max_line = editor.current_buffer.line_count - 1
+      base = [[base, 0].max, max_line].min
+
+      [base, new_pos]
+    end
+
+    # Parse a range from the beginning of raw.
+    # Returns {range_start:, range_end:, rest:} or nil.
+    def parse_range(raw, editor)
+      str = raw.to_s
+      return nil if str.empty?
+
+      # % = whole file
+      if str[0] == "%"
+        max_line = editor.current_buffer.line_count - 1
+        rest = str[1..].to_s
+        return { range_start: 0, range_end: max_line, rest: rest }
+      end
+
+      # Try first address
+      addr1 = parse_address(str, 0, editor)
+      return nil unless addr1
+
+      line1, pos = addr1
+
+      if pos < str.length && str[pos] == ","
+        # addr,addr range
+        addr2 = parse_address(str, pos + 1, editor)
+        if addr2
+          line2, pos2 = addr2
+          return { range_start: line1, range_end: line2, rest: str[pos2..].to_s }
+        end
+      end
+
+      # Single address
+      { range_start: line1, range_end: line1, rest: str[pos..].to_s }
     end
 
     private

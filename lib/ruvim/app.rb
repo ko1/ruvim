@@ -302,6 +302,11 @@ module RuVim
       register_ex_unless(ex, "bprev", call: :buffer_prev, aliases: %w[bp], desc: "Previous buffer", nargs: 0, bang: true)
       register_ex_unless(ex, "buffer", call: :buffer_switch, aliases: %w[b], desc: "Switch buffer", nargs: 1, bang: true)
       register_ex_unless(ex, "bdelete", call: :buffer_delete, aliases: %w[bd], desc: "Delete buffer", nargs: :maybe_one, bang: true)
+      register_ex_unless(ex, "args", call: :arglist_show, desc: "Show argument list", nargs: 0)
+      register_ex_unless(ex, "next", call: :arglist_next, desc: "Next argument", nargs: 0)
+      register_ex_unless(ex, "prev", call: :arglist_prev, desc: "Previous argument", nargs: 0)
+      register_ex_unless(ex, "first", call: :arglist_first, desc: "First argument", nargs: 0)
+      register_ex_unless(ex, "last", call: :arglist_last, desc: "Last argument", nargs: 0)
       register_ex_unless(ex, "commands", call: :ex_commands, desc: "List Ex commands", nargs: 0)
       register_ex_unless(ex, "bindings", call: :ex_bindings, desc: "List active key bindings", nargs: :any)
       register_ex_unless(ex, "set", call: :ex_set, desc: "Set options", nargs: :any)
@@ -322,6 +327,10 @@ module RuVim
       register_ex_unless(ex, "lclose", call: :ex_lclose, desc: "Close location list window", nargs: 0)
       register_ex_unless(ex, "lnext", call: :ex_lnext, aliases: %w[ln], desc: "Next location item", nargs: 0)
       register_ex_unless(ex, "lprev", call: :ex_lprev, aliases: %w[lp], desc: "Prev location item", nargs: 0)
+      register_ex_unless(ex, "grep", call: :ex_grep, desc: "Search with external grep", nargs: :any)
+      register_ex_unless(ex, "lgrep", call: :ex_lgrep, desc: "Search with external grep (location list)", nargs: :any)
+      register_ex_unless(ex, "d", call: :ex_delete_lines, aliases: %w[delete], desc: "Delete lines", nargs: :any)
+      register_ex_unless(ex, "y", call: :ex_yank_lines, aliases: %w[yank], desc: "Yank lines", nargs: :any)
     end
 
     def bind_default_keys!
@@ -2354,6 +2363,9 @@ module RuVim
     def open_startup_paths!(paths)
       list = Array(paths).compact
       return if list.empty?
+
+      # Initialize arglist with all paths
+      @editor.set_arglist(list)
 
       first, *rest = list
       @editor.open_path(first)

@@ -1129,32 +1129,74 @@ module RuVim
       ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
     end
 
-    def ex_substitute(ctx, pattern:, replacement:, global: false, **)
+    def ex_substitute(ctx, pattern:, replacement:, flags_str: nil, range_start: nil, range_end: nil, global: false, **)
       materialize_intro_buffer_if_needed(ctx)
-      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
-      changed = 0
-      new_lines = ctx.buffer.lines.map do |line|
-        if global
-          line.scan(regex) { changed += 1 }
-          line.gsub(regex, replacement)
-        else
-          if line.match?(regex)
-            changed += 1
-            line.sub(regex, replacement)
-          else
-            line
-          end
-        end
+      flags = parse_substitute_flags(flags_str, default_global: global)
+      raise RuVim::CommandError, "Confirm flag (:s///c) is not yet supported" if flags[:confirm]
+
+      regex = build_substitute_regex(pattern, flags, ctx)
+
+      r_start = range_start || 0
+      r_end = range_end || (ctx.buffer.line_count - 1)
+
+      if flags[:count_only]
+        total = count_matches_in_range(ctx.buffer, regex, r_start, r_end, flags[:global])
+        ctx.editor.echo("#{total} match(es)")
+        return
       end
 
+      changed = substitute_range(ctx, regex, replacement, r_start, r_end, flags)
+
       if changed.positive?
-        ctx.buffer.begin_change_group
-        ctx.buffer.replace_all_lines!(new_lines)
-        ctx.buffer.end_change_group
         ctx.editor.echo("#{changed} substitution(s)")
+      elsif flags[:no_error]
+        ctx.editor.echo("Pattern not found: #{pattern}")
       else
         ctx.editor.echo("Pattern not found: #{pattern}")
       end
+    end
+
+    def ex_grep(ctx, argv:, kwargs: {}, **)
+      run_external_grep(ctx, argv:, target: :quickfix)
+    end
+
+    def ex_lgrep(ctx, argv:, kwargs: {}, **)
+      run_external_grep(ctx, argv:, target: :location_list)
+    end
+
+    def ex_delete_lines(ctx, kwargs: {}, **)
+      materialize_intro_buffer_if_needed(ctx)
+      r_start = kwargs[:range_start]
+      r_end = kwargs[:range_end]
+      unless r_start && r_end
+        # Default to current line
+        r_start = r_end = ctx.window.cursor_y
+      end
+
+      count = r_end - r_start + 1
+      deleted_text = ctx.buffer.line_block_text(r_start, count)
+      ctx.buffer.begin_change_group
+      count.times { ctx.buffer.delete_line(r_start) }
+      ctx.buffer.end_change_group
+      store_delete_register(ctx, text: deleted_text, type: :linewise)
+      ctx.window.cursor_y = [r_start, ctx.buffer.line_count - 1].min
+      ctx.window.cursor_x = 0
+      ctx.window.clamp_to_buffer(ctx.buffer)
+      ctx.editor.echo("#{count} line(s) deleted")
+    end
+
+    def ex_yank_lines(ctx, kwargs: {}, **)
+      materialize_intro_buffer_if_needed(ctx)
+      r_start = kwargs[:range_start]
+      r_end = kwargs[:range_end]
+      unless r_start && r_end
+        r_start = r_end = ctx.window.cursor_y
+      end
+
+      count = r_end - r_start + 1
+      text = ctx.buffer.line_block_text(r_start, count)
+      store_yank_register(ctx, text:, type: :linewise)
+      ctx.editor.echo("#{count} line(s) yanked")
     end
 
     def submit_search(ctx, pattern:, direction:)
@@ -1180,6 +1222,68 @@ module RuVim
         raw[1...-1]
       else
         raw
+      end
+    end
+
+    def run_external_grep(ctx, argv:, target:)
+      args = Array(argv).join(" ").strip
+      raise RuVim::CommandError, "Usage: :grep pattern [files...]" if args.empty?
+
+      grepprg = ctx.editor.effective_option("grepprg", window: ctx.window, buffer: ctx.buffer) || "grep -n"
+      cmd = "#{grepprg} #{args}"
+
+      stdout, stderr, status = Open3.capture3(cmd)
+      if stdout.strip.empty? && !status.success?
+        msg = stderr.strip.empty? ? "No matches found" : stderr.strip
+        ctx.editor.echo_error(msg)
+        return
+      end
+
+      items = parse_grep_output(ctx, stdout)
+      if items.empty?
+        ctx.editor.echo_error("No matches found")
+        return
+      end
+
+      case target
+      when :quickfix
+        ctx.editor.set_quickfix_list(items)
+        ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
+        ctx.editor.echo("quickfix: #{items.length} item(s)")
+      when :location_list
+        ctx.editor.set_location_list(items, window_id: ctx.window.id)
+        ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
+        ctx.editor.echo("location list: #{items.length} item(s)")
+      end
+    end
+
+    def parse_grep_output(ctx, output)
+      items = []
+      output.each_line do |line|
+        line = line.chomp
+        # Parse filename:lineno:text format
+        if (m = line.match(/\A(.+?):(\d+):(.*)?\z/))
+          filepath = m[1]
+          lineno = m[2].to_i - 1 # 0-based
+          text = m[3].to_s
+          buf = ensure_buffer_for_grep_file(ctx, filepath)
+          items << { buffer_id: buf.id, row: lineno, col: 0, text: text }
+        end
+      end
+      items
+    end
+
+    def ensure_buffer_for_grep_file(ctx, filepath)
+      abspath = File.expand_path(filepath)
+      # Check if buffer already exists for this file
+      existing = ctx.editor.buffers.values.find { |b| b.path && File.expand_path(b.path) == abspath }
+      return existing if existing
+
+      # Create buffer for the file
+      if File.exist?(abspath)
+        ctx.editor.add_buffer_from_file(abspath)
+      else
+        ctx.editor.add_empty_buffer(path: abspath)
       end
     end
 
@@ -2732,6 +2836,138 @@ module RuVim
       end
     rescue StandardError
       0
+    end
+
+    def parse_substitute_flags(flags_str, default_global: false)
+      flags = { global: default_global, ignore_case: false, match_case: false, count_only: false, no_error: false, confirm: false }
+      return flags if flags_str.nil? || flags_str.empty?
+
+      flags_str.each_char do |ch|
+        case ch
+        when "g" then flags[:global] = true
+        when "i" then flags[:ignore_case] = true
+        when "I" then flags[:match_case] = true
+        when "n" then flags[:count_only] = true
+        when "e" then flags[:no_error] = true
+        when "c" then flags[:confirm] = true
+        end
+      end
+      flags
+    end
+
+    def build_substitute_regex(pattern, flags, ctx)
+      if flags[:match_case]
+        # I flag: force case-sensitive
+        Regexp.new(pattern.to_s)
+      elsif flags[:ignore_case]
+        # i flag: force case-insensitive
+        Regexp.new(pattern.to_s, Regexp::IGNORECASE)
+      else
+        compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
+      end
+    rescue RegexpError => e
+      raise RuVim::CommandError, "Invalid regex: #{e.message}"
+    end
+
+    def substitute_range(ctx, regex, replacement, r_start, r_end, flags)
+      changed = 0
+      new_lines = ctx.buffer.lines.each_with_index.map do |line, idx|
+        if idx >= r_start && idx <= r_end
+          if flags[:global]
+            line.scan(regex) { changed += 1 }
+            line.gsub(regex, replacement)
+          else
+            if line.match?(regex)
+              changed += 1
+              line.sub(regex, replacement)
+            else
+              line
+            end
+          end
+        else
+          line
+        end
+      end
+
+      if changed.positive?
+        ctx.buffer.begin_change_group
+        ctx.buffer.replace_all_lines!(new_lines)
+        ctx.buffer.end_change_group
+      end
+      changed
+    end
+
+    def count_matches_in_range(buffer, regex, r_start, r_end, global)
+      total = 0
+      (r_start..r_end).each do |idx|
+        line = buffer.line_at(idx)
+        if global
+          line.scan(regex) { total += 1 }
+        else
+          total += 1 if line.match?(regex)
+        end
+      end
+      total
+    end
+
+    def arglist_show(ctx, **)
+      arglist = ctx.editor.arglist
+      if arglist.empty?
+        ctx.editor.echo("No arguments")
+        return
+      end
+
+      current_index = ctx.editor.arglist_index
+      items = arglist.map.with_index do |path, i|
+        prefix = i == current_index ? "[" : " "
+        suffix = i == current_index ? "]" : " "
+        "#{prefix}#{path}#{suffix}"
+      end
+      ctx.editor.echo(items.join(" "))
+    end
+
+    def arglist_next(ctx, count:, **)
+      count = normalized_count(count)
+      path = ctx.editor.arglist_next(count)
+      switch_to_file(ctx, path)
+      ctx.editor.echo("Argument #{ctx.editor.arglist_index + 1} of #{ctx.editor.arglist.length}: #{path}")
+    end
+
+    def arglist_prev(ctx, count:, **)
+      count = normalized_count(count)
+      path = ctx.editor.arglist_prev(count)
+      switch_to_file(ctx, path)
+      ctx.editor.echo("Argument #{ctx.editor.arglist_index + 1} of #{ctx.editor.arglist.length}: #{path}")
+    end
+
+    def arglist_first(ctx, **)
+      path = ctx.editor.arglist_first
+      return ctx.editor.error("No arguments") unless path
+      switch_to_file(ctx, path)
+      ctx.editor.echo("Argument 1 of #{ctx.editor.arglist.length}: #{path}")
+    end
+
+    def arglist_last(ctx, **)
+      path = ctx.editor.arglist_last
+      return ctx.editor.error("No arguments") unless path
+      switch_to_file(ctx, path)
+      ctx.editor.echo("Argument #{ctx.editor.arglist.length} of #{ctx.editor.arglist.length}: #{path}")
+    end
+
+    private
+
+    def switch_to_file(ctx, path)
+      existing_buffer = ctx.editor.buffers.values.find { |buf| buf.path == path }
+      if existing_buffer
+        ctx.editor.set_alternate_buffer_id(ctx.editor.current_buffer.id)
+        ctx.editor.activate_buffer(existing_buffer.id)
+        existing_buffer.id
+      else
+        ctx.editor.set_alternate_buffer_id(ctx.editor.current_buffer.id)
+        buffer = ctx.editor.add_buffer_from_file(path)
+        ctx.editor.current_window.buffer_id = buffer.id
+        buffer.id
+      end
     end
   end
 end

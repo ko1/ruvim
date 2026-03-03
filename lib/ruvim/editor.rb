@@ -49,7 +49,9 @@ module RuVim
       "smartindent" => { default_scope: :buffer, type: :bool, default: false },
       "iskeyword" => { default_scope: :buffer, type: :string, default: nil },
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
-      "filetype" => { default_scope: :buffer, type: :string, default: nil }
+      "filetype" => { default_scope: :buffer, type: :string, default: nil },
+      "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
+      "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" }
     }.freeze
     SHEBANG_FILETYPE_RULES = [
       [/\Aruby(?:\d+(?:\.\d+)*)?\z/, "ruby"],
@@ -108,6 +110,8 @@ module RuVim
       @visual_state = nil
       @quickfix_list = { items: [], index: nil }
       @location_lists = Hash.new { |h, k| h[k] = { items: [], index: nil } }
+      @arglist = []
+      @arglist_index = 0
     end
 
     def running?
@@ -1160,6 +1164,51 @@ module RuVim
       current_window.cursor_x = first_nonblank_col(current_buffer, current_window.cursor_y) if linewise
       current_window.clamp_to_buffer(current_buffer)
       current_location
+    end
+
+    def arglist
+      @arglist.dup
+    end
+
+    def arglist_index
+      @arglist_index
+    end
+
+    def set_arglist(paths)
+      @arglist = Array(paths).dup
+      @arglist_index = 0
+    end
+
+    def arglist_current
+      @arglist[@arglist_index] if @arglist_index < @arglist.length
+    end
+
+    def arglist_next(count = 1)
+      new_index = @arglist_index + count
+      if new_index >= @arglist.length
+        raise RuVim::CommandError, "Already at last argument"
+      end
+      @arglist_index = new_index
+      @arglist[@arglist_index]
+    end
+
+    def arglist_prev(count = 1)
+      new_index = @arglist_index - count
+      if new_index < 0
+        raise RuVim::CommandError, "Already at first argument"
+      end
+      @arglist_index = new_index
+      @arglist[@arglist_index]
+    end
+
+    def arglist_first
+      @arglist_index = 0
+      @arglist[@arglist_index] if @arglist.length > 0
+    end
+
+    def arglist_last
+      @arglist_index = [@arglist.length - 1, 0].max
+      @arglist[@arglist_index] if @arglist.length > 0
     end
 
     private
