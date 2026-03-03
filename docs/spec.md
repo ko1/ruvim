@@ -166,7 +166,8 @@ RuVim::ExCommandRegistry.instance.register(
 2. `RuVim::App` が mode ごとに処理を分岐
 3. Normal mode のキーは `RuVim::KeymapManager` で解決
 4. `RuVim::Dispatcher` が内部コマンド or Ex コマンドを実行
-5. `RuVim::Screen` が再描画
+5. Insert mode でキー処理後、stdin に未読データが残っていればレンダリングをスキップして追加のキーを読み取り・処理する（ペースト高速化）
+6. `RuVim::Screen` が再描画
 
 ## 起動オプション（CLI, 現状）
 
