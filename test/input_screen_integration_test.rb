@@ -88,4 +88,17 @@ class InputScreenIntegrationTest < Minitest::Test
       assert_equal :ctrl_z, input.read_key(timeout: 0.2)
     end
   end
+
+  def test_has_pending_input_returns_true_when_data_available
+    stdin = FakeTTY.new("abc")
+    input = RuVim::Input.new(stdin: stdin)
+
+    with_fake_select do
+      assert input.has_pending_input?
+      input.read_key(timeout: 0)
+      input.read_key(timeout: 0)
+      input.read_key(timeout: 0)
+      refute input.has_pending_input?
+    end
+  end
 end

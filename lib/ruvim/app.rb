@@ -115,6 +115,13 @@ module RuVim
 
           handle_key(key)
           @needs_redraw = true
+
+          # Batch insert-mode keystrokes to avoid per-char rendering during paste
+          while @editor.mode == :insert && @input.has_pending_input?
+            batch_key = @input.read_key(timeout: 0, esc_timeout: 0)
+            break unless batch_key
+            handle_key(batch_key)
+          end
         end
       end
     ensure

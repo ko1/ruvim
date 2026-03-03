@@ -630,6 +630,24 @@ class AppScenarioTest < Minitest::Test
     assert_operator @editor.hit_enter_lines.length, :>, 1
   end
 
+  def test_batch_insert_handles_pasted_text_correctly
+    @editor.current_buffer.replace_all_lines!([""])
+    # Simulate pasting "Hello World\n" in insert mode (batch of characters)
+    feed("i", *"Hello World".chars, :enter, *"Second line".chars, :escape)
+
+    assert_equal ["Hello World", "Second line"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_batch_insert_stops_on_escape
+    @editor.current_buffer.replace_all_lines!([""])
+    # Escape exits insert mode; subsequent keys are normal-mode commands
+    feed("i", "a", "b", "c", :escape)
+
+    assert_equal ["abc"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+  end
+
   def test_ls_format_shows_vim_style_output
     @editor.add_empty_buffer(path: "second.rb")
     @dispatcher.dispatch_ex(@editor, "ls")

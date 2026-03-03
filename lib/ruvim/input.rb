@@ -39,6 +39,10 @@ module RuVim
       ch
     end
 
+    def has_pending_input?
+      IO.select([@stdin], nil, nil, 0) != nil
+    end
+
     private
 
     def drain_io(io)
