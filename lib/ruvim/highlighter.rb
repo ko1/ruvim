@@ -21,6 +21,8 @@ module RuVim
         Lang::Json.color_columns(text)
       when "markdown"
         Lang::Markdown.color_columns(text)
+      when "scheme"
+        Lang::Scheme.color_columns(text)
       else
         {}
       end

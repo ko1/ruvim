@@ -86,4 +86,52 @@ class HighlighterTest < Minitest::Test
     cols = RuVim::Highlighter.color_columns("markdown", "plain text")
     assert_empty cols
   end
+
+  # --- Scheme ---
+
+  def test_scheme_keyword_define
+    cols = RuVim::Highlighter.color_columns("scheme", "(define x 42)")
+    assert_equal "\e[36m", cols[1]  # "define" keyword
+    assert_equal "\e[36m", cols[6]  # end of "define"
+  end
+
+  def test_scheme_keyword_lambda
+    cols = RuVim::Highlighter.color_columns("scheme", "(lambda (x) x)")
+    assert_equal "\e[36m", cols[1]  # "lambda"
+  end
+
+  def test_scheme_string
+    cols = RuVim::Highlighter.color_columns("scheme", '(display "hello")')
+    assert_equal "\e[32m", cols[9]  # opening quote
+    assert_equal "\e[32m", cols[15] # closing quote
+  end
+
+  def test_scheme_number
+    cols = RuVim::Highlighter.color_columns("scheme", "(+ 1 2.5)")
+    assert_equal "\e[33m", cols[3]  # "1"
+    assert_equal "\e[33m", cols[5]  # "2"
+  end
+
+  def test_scheme_boolean
+    cols = RuVim::Highlighter.color_columns("scheme", "(if #t #f)")
+    assert_equal "\e[35m", cols[4]  # "#t"
+    assert_equal "\e[35m", cols[7]  # "#f"
+  end
+
+  def test_scheme_comment
+    cols = RuVim::Highlighter.color_columns("scheme", "; this is a comment")
+    assert_equal "\e[90m", cols[0]  # ";"
+    assert_equal "\e[90m", cols[18] # end of comment
+  end
+
+  def test_scheme_char_literal
+    cols = RuVim::Highlighter.color_columns("scheme", '#\a #\space')
+    assert_equal "\e[32m", cols[0]  # "#\a"
+    assert_equal "\e[32m", cols[4]  # "#\space"
+  end
+
+  def test_scheme_empty_line
+    cols = RuVim::Highlighter.color_columns("scheme", "")
+    assert_empty cols
+  end
 end

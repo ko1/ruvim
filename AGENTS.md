@@ -49,6 +49,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer |
 | `lang/json.rb` | JSON syntax highlighting via regex |
+| `lang/scheme.rb` | Scheme syntax highlighting via regex |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
