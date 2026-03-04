@@ -189,8 +189,21 @@ module RuVim
         return unless path && File.exist?(path)
         output, status = Open3.capture2e("ruby", "-wc", path)
         message = output.sub(/^Syntax OK\n?\z/m, "").strip
+
         if !status.success? || !message.empty?
-          ctx.editor.echo_error(message)
+          buffer_id = ctx.buffer.id
+          items = message.lines.filter_map { |line|
+            if line =~ /\A.+?:(\d+):/
+              { buffer_id: buffer_id, row: $1.to_i - 1, col: 0, text: line.strip }
+            end
+          }
+          items = [{ buffer_id: buffer_id, row: 0, col: 0, text: message }] if items.empty?
+          ctx.editor.set_quickfix_list(items)
+          first = message.lines.first.to_s.strip
+          hint = items.size > 1 ? " (]q to see next, #{items.size} total)" : ""
+          ctx.editor.echo_error("#{first}#{hint}")
+        else
+          ctx.editor.set_quickfix_list([])
         end
       end
 

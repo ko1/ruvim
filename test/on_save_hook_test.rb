@@ -19,6 +19,7 @@ class OnSaveHookTest < Minitest::Test
       RuVim::Lang::Ruby.on_save(ctx, path)
       # No error message should be set (echo from before should remain)
       refute editor.message_error?
+      assert_empty editor.quickfix_items, "quickfix list should be empty for valid file"
     end
   end
 
@@ -31,6 +32,10 @@ class OnSaveHookTest < Minitest::Test
       RuVim::Lang::Ruby.on_save(ctx, path)
       assert editor.message_error?
       assert_match(/syntax error/i, editor.message)
+      refute_empty editor.quickfix_items, "quickfix list should be populated on syntax error"
+      item = editor.quickfix_items.first
+      assert_kind_of Integer, item[:row]
+      assert_match(/syntax error/i, item[:text])
     end
   end
 
