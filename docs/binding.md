@@ -30,6 +30,14 @@
 - `/` : 前方検索入力に入る
 - `?` : 後方検索入力に入る
 - `x` : カーソル位置の文字削除
+- `X` : カーソル前の文字削除
+- `s` : カーソル位置の文字を削除して Insert mode（substitute）
+- `~` : カーソル位置の文字の大文字小文字を切替
+- `J` : 現在行と次の行を結合
+- `D` : カーソルから行末まで削除
+- `C` : カーソルから行末まで変更（削除して Insert mode）
+- `S` : 行全体を変更（削除して Insert mode）
+- `Y` : 行全体をヤンク
 - `dd` : 現在行を削除
 - `d` + motion : operator-pending delete（`dw`, `dj`, `dk`, `d$`, `dh`, `dl`）
 - `diw` / `daw` : 単語 text object delete（簡易）
@@ -68,6 +76,9 @@
 - `Ctrl-d` / `Ctrl-u` : 半ページ下/上へ移動（概ね表示高さの半分）
 - `Ctrl-f` / `Ctrl-b` : 1ページ下/上へ移動（`PageDown` / `PageUp` 相当）
 - `Ctrl-e` / `Ctrl-y` : カーソル位置をなるべく保ったまま画面を1行下/上へスクロール（最小実装）
+- `zt` : カーソル行を画面上端に移動
+- `zz` : カーソル行を画面中央に移動
+- `zb` : カーソル行を画面下端に移動
 - `q{reg}` : macro 記録開始/終了（再度 `q` で停止）
 - `@{reg}` / `@@` : macro 再生 / 直前 macro 再生
 - `n` : 直前検索を次へ
@@ -77,6 +88,7 @@
 - `gf` : カーソル下のファイル名を開く（最小。`path` / `suffixesadd` を参照）
   - `file:line` 形式なら開いた後に `line` 行目へ移動
 - `gr` : Rich mode をトグル（TSV/CSV をテーブル整形表示、同一バッファ上で動作）
+- `Ctrl-c` : stdin stream 停止（stdin バッファ表示時）
 - `Esc` : メッセージ/保留入力のクリア
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動

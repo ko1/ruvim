@@ -7,7 +7,7 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 ### Ruby ネイティブな拡張性
 
 - 設定ファイルは Ruby DSL（`~/.config/ruvim/init.rb`）
-  - `nmap`, `imap`, `map_global`, `command`, `ex_command`, `ex_command_call`
+  - `nmap`, `imap`, `map_global`, `set`, `setlocal`, `setglobal`, `command`, `ex_command`, `ex_command_call`
   - Vim script 不要で Ruby の全機能を利用可能
 - `:ruby` / `:rb` で実行中に Ruby eval が可能（Vim の `:ruby` とは別物）
 - plugin 向け `ctx.editor / ctx.buffer / ctx.window` API
@@ -53,10 +53,12 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 
 ### Ex コマンド
 
-- `:w`, `:q`, `:wq`, `:e`, `:buffer`, `:bnext`, `:bprev`, `:ls`, `:split`, `:vsplit`
+- `:w`, `:q`, `:wq`, `:e`, `:buffer`, `:bnext`, `:bprev`, `:bdelete`, `:ls`, `:split`, `:vsplit`
 - `:qa`, `:qa!`, `:wqa`
-- quickfix / location list: `:vimgrep`, `:lvimgrep`, `:copen`, `:cnext`, `:lopen`, `:lnext`
-- tabpage: `:tabnew`, `:tabnext`, `:tabprev`
+- quickfix / location list: `:vimgrep`, `:lvimgrep`, `:grep`, `:lgrep`, `:copen`, `:cnext`, `:lopen`, `:lnext`
+- tabpage: `:tabnew`, `:tabnext`, `:tabprev`, `:tabs`
+- arglist: `:args`, `:next`, `:prev`, `:first`, `:last`
+- 行操作: `:d` / `:delete`, `:y` / `:yank`
 
 ### option system
 
@@ -65,7 +67,8 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - インデント: `shiftwidth`, `softtabstop`, `expandtab`, `autoindent`, `smartindent`, `tabstop`
 - 検索: `ignorecase`, `smartcase`, `hlsearch`, `incsearch`
 - 分割: `splitbelow`, `splitright`
-- その他: `hidden`, `autowrite`, `clipboard`, `timeoutlen`, `ttimeoutlen`, `backspace`, `whichwrap`, `iskeyword`, `filetype`, `path`, `suffixesadd`, `grepprg`, `grepformat`, 補完系（`completeopt`, `pumheight`, `wildmode`, `wildmenu`, `wildignore`, `wildignorecase`）
+- grep: `grepprg`, `grepformat`
+- その他: `hidden`, `autowrite`, `clipboard`, `timeoutlen`, `ttimeoutlen`, `backspace`, `whichwrap`, `iskeyword`, `filetype`, `path`, `suffixesadd`, 補完系（`completeopt`, `pumheight`, `wildmode`, `wildmenu`, `wildignore`, `wildignorecase`）
 
 ### その他
 
@@ -96,7 +99,7 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - folds
 - LSP / diagnostics
 - job / channel / terminal 連携
-- `:grep`, `:make`, `:cfile`, `:lgrep`
-- substitute の高度なフラグ群（現状は `:%s/.../.../g` のみ）
+- `:make`, `:cfile`, `:lfile`（`:grep`, `:lgrep` は実装済み）
+- substitute の `c`（confirm）フラグ（`g`, `i`, `I`, `n`, `e` は実装済み）
 - swap / backup / undofile（永続 undo）
 - `-d`（diff mode）, `-q`（quickfix mode）, `-S`（session）は placeholder のみ

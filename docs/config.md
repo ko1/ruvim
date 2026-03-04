@@ -244,11 +244,11 @@ setglobal "tabstop=8"
   - Tab 入力/削除時の編集幅を指定します。
   - 現状は Insert mode の Tab 入力と、`expandtab` 時の空白 Backspace（最小）で使用します。
 
-- `autoindent` (`bool`, default `false`) [`DONE`]
+- `autoindent` (`bool`, default `true`) [`DONE`]
   - 改行時に前行の先頭インデントを引き継ぎます。
   - Insert mode `Enter`、`o`/`O` に反映されます。
 
-- `smartindent` (`bool`, default `false`) [`PARTIAL`]
+- `smartindent` (`bool`, default `true`) [`PARTIAL`]
   - 簡易な自動インデントを行います。
   - 現状は前行が `{` `[` `(` で終わる場合に `shiftwidth` 分の空白を追加します。
 
@@ -264,6 +264,14 @@ setglobal "tabstop=8"
   - filetype を示します。
   - ftplugin 読み込み対象、filetype-local keymap、簡易 syntax highlight の判定に使います。
   - 手動で変更した場合の ftplugin 再適用は現状未対応です。
+
+### Global options（検索・grep）
+
+- `grepprg` (`string`, default `"grep -nH"`) [`DONE`]
+  - `:grep` / `:lgrep` が使用する外部コマンドを指定します。
+
+- `grepformat` (`string`, default `"%f:%l:%m"`) [`DONE`]
+  - `:grep` / `:lgrep` の出力パース書式を指定します。
 
 ## 制限（現状）
 

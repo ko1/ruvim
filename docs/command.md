@@ -114,8 +114,12 @@
   - current window の location list を開く / 閉じる
 - `:lnext` / `:ln`, `:lprev` / `:lp`
   - location list 項目を前後移動して該当位置へジャンプ
+- `:grep /pattern/ [path...]`
+  - 外部 grep（`grepprg`）を実行して quickfix list を作成
+- `:lgrep /pattern/ [path...]`
+  - 外部 grep（`grepprg`）を実行して location list を作成
 - 現状の制限:
-  - `:grep`, `:make`, `:cfile`, `:lgrep` は未実装
+  - `:make`, `:cfile`, `:lfile` は未実装
   - 一覧バッファ上で `Enter` からのジャンプは未実装
 
 ### `:rich`
@@ -247,6 +251,16 @@
 - 各タブに含まれるウィンドウとバッファ名を表示
 - 現在のタブ / ウィンドウは `>` マーカーで示す
 
+### `:d` / `:delete`
+
+- 形式: `:d [count]`, `:{range}d`
+- 行を削除
+
+### `:y` / `:yank`
+
+- 形式: `:y [count]`, `:{range}y`
+- 行をヤンク
+
 ## 内部コマンド（主なもの）
 
 内部コマンドは主に key binding から使われ、`RuVim::CommandRegistry` に登録されます。
@@ -302,6 +316,33 @@
 - `editor.buffer_next`
 - `editor.buffer_prev`
 - `buffer.replace_char`
+- `buffer.substitute_char`
+- `buffer.swapcase_char`
+- `buffer.join_lines`
+- `buffer.indent_lines`
+- `buffer.indent_motion`
+- `buffer.visual_indent`
+- `buffer.visual_select_text_object`
+- `mode.visual_block`
+- `cursor.page_up` / `cursor.page_down`
+- `cursor.page_up.default` / `cursor.page_down.default`
+- `cursor.page_up.half` / `cursor.page_down.half`
+- `cursor.match_bracket`
+- `window.scroll_up` / `window.scroll_down`
+- `window.scroll_up.line` / `window.scroll_down.line`
+- `window.cursor_line_top` / `window.cursor_line_center` / `window.cursor_line_bottom`
+- `window.focus_or_split_left` / `window.focus_or_split_right` / `window.focus_or_split_up` / `window.focus_or_split_down`
+- `normal.register_pending_start`
+- `normal.operator_delete_start` / `normal.operator_yank_start` / `normal.operator_change_start` / `normal.operator_indent_start`
+- `normal.replace_pending_start`
+- `normal.find_char_forward_start` / `normal.find_char_backward_start` / `normal.find_till_forward_start` / `normal.find_till_backward_start`
+- `normal.find_repeat` / `normal.find_repeat_reverse`
+- `normal.change_repeat`
+- `normal.macro_record_toggle` / `normal.macro_play_pending_start`
+- `normal.mark_pending_start`
+- `normal.jump_mark_linewise_pending_start` / `normal.jump_mark_exact_pending_start`
+- `quickfix.next` / `quickfix.prev` / `quickfix.open`
+- `stdin.stream_stop`
 - `ui.clear_message`
 - `rich.toggle`
 
@@ -317,11 +358,12 @@
 - `g*` / `g#` : カーソル下の単語検索（部分一致）
 - `:vimgrep` / `:lvimgrep` : 検索結果を quickfix/location list に積む
 
-### `:%s/.../.../g`（最小実装）
+### `:%s/.../.../[flags]`
 
-- バッファ全体置換
+- バッファ全体置換（レンジ指定対応: `:{range}s/.../.../`）
 - Ruby 正規表現 + Ruby 置換文字列を利用
-- `g` フラグ対応（全置換）
+- 対応フラグ: `g`（全置換）, `i`（大文字小文字無視）, `I`（大文字小文字区別）, `n`（置換せずマッチ数表示）, `e`（エラー抑制）
+- `c`（確認）フラグは未実装
 
 ## Operator-pending（Normal mode）
 
