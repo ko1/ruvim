@@ -797,7 +797,45 @@ class AppScenarioTest < Minitest::Test
     end
   end
 
-  def test_shift_arrow_moves_window_focus
+  def test_shift_right_splits_when_single_window
+    assert_equal 1, @editor.window_count
+    first_win = @editor.current_window
+    feed(:shift_right)
+    assert_equal 2, @editor.window_count
+    # Focus should be on the new (right) window
+    refute_equal first_win.id, @editor.current_window.id
+    assert_equal :vertical, @editor.window_layout
+  end
+
+  def test_shift_left_splits_when_single_window
+    assert_equal 1, @editor.window_count
+    first_win = @editor.current_window
+    feed(:shift_left)
+    assert_equal 2, @editor.window_count
+    # Focus should be on the new (left) window
+    refute_equal first_win.id, @editor.current_window.id
+    assert_equal :vertical, @editor.window_layout
+  end
+
+  def test_shift_down_splits_when_single_window
+    assert_equal 1, @editor.window_count
+    first_win = @editor.current_window
+    feed(:shift_down)
+    assert_equal 2, @editor.window_count
+    refute_equal first_win.id, @editor.current_window.id
+    assert_equal :horizontal, @editor.window_layout
+  end
+
+  def test_shift_up_splits_when_single_window
+    assert_equal 1, @editor.window_count
+    first_win = @editor.current_window
+    feed(:shift_up)
+    assert_equal 2, @editor.window_count
+    refute_equal first_win.id, @editor.current_window.id
+    assert_equal :horizontal, @editor.window_layout
+  end
+
+  def test_shift_arrow_moves_window_focus_when_multiple_windows
     # Create a vertical split so we have two windows
     first_win = @editor.current_window
     @editor.split_current_window(layout: :vertical)
@@ -806,13 +844,15 @@ class AppScenarioTest < Minitest::Test
     # After split, focus is on the new (second) window
     assert_equal second_win.id, @editor.current_window.id
 
-    # Shift+Left should move focus to the left window
+    # Shift+Left should move focus to the left window (no new split)
     feed(:shift_left)
     assert_equal first_win.id, @editor.current_window.id
+    assert_equal 2, @editor.window_count
 
     # Shift+Right should move focus back to the right window
     feed(:shift_right)
     assert_equal second_win.id, @editor.current_window.id
+    assert_equal 2, @editor.window_count
   end
 
   def test_shift_arrow_up_down_moves_window_focus_horizontal_split
@@ -823,12 +863,14 @@ class AppScenarioTest < Minitest::Test
 
     assert_equal second_win.id, @editor.current_window.id
 
-    # Shift+Up should move focus to the upper window
+    # Shift+Up should move focus to the upper window (no new split)
     feed(:shift_up)
     assert_equal first_win.id, @editor.current_window.id
+    assert_equal 2, @editor.window_count
 
     # Shift+Down should move focus back to the lower window
     feed(:shift_down)
     assert_equal second_win.id, @editor.current_window.id
+    assert_equal 2, @editor.window_count
   end
 end

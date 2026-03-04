@@ -263,6 +263,42 @@ module RuVim
       ctx.editor.focus_window_direction(:down)
     end
 
+    def window_focus_or_split_left(ctx, **)
+      ed = ctx.editor
+      if ed.window_count <= 1
+        ed.split_current_window(layout: :vertical, place: :before)
+      else
+        ed.focus_window_direction(:left)
+      end
+    end
+
+    def window_focus_or_split_right(ctx, **)
+      ed = ctx.editor
+      if ed.window_count <= 1
+        ed.split_current_window(layout: :vertical, place: :after)
+      else
+        ed.focus_window_direction(:right)
+      end
+    end
+
+    def window_focus_or_split_up(ctx, **)
+      ed = ctx.editor
+      if ed.window_count <= 1
+        ed.split_current_window(layout: :horizontal, place: :before)
+      else
+        ed.focus_window_direction(:up)
+      end
+    end
+
+    def window_focus_or_split_down(ctx, **)
+      ed = ctx.editor
+      if ed.window_count <= 1
+        ed.split_current_window(layout: :horizontal, place: :after)
+      else
+        ed.focus_window_direction(:down)
+      end
+    end
+
     def tab_new(ctx, argv:, **)
       path = argv[0]
       if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)

@@ -59,7 +59,7 @@
 - `V` : Visual (linewise)
 - `Ctrl-w w` : 次の window へ移動
 - `Ctrl-w h/j/k/l` : window 間移動（split UI）
-- `Shift+矢印キー` : window 間移動（`Shift+Left/Right/Up/Down`）
+- `Shift+矢印キー` : window 間移動 or 分割（1ウィンドウ時は分割、2個以上なら移動）
 - `u` : Undo
 - `Ctrl-r` : Redo
 - `.` : 直前変更の repeat（現状: `x`, `dd`, `d{motion}`, `p/P`, `r<char>`）
