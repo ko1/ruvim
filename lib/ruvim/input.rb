@@ -1,6 +1,6 @@
 module RuVim
   class Input
-    def initialize(input = STDIN)
+    def initialize(input)
       @input = input
     end
 
