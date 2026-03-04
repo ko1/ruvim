@@ -110,6 +110,8 @@ module RuVim
         ruby_color_columns(text)
       when "json"
         json_color_columns(text)
+      when "markdown"
+        Lang::Markdown.color_columns(text)
       else
         {}
       end

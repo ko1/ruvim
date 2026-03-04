@@ -19,4 +19,71 @@ class HighlighterTest < Minitest::Test
     assert_equal "\e[93m", cols[0] # @x
     assert_equal "\e[96m", cols[5] # F
   end
+
+  # --- Markdown ---
+
+  def test_markdown_heading_h1
+    cols = RuVim::Highlighter.color_columns("markdown", "# Hello")
+    refute_empty cols
+    assert_equal "\e[1;33m", cols[0]  # bold yellow for H1
+    assert_equal "\e[1;33m", cols[6]  # entire line colored
+  end
+
+  def test_markdown_heading_h2
+    cols = RuVim::Highlighter.color_columns("markdown", "## Section")
+    assert_equal "\e[1;36m", cols[0]  # bold cyan for H2
+  end
+
+  def test_markdown_heading_h3_to_h6
+    colors = {
+      3 => "\e[1;32m",
+      4 => "\e[1;35m",
+      5 => "\e[1;34m",
+      6 => "\e[1;90m"
+    }
+    colors.each do |level, expected_color|
+      line = "#{"#" * level} Title"
+      cols = RuVim::Highlighter.color_columns("markdown", line)
+      assert_equal expected_color, cols[0], "H#{level} should use correct color"
+    end
+  end
+
+  def test_markdown_fence_line
+    cols = RuVim::Highlighter.color_columns("markdown", "```ruby")
+    refute_empty cols
+    assert_equal "\e[90m", cols[0]  # dim
+  end
+
+  def test_markdown_hr
+    cols = RuVim::Highlighter.color_columns("markdown", "---")
+    refute_empty cols
+    assert_equal "\e[90m", cols[0]  # dim
+  end
+
+  def test_markdown_block_quote_marker
+    cols = RuVim::Highlighter.color_columns("markdown", "> quoted text")
+    assert_equal "\e[36m", cols[0]  # cyan for >
+  end
+
+  def test_markdown_inline_bold
+    cols = RuVim::Highlighter.color_columns("markdown", "hello **bold** world")
+    # ** markers and content should be bold
+    assert_equal "\e[1m", cols[6]   # first *
+    assert_equal "\e[1m", cols[13]  # last *
+  end
+
+  def test_markdown_inline_code
+    cols = RuVim::Highlighter.color_columns("markdown", "use `foo()` here")
+    assert_equal "\e[33m", cols[4]  # backtick
+  end
+
+  def test_markdown_empty_line
+    cols = RuVim::Highlighter.color_columns("markdown", "")
+    assert_empty cols
+  end
+
+  def test_markdown_plain_text
+    cols = RuVim::Highlighter.color_columns("markdown", "plain text")
+    assert_empty cols
+  end
 end

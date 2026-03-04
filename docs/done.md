@@ -95,6 +95,7 @@
 - テスト基盤の拡張（結合テスト / snapshot / シナリオ）
 - CI / 開発体験（GitHub Actions, `rake docs:check`, `rake ci`）
 - シンタックスハイライト（最小）
+- Markdown シンタックスハイライト（`Lang::Markdown` に抽出、通常モード + Rich mode で共有）
 - 補完基盤（Ex 補完 / Insert mode 補完）
 
 ## CLI オプション（Vim 風・実装済み / placeholder 含む）
