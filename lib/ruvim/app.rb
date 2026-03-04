@@ -15,7 +15,7 @@ module RuVim
       @stdin_stream_source = @stdin_stream_mode ? stdin : nil
       @editor = Editor.new
       @terminal = Terminal.new(stdin: @ui_stdin, stdout:)
-      @input = Input.new(stdin: @ui_stdin)
+      @input = Input.new(@ui_stdin)
       @screen = Screen.new(terminal: @terminal)
       @dispatcher = Dispatcher.new
       @keymaps = KeymapManager.new

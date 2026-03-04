@@ -1,20 +1,20 @@
 module RuVim
   class Input
-    def initialize(stdin: STDIN)
-      @stdin = stdin
+    def initialize(input = STDIN)
+      @input = input
     end
 
     def read_key(timeout: nil, wakeup_ios: [], esc_timeout: nil)
-      ios = [@stdin, *wakeup_ios].compact
+      ios = [@input, *wakeup_ios].compact
       readable = IO.select(ios, nil, nil, timeout)
       return nil unless readable
 
       ready = readable[0]
-      wakeups = ready - [@stdin]
+      wakeups = ready - [@input]
       wakeups.each { |io| drain_io(io) }
-      return nil unless ready.include?(@stdin)
+      return nil unless ready.include?(@input)
 
-      ch = @stdin.getch
+      ch = @input.getch
       return :ctrl_b if ch == "\u0002"
       return :ctrl_c if ch == "\u0003"
       return :ctrl_d if ch == "\u0004"
@@ -40,7 +40,7 @@ module RuVim
     end
 
     def has_pending_input?
-      IO.select([@stdin], nil, nil, 0) != nil
+      IO.select([@input], nil, nil, 0) != nil
     end
 
     private
@@ -69,8 +69,8 @@ module RuVim
       }
       wait = timeout.nil? ? 0.005 : [timeout.to_f, 0.0].max
       begin
-        while IO.select([@stdin], nil, nil, wait)
-          extra << @stdin.read_nonblock(1)
+        while IO.select([@input], nil, nil, wait)
+          extra << @input.read_nonblock(1)
           key = recognized[extra]
           return key if key
         end

@@ -56,7 +56,7 @@ class InputScreenIntegrationTest < Minitest::Test
     app.instance_variable_set(:@screen, screen)
 
     stdin = FakeTTY.new("\e[6~")
-    input = RuVim::Input.new(stdin: stdin)
+    input = RuVim::Input.new(stdin)
 
     with_fake_select do
       key = input.read_key(timeout: 0.2)
@@ -72,7 +72,7 @@ class InputScreenIntegrationTest < Minitest::Test
 
   def test_input_keeps_repeated_arrow_sequences_separate
     stdin = FakeTTY.new("\e[A\e[A")
-    input = RuVim::Input.new(stdin: stdin)
+    input = RuVim::Input.new(stdin)
 
     with_fake_select do
       assert_equal :up, input.read_key(timeout: 0.2)
@@ -82,7 +82,7 @@ class InputScreenIntegrationTest < Minitest::Test
 
   def test_input_reads_ctrl_z
     stdin = FakeTTY.new("\u001a")
-    input = RuVim::Input.new(stdin: stdin)
+    input = RuVim::Input.new(stdin)
 
     with_fake_select do
       assert_equal :ctrl_z, input.read_key(timeout: 0.2)
@@ -97,7 +97,7 @@ class InputScreenIntegrationTest < Minitest::Test
       "\e[1;2D" => :shift_left
     }.each do |seq, expected|
       stdin = FakeTTY.new(seq)
-      input = RuVim::Input.new(stdin: stdin)
+      input = RuVim::Input.new(stdin)
 
       with_fake_select do
         assert_equal expected, input.read_key(timeout: 0.2), "Expected #{expected} for sequence #{seq.inspect}"
@@ -107,7 +107,7 @@ class InputScreenIntegrationTest < Minitest::Test
 
   def test_has_pending_input_returns_true_when_data_available
     stdin = FakeTTY.new("abc")
-    input = RuVim::Input.new(stdin: stdin)
+    input = RuVim::Input.new(stdin)
 
     with_fake_select do
       assert input.has_pending_input?
