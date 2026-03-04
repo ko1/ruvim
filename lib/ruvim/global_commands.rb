@@ -307,26 +307,17 @@ module RuVim
           return
         end
       end
-      tab = ctx.editor.tabnew(path: path)
-      if path && !path.empty?
-        b = ctx.editor.current_buffer
-        ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}: #{b.path || '[No Name]'}")
-      else
-        ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
-      end
-      tab
+      ctx.editor.tabnew(path: path)
     end
 
     def tab_next(ctx, count:, **)
       count = normalized_count(count)
       ctx.editor.tabnext(count)
-      ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
     end
 
     def tab_prev(ctx, count:, **)
       count = normalized_count(count)
       ctx.editor.tabprev(count)
-      ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
     end
 
     def tab_list(ctx, **)
