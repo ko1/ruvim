@@ -60,6 +60,10 @@ module RuVim
         "[B" => :down,
         "[C" => :right,
         "[D" => :left,
+        "[1;2A" => :shift_up,
+        "[1;2B" => :shift_down,
+        "[1;2C" => :shift_right,
+        "[1;2D" => :shift_left,
         "[5~" => :pageup,
         "[6~" => :pagedown
       }

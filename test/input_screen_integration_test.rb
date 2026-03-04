@@ -89,6 +89,22 @@ class InputScreenIntegrationTest < Minitest::Test
     end
   end
 
+  def test_input_shift_arrow_sequences
+    {
+      "\e[1;2A" => :shift_up,
+      "\e[1;2B" => :shift_down,
+      "\e[1;2C" => :shift_right,
+      "\e[1;2D" => :shift_left
+    }.each do |seq, expected|
+      stdin = FakeTTY.new(seq)
+      input = RuVim::Input.new(stdin: stdin)
+
+      with_fake_select do
+        assert_equal expected, input.read_key(timeout: 0.2), "Expected #{expected} for sequence #{seq.inspect}"
+      end
+    end
+  end
+
   def test_has_pending_input_returns_true_when_data_available
     stdin = FakeTTY.new("abc")
     input = RuVim::Input.new(stdin: stdin)

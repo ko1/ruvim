@@ -796,4 +796,39 @@ class AppScenarioTest < Minitest::Test
       assert_equal "world", File.read(path2)
     end
   end
+
+  def test_shift_arrow_moves_window_focus
+    # Create a vertical split so we have two windows
+    first_win = @editor.current_window
+    @editor.split_current_window(layout: :vertical)
+    second_win = @editor.current_window
+
+    # After split, focus is on the new (second) window
+    assert_equal second_win.id, @editor.current_window.id
+
+    # Shift+Left should move focus to the left window
+    feed(:shift_left)
+    assert_equal first_win.id, @editor.current_window.id
+
+    # Shift+Right should move focus back to the right window
+    feed(:shift_right)
+    assert_equal second_win.id, @editor.current_window.id
+  end
+
+  def test_shift_arrow_up_down_moves_window_focus_horizontal_split
+    # Create a horizontal split so we have two windows
+    first_win = @editor.current_window
+    @editor.split_current_window(layout: :horizontal)
+    second_win = @editor.current_window
+
+    assert_equal second_win.id, @editor.current_window.id
+
+    # Shift+Up should move focus to the upper window
+    feed(:shift_up)
+    assert_equal first_win.id, @editor.current_window.id
+
+    # Shift+Down should move focus back to the lower window
+    feed(:shift_down)
+    assert_equal second_win.id, @editor.current_window.id
+  end
 end

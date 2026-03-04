@@ -383,6 +383,10 @@ module RuVim
       @keymaps.bind(:normal, ["<C-w>", "j"], "window.focus_down")
       @keymaps.bind(:normal, ["<C-w>", "k"], "window.focus_up")
       @keymaps.bind(:normal, ["<C-w>", "l"], "window.focus_right")
+      @keymaps.bind(:normal, ["<S-Left>"], "window.focus_left")
+      @keymaps.bind(:normal, ["<S-Right>"], "window.focus_right")
+      @keymaps.bind(:normal, ["<S-Up>"], "window.focus_up")
+      @keymaps.bind(:normal, ["<S-Down>"], "window.focus_down")
       @keymaps.bind(:normal, ":", "mode.command_line")
       @keymaps.bind(:normal, "/", "mode.search_forward")
       @keymaps.bind(:normal, "?", "mode.search_backward")
@@ -943,6 +947,10 @@ module RuVim
       when :end then "<End>"
       when :pageup then "<PageUp>"
       when :pagedown then "<PageDown>"
+      when :shift_up then "<S-Up>"
+      when :shift_down then "<S-Down>"
+      when :shift_left then "<S-Left>"
+      when :shift_right then "<S-Right>"
       else nil
       end
     end
