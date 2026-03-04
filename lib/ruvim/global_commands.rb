@@ -1141,6 +1141,7 @@ module RuVim
         return
       end
       ctx.editor.jump_to_location(item)
+      refresh_list_window(ctx.editor, :quickfix)
       ctx.editor.echo(quickfix_item_echo(ctx.editor))
     end
 
@@ -1151,6 +1152,7 @@ module RuVim
         return
       end
       ctx.editor.jump_to_location(item)
+      refresh_list_window(ctx.editor, :quickfix)
       ctx.editor.echo(quickfix_item_echo(ctx.editor))
     end
 
@@ -1170,6 +1172,7 @@ module RuVim
         return
       end
       ctx.editor.jump_to_location(item)
+      refresh_list_window(ctx.editor, :location_list)
       ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
     end
 
@@ -1180,6 +1183,7 @@ module RuVim
         return
       end
       ctx.editor.jump_to_location(item)
+      refresh_list_window(ctx.editor, :location_list)
       ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
     end
 
@@ -1444,6 +1448,22 @@ module RuVim
         editor.close_window(wid)
       end
       editor.echo("#{kind} closed")
+    end
+
+    def refresh_list_window(editor, kind)
+      wids = editor.find_window_ids_by_buffer_kind(kind)
+      return if wids.empty?
+
+      lines = case kind
+              when :quickfix then quickfix_buffer_lines(editor)
+              when :location_list then location_list_buffer_lines(editor, editor.current_window_id)
+              end
+      wids.each do |wid|
+        buf = editor.buffers[editor.windows[wid].buffer_id]
+        next unless buf
+        # Bypass modifiable check — this is an internal refresh of a readonly list buffer
+        buf.instance_variable_set(:@lines, Array(lines).map(&:dup))
+      end
     end
 
     def quickfix_item_echo(editor)
