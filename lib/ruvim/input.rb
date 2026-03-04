@@ -15,28 +15,28 @@ module RuVim
       return nil unless ready.include?(@input)
 
       ch = @input.getch
-      return :ctrl_b if ch == "\u0002"
-      return :ctrl_c if ch == "\u0003"
-      return :ctrl_d if ch == "\u0004"
-      return :ctrl_e if ch == "\u0005"
-      return :ctrl_f if ch == "\u0006"
-      return :ctrl_i if ch == "\u0009"
-      return :ctrl_l if ch == "\u000c"
-      return :ctrl_n if ch == "\u000e"
-      return :ctrl_o if ch == "\u000f"
-      return :ctrl_p if ch == "\u0010"
-      return :ctrl_r if ch == "\u0012"
-      return :ctrl_u if ch == "\u0015"
-      return :ctrl_v if ch == "\u0016"
-      return :ctrl_w if ch == "\u0017"
-      return :ctrl_y if ch == "\u0019"
-      return :ctrl_z if ch == "\u001a"
-      return :enter if ch == "\r" || ch == "\n"
-      return :backspace if ch == "\u007f" || ch == "\b"
-
-      return read_escape_sequence(timeout: esc_timeout) if ch == "\e"
-
-      ch
+      case ch
+      when "\u0002" then :ctrl_b
+      when "\u0003" then :ctrl_c
+      when "\u0004" then :ctrl_d
+      when "\u0005" then :ctrl_e
+      when "\u0006" then :ctrl_f
+      when "\u0009" then :ctrl_i
+      when "\u000c" then :ctrl_l
+      when "\u000e" then :ctrl_n
+      when "\u000f" then :ctrl_o
+      when "\u0010" then :ctrl_p
+      when "\u0012" then :ctrl_r
+      when "\u0015" then :ctrl_u
+      when "\u0016" then :ctrl_v
+      when "\u0017" then :ctrl_w
+      when "\u0019" then :ctrl_y
+      when "\u001a" then :ctrl_z
+      when "\r", "\n" then :enter
+      when "\u007f", "\b" then :backspace
+      when "\e" then read_escape_sequence(timeout: esc_timeout)
+      else ch
+      end
     end
 
     def has_pending_input?
