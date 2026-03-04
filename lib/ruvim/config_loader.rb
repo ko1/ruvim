@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class ConfigLoader
     SAFE_FILETYPE_RE = /\A[a-zA-Z0-9_+-]+\z/.freeze

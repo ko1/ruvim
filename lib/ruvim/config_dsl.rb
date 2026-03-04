@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class ConfigDSL < BasicObject
     def initialize(command_registry:, ex_registry:, keymaps:, command_host:, editor: nil, filetype: nil)

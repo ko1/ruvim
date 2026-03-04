@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class KeymapManager
     Match = Struct.new(:status, :invocation, keyword_init: true)

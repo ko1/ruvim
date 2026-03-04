@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   module DisplayWidth
     module_function

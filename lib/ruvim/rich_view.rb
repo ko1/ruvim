@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require_relative "rich_view/table_renderer"
 require_relative "rich_view/markdown_renderer"
 

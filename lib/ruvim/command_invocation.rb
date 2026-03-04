@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class CommandInvocation
     attr_accessor :id, :argv, :kwargs, :count, :bang, :raw_keys

@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class Context
     attr_reader :editor, :invocation

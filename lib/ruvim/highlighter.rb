@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   module Highlighter
     KEYWORD_COLOR = "\e[36m"

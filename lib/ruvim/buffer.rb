@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class Buffer
     attr_reader :id, :kind, :name

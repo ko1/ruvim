@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RuVim
   class CommandLine
     attr_reader :prefix, :text, :cursor
