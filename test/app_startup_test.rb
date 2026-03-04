@@ -108,6 +108,34 @@ class AppStartupTest < Minitest::Test
     end
   end
 
+  def test_startup_horizontal_split_focuses_first_file
+    Tempfile.create(["ruvim-a", ".txt"]) do |a|
+      Tempfile.create(["ruvim-b", ".txt"]) do |b|
+        a.write("a\n"); a.flush
+        b.write("b\n"); b.flush
+
+        app = RuVim::App.new(paths: [a.path, b.path], clean: true, startup_open_layout: :horizontal)
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal a.path, editor.current_buffer.path
+      end
+    end
+  end
+
+  def test_startup_vertical_split_focuses_first_file
+    Tempfile.create(["ruvim-a", ".txt"]) do |a|
+      Tempfile.create(["ruvim-b", ".txt"]) do |b|
+        a.write("a\n"); a.flush
+        b.write("b\n"); b.flush
+
+        app = RuVim::App.new(paths: [a.path, b.path], clean: true, startup_open_layout: :vertical)
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal a.path, editor.current_buffer.path
+      end
+    end
+  end
+
   def test_startup_tab_layout_opens_multiple_tabs
     Tempfile.create(["ruvim-a", ".txt"]) do |a|
       Tempfile.create(["ruvim-b", ".txt"]) do |b|
@@ -118,6 +146,21 @@ class AppStartupTest < Minitest::Test
         editor = app.instance_variable_get(:@editor)
 
         assert_equal 2, editor.tabpage_count
+      end
+    end
+  end
+
+  def test_startup_tab_layout_focuses_first_tab
+    Tempfile.create(["ruvim-a", ".txt"]) do |a|
+      Tempfile.create(["ruvim-b", ".txt"]) do |b|
+        a.write("a\n"); a.flush
+        b.write("b\n"); b.flush
+
+        app = RuVim::App.new(paths: [a.path, b.path], clean: true, startup_open_layout: :tab)
+        editor = app.instance_variable_get(:@editor)
+
+        assert_equal 1, editor.current_tabpage_number
+        assert_equal a.path, editor.current_buffer.path
       end
     end
   end

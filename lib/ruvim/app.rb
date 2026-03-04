@@ -2536,11 +2536,16 @@ module RuVim
 
       case @startup_open_layout
       when :horizontal
+        first_win_id = @editor.current_window_id
         rest.each { |p| open_path_in_split!(p, layout: :horizontal) }
+        @editor.focus_window(first_win_id)
       when :vertical
+        first_win_id = @editor.current_window_id
         rest.each { |p| open_path_in_split!(p, layout: :vertical) }
+        @editor.focus_window(first_win_id)
       when :tab
         rest.each { |p| open_path_in_tab!(p) }
+        @editor.tabnext(-(@editor.tabpage_count - 1))
       else
         # Load remaining files as buffers (Vim-like behavior).
         rest.each { |p| @editor.add_buffer_from_file(p) }
