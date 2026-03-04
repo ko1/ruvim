@@ -1277,7 +1277,6 @@ module RuVim
     def reindent_range(ctx, start_row, end_row)
       buf = ctx.buffer
       lang_mod = buf.lang_module
-      return unless lang_mod
 
       sw = ctx.editor.effective_option("shiftwidth", buffer: buf).to_i
       sw = 2 if sw <= 0
@@ -1285,13 +1284,13 @@ module RuVim
       buf.begin_change_group
       (start_row..end_row).each do |row|
         target_indent = lang_mod.calculate_indent(buf.lines, row, sw)
+        next unless target_indent
+
         line = buf.line_at(row)
         current_indent = line[/\A */].to_s.length
         next if current_indent == target_indent
 
-        # Remove old indent, insert new indent
-        old_end = line[/\A */].to_s.length
-        buf.delete_span(row, 0, row, old_end) if old_end > 0
+        buf.delete_span(row, 0, row, current_indent) if current_indent > 0
         buf.insert_text(row, 0, " " * target_indent) if target_indent > 0
       end
       buf.end_change_group

@@ -46,6 +46,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
+| `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex |

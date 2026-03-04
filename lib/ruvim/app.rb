@@ -1834,8 +1834,7 @@ module RuVim
         trimmed = prev.rstrip
         needs_indent = trimmed.end_with?("{", "[", "(")
         if !needs_indent
-          lang_mod = buf.lang_module
-          needs_indent = lang_mod.indent_trigger?(trimmed) if lang_mod&.respond_to?(:indent_trigger?)
+          needs_indent = buf.lang_module.indent_trigger?(trimmed)
         end
         if needs_indent
           sw = @editor.effective_option("shiftwidth", window: win, buffer: buf).to_i
@@ -1864,7 +1863,6 @@ module RuVim
 
       buf = @editor.current_buffer
       lang_mod = buf.lang_module
-      return unless lang_mod&.respond_to?(:dedent_trigger) && lang_mod&.respond_to?(:calculate_indent)
 
       pattern = lang_mod.dedent_trigger(key)
       return unless pattern
@@ -1877,6 +1875,8 @@ module RuVim
       sw = @editor.effective_option("shiftwidth", buffer: buf).to_i
       sw = 2 if sw <= 0
       target_indent = lang_mod.calculate_indent(buf.lines, row, sw)
+      return unless target_indent
+
       current_indent = m[1].length
       return if current_indent == target_indent
 

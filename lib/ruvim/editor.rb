@@ -1095,6 +1095,7 @@ module RuVim
     def resolve_lang_module(ft)
       case ft
       when "ruby" then Lang::Ruby
+      else Lang::Base
       end
     end
 
