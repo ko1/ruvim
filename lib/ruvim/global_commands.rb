@@ -265,36 +265,36 @@ module RuVim
 
     def window_focus_or_split_left(ctx, **)
       ed = ctx.editor
-      before = ed.current_window.id
-      ed.focus_window_direction(:left)
-      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:left)
+      if ed.has_split_ancestor_on_axis?(:left)
+        ed.focus_window_direction(:left)
+      else
         ed.split_current_window(layout: :vertical, place: :before)
       end
     end
 
     def window_focus_or_split_right(ctx, **)
       ed = ctx.editor
-      before = ed.current_window.id
-      ed.focus_window_direction(:right)
-      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:right)
+      if ed.has_split_ancestor_on_axis?(:right)
+        ed.focus_window_direction(:right)
+      else
         ed.split_current_window(layout: :vertical, place: :after)
       end
     end
 
     def window_focus_or_split_up(ctx, **)
       ed = ctx.editor
-      before = ed.current_window.id
-      ed.focus_window_direction(:up)
-      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:up)
+      if ed.has_split_ancestor_on_axis?(:up)
+        ed.focus_window_direction(:up)
+      else
         ed.split_current_window(layout: :horizontal, place: :before)
       end
     end
 
     def window_focus_or_split_down(ctx, **)
       ed = ctx.editor
-      before = ed.current_window.id
-      ed.focus_window_direction(:down)
-      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:down)
+      if ed.has_split_ancestor_on_axis?(:down)
+        ed.focus_window_direction(:down)
+      else
         ed.split_current_window(layout: :horizontal, place: :after)
       end
     end

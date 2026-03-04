@@ -1019,6 +1019,48 @@ class AppScenarioTest < Minitest::Test
     assert_equal 2, @editor.window_count
   end
 
+  def test_shift_left_splits_bottom_window_in_nested_layout
+    # Create layout: hsplit[ vsplit[win1, win2], win3 ]
+    # Start with win1
+    win1 = @editor.current_window
+    # vsplit → vsplit[win1, win2]
+    @editor.split_current_window(layout: :vertical)
+    win2 = @editor.current_window
+    # Focus back to win1, then split horizontally from win1
+    # Actually, easier: split from win2 horizontally to get the right structure
+    # Let me build it differently: start fresh
+    @editor.focus_window(win1.id)
+
+    # From win1, hsplit → hsplit[win1, win3], but we want vsplit on top.
+    # Let me just build the tree directly.
+    # Better approach: vsplit first, then move up and hsplit from the vsplit pair
+    # Actually: vsplit[win1, win2], then from win1 do hsplit → hsplit[vsplit[...], win3]
+    # No, that's wrong. Let me think:
+    # We want hsplit[ vsplit[A, B], C ]
+    # Step 1: split (horizontal) → hsplit[win1, win3], focus on win3
+    @editor.close_window(win2.id)
+    assert_equal 1, @editor.window_count
+    @editor.split_current_window(layout: :horizontal)
+    win3 = @editor.current_window
+    # Step 2: focus win1 (top), then vsplit → vsplit[win1, win2] inside hsplit
+    @editor.focus_window(win1.id)
+    @editor.split_current_window(layout: :vertical)
+    win2 = @editor.current_window
+    assert_equal 3, @editor.window_count
+
+    # Layout should be: hsplit[ vsplit[win1, win2], win3 ]
+    tree = @editor.layout_tree
+    assert_equal :hsplit, tree[:type]
+    assert_equal :vsplit, tree[:children][0][:type]
+    assert_equal :window, tree[:children][1][:type]
+    assert_equal win3.id, tree[:children][1][:id]
+
+    # From win3 (full-width bottom), Shift+Left should SPLIT (no vsplit ancestor)
+    @editor.focus_window(win3.id)
+    feed(:shift_left)
+    assert_equal 4, @editor.window_count, "Shift+Left from full-width bottom should vsplit it"
+  end
+
   def test_same_direction_split_merges_into_parent
     # hsplit[ win1, win2 ], then split win2 again horizontally
     @editor.split_current_window(layout: :horizontal)

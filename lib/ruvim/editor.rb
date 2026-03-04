@@ -994,25 +994,17 @@ module RuVim
       current_location_list_item(window_id)
     end
 
-    # Check if any other window exists on the same axis as dir.
-    # Used by focus_or_split to avoid splitting at edges of existing splits.
-    def has_neighbor_on_axis?(dir)
-      rects = tree_compute_rects(@layout_tree, top: 0.0, left: 0.0, height: 1.0, width: 1.0)
-      cur = rects[@current_window_id]
-      return false unless cur
-
-      cur_cx = cur[:left] + cur[:width] / 2.0
-      cur_cy = cur[:top] + cur[:height] / 2.0
-
-      rects.any? do |wid, r|
-        next false if wid == @current_window_id
-        rcx = r[:left] + r[:width] / 2.0
-        rcy = r[:top] + r[:height] / 2.0
-        case dir
-        when :left, :right then (rcx - cur_cx).abs > 0.001
-        when :up, :down then (rcy - cur_cy).abs > 0.001
-        end
-      end
+    # Check if the path from root to the current window passes through
+    # a split node matching the direction's axis. Used by focus_or_split
+    # to decide whether to split or stay put at edges.
+    #   left/right → check for :vsplit ancestor
+    #   up/down    → check for :hsplit ancestor
+    def has_split_ancestor_on_axis?(dir)
+      target_type = case dir
+                    when :left, :right then :vsplit
+                    when :up, :down then :hsplit
+                    end
+      tree_path_has_split_type?(@layout_tree, @current_window_id, target_type)
     end
 
     def find_window_ids_by_buffer_kind(kind)
@@ -1526,6 +1518,28 @@ module RuVim
       return new_children.first if new_children.length == 1
 
       { type: node[:type], children: new_children }
+    end
+
+    # Check if the path from root to the target window passes through
+    # a split node of the given type. Returns true if any ancestor of the
+    # target window in the tree has type == split_type.
+    def tree_path_has_split_type?(node, target_id, split_type)
+      return false if node.nil?
+      return false if node[:type] == :window
+      # Check if target is in any child subtree
+      node[:children].each do |child|
+        if tree_subtree_contains?(child, target_id)
+          return true if node[:type] == split_type
+          return tree_path_has_split_type?(child, target_id, split_type)
+        end
+      end
+      false
+    end
+
+    def tree_subtree_contains?(node, target_id)
+      return false if node.nil?
+      return node[:id] == target_id if node[:type] == :window
+      node[:children].any? { |c| tree_subtree_contains?(c, target_id) }
     end
 
     # Compute normalized rects (0.0–1.0 coordinate space) for direction finding.
