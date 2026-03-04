@@ -73,6 +73,49 @@ class OnSaveHookTest < Minitest::Test
     end
   end
 
+  def test_write_then_bracket_q_navigates_quickfix
+    app = RuVim::App.new(clean: true)
+    editor = app.instance_variable_get(:@editor)
+    editor.materialize_intro_buffer!
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "bad.rb")
+      File.write(path, "def foo(\n")
+
+      # Open and write the file
+      ":e #{path}\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      ":w\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+
+      refute_empty editor.quickfix_items, "quickfix should be populated after :w with syntax error"
+      assert_equal 0, editor.quickfix_index
+
+      # Press ]q
+      app.send(:handle_key, "]")
+      app.send(:handle_key, "q")
+
+      assert_match(/qf/, editor.message)
+    end
+  end
+
+  def test_write_valid_clears_quickfix
+    app = RuVim::App.new(clean: true)
+    editor = app.instance_variable_get(:@editor)
+    editor.materialize_intro_buffer!
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "ok.rb")
+      File.write(path, "puts 'hi'\n")
+
+      ":e #{path}\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      # Set some dummy quickfix items first
+      editor.set_quickfix_list([{ buffer_id: editor.current_buffer.id, row: 0, col: 0, text: "dummy" }])
+      refute_empty editor.quickfix_items
+
+      ":w\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      assert_empty editor.quickfix_items, "quickfix should be cleared after :w with valid file"
+    end
+  end
+
   def test_file_write_skips_on_save_when_onsavehook_disabled
     app = RuVim::App.new(clean: true)
     editor = app.instance_variable_get(:@editor)
