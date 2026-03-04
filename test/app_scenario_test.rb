@@ -177,6 +177,34 @@ class AppScenarioTest < Minitest::Test
     assert_equal ["if x {", "  "], @editor.current_buffer.lines
   end
 
+  def test_smartindent_adds_shiftwidth_after_ruby_def
+    @editor.set_option("autoindent", true, scope: :buffer)
+    @editor.set_option("smartindent", true, scope: :buffer)
+    @editor.set_option("shiftwidth", 2, scope: :buffer)
+    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.current_buffer.replace_all_lines!(["def foo"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
+
+    feed("A", :enter, :escape)
+
+    assert_equal ["def foo", "  "], @editor.current_buffer.lines
+  end
+
+  def test_smartindent_adds_shiftwidth_after_ruby_do_block
+    @editor.set_option("autoindent", true, scope: :buffer)
+    @editor.set_option("smartindent", true, scope: :buffer)
+    @editor.set_option("shiftwidth", 2, scope: :buffer)
+    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.current_buffer.replace_all_lines!(["  items.each do |x|"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
+
+    feed("A", :enter, :escape)
+
+    assert_equal ["  items.each do |x|", "    "], @editor.current_buffer.lines
+  end
+
   def test_incsearch_moves_cursor_while_typing_and_escape_restores
     @editor.set_option("incsearch", true, scope: :global)
     @editor.current_buffer.replace_all_lines!(["alpha", "beta", "gamma"])

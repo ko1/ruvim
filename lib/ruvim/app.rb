@@ -1831,7 +1831,14 @@ module RuVim
       indent = prev[/\A[ \t]*/].to_s
       if @editor.effective_option("smartindent", window: win, buffer: buf)
         trimmed = prev.rstrip
-        if trimmed.end_with?("{", "[", "(")
+        needs_indent = trimmed.end_with?("{", "[", "(")
+        if !needs_indent && @editor.effective_option("filetype", buffer: buf) == "ruby"
+          stripped = trimmed.lstrip
+          first_word = stripped[/\A(\w+)/, 1].to_s
+          needs_indent = %w[def class module if unless while until for begin case].include?(first_word) ||
+                         stripped.match?(/\bdo\s*(\|[^|]*\|)?\s*$/)
+        end
+        if needs_indent
           sw = @editor.effective_option("shiftwidth", window: win, buffer: buf).to_i
           sw = effective_tabstop(win, buf) if sw <= 0
           sw = 2 if sw <= 0
