@@ -1834,7 +1834,7 @@ module RuVim
         trimmed = prev.rstrip
         needs_indent = trimmed.end_with?("{", "[", "(")
         if !needs_indent
-          lang_mod = lang_module_for(buf)
+          lang_mod = buf.lang_module
           needs_indent = lang_mod.indent_trigger?(trimmed) if lang_mod&.respond_to?(:indent_trigger?)
         end
         if needs_indent
@@ -1863,7 +1863,7 @@ module RuVim
       return unless @editor.effective_option("smartindent", window: @editor.current_window, buffer: @editor.current_buffer)
 
       buf = @editor.current_buffer
-      lang_mod = lang_module_for(buf)
+      lang_mod = buf.lang_module
       return unless lang_mod&.respond_to?(:dedent_trigger) && lang_mod&.respond_to?(:calculate_indent)
 
       pattern = lang_mod.dedent_trigger(key)
@@ -1884,12 +1884,6 @@ module RuVim
       buf.delete_span(row, 0, row, current_indent) if current_indent > 0
       buf.insert_text(row, 0, " " * target_indent) if target_indent > 0
       @editor.current_window.cursor_x = target_indent + stripped.length
-    end
-
-    def lang_module_for(buf)
-      case @editor.effective_option("filetype", buffer: buf)
-      when "ruby" then Lang::Ruby
-      end
     end
 
     def clear_expired_transient_message_if_any

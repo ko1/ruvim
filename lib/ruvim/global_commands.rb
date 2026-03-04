@@ -1274,15 +1274,9 @@ module RuVim
 
     private
 
-    def lang_module_for_indent(ctx)
-      case ctx.editor.effective_option("filetype", buffer: ctx.buffer)
-      when "ruby" then Lang::Ruby
-      end
-    end
-
     def reindent_range(ctx, start_row, end_row)
       buf = ctx.buffer
-      lang_mod = lang_module_for_indent(ctx)
+      lang_mod = buf.lang_module
       return unless lang_mod
 
       sw = ctx.editor.effective_option("shiftwidth", buffer: buf).to_i

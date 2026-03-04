@@ -181,7 +181,7 @@ class AppScenarioTest < Minitest::Test
     @editor.set_option("autoindent", true, scope: :buffer)
     @editor.set_option("smartindent", true, scope: :buffer)
     @editor.set_option("shiftwidth", 2, scope: :buffer)
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_buffer.replace_all_lines!(["def foo"])
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
@@ -195,7 +195,7 @@ class AppScenarioTest < Minitest::Test
     @editor.set_option("autoindent", true, scope: :buffer)
     @editor.set_option("smartindent", true, scope: :buffer)
     @editor.set_option("shiftwidth", 2, scope: :buffer)
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_buffer.replace_all_lines!(["  items.each do |x|"])
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
@@ -209,7 +209,7 @@ class AppScenarioTest < Minitest::Test
     @editor.set_option("autoindent", true, scope: :buffer)
     @editor.set_option("smartindent", true, scope: :buffer)
     @editor.set_option("shiftwidth", 2, scope: :buffer)
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_buffer.replace_all_lines!(["def foo"])
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
@@ -223,7 +223,7 @@ class AppScenarioTest < Minitest::Test
     @editor.set_option("autoindent", true, scope: :buffer)
     @editor.set_option("smartindent", true, scope: :buffer)
     @editor.set_option("shiftwidth", 2, scope: :buffer)
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_buffer.replace_all_lines!(["if cond"])
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = @editor.current_buffer.line_length(0)
@@ -716,7 +716,7 @@ class AppScenarioTest < Minitest::Test
 
   def test_equal_equal_indents_current_line
     @editor.current_buffer.replace_all_lines!(["def foo", "bar", "end"])
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_window.cursor_y = 1
     @editor.current_window.cursor_x = 0
 
@@ -727,7 +727,7 @@ class AppScenarioTest < Minitest::Test
 
   def test_equal_j_indents_two_lines
     @editor.current_buffer.replace_all_lines!(["def foo", "bar", "baz", "end"])
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_window.cursor_y = 1
     @editor.current_window.cursor_x = 0
 
@@ -738,7 +738,7 @@ class AppScenarioTest < Minitest::Test
 
   def test_visual_equal_indents_selection
     @editor.current_buffer.replace_all_lines!(["def foo", "bar", "end"])
-    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.assign_filetype(@editor.current_buffer, "ruby")
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = 0
 

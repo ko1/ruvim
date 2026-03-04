@@ -586,7 +586,7 @@ module RuVim
     def add_virtual_buffer(kind:, name:, lines:, filetype: nil, readonly: true, modifiable: false)
       id = next_buffer_id
       buffer = Buffer.new(id:, lines:, kind:, name:, readonly:, modifiable:)
-      buffer.options["filetype"] = filetype if filetype
+      assign_filetype(buffer, filetype) if filetype
       @buffers[id] = buffer
       buffer
     end
@@ -773,7 +773,7 @@ module RuVim
       current_buffer.replace_all_lines!(intro_lines)
       current_buffer.configure_special!(kind: :intro, name: "[Intro]", readonly: true, modifiable: false)
       current_buffer.modified = false
-      current_buffer.options["filetype"] = "help"
+      assign_filetype(current_buffer, "help")
       current_window.cursor_x = 0
       current_window.cursor_y = 0
       current_window.row_offset = 0
@@ -786,7 +786,7 @@ module RuVim
       return false unless current_buffer.intro_buffer?
 
       current_buffer.become_normal_empty_buffer!
-      current_buffer.options["filetype"] = nil
+      assign_filetype(current_buffer, nil)
       current_window.cursor_x = 0
       current_window.cursor_y = 0
       current_window.row_offset = 0
@@ -1085,7 +1085,18 @@ module RuVim
       command_line_active? || message_error?
     end
 
+    def assign_filetype(buffer, ft)
+      buffer.options["filetype"] = ft
+      buffer.lang_module = resolve_lang_module(ft)
+    end
+
     private
+
+    def resolve_lang_module(ft)
+      case ft
+      when "ruby" then Lang::Ruby
+      end
+    end
 
     def detect_filetype_from_shebang(path)
       line = read_first_line(path)
@@ -1193,7 +1204,7 @@ module RuVim
 
     def assign_detected_filetype(buffer)
       ft = detect_filetype(buffer.path)
-      buffer.options["filetype"] = ft if ft && !ft.empty?
+      assign_filetype(buffer, ft) if ft && !ft.empty?
       buffer
     end
 

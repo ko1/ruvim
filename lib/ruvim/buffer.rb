@@ -5,6 +5,7 @@ module RuVim
     attr_reader :options
     attr_writer :modified
     attr_accessor :stream_state, :loading_state
+    attr_accessor :lang_module
 
     def self.from_file(id:, path:)
       lines =
