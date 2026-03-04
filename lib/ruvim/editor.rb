@@ -994,6 +994,27 @@ module RuVim
       current_location_list_item(window_id)
     end
 
+    # Check if any other window exists on the same axis as dir.
+    # Used by focus_or_split to avoid splitting at edges of existing splits.
+    def has_neighbor_on_axis?(dir)
+      rects = tree_compute_rects(@layout_tree, top: 0.0, left: 0.0, height: 1.0, width: 1.0)
+      cur = rects[@current_window_id]
+      return false unless cur
+
+      cur_cx = cur[:left] + cur[:width] / 2.0
+      cur_cy = cur[:top] + cur[:height] / 2.0
+
+      rects.any? do |wid, r|
+        next false if wid == @current_window_id
+        rcx = r[:left] + r[:width] / 2.0
+        rcy = r[:top] + r[:height] / 2.0
+        case dir
+        when :left, :right then (rcx - cur_cx).abs > 0.001
+        when :up, :down then (rcy - cur_cy).abs > 0.001
+        end
+      end
+    end
+
     def find_window_ids_by_buffer_kind(kind)
       sym = kind.to_sym
       window_order.select do |wid|
@@ -1507,6 +1528,8 @@ module RuVim
       { type: node[:type], children: new_children }
     end
 
+    # Compute normalized rects (0.0–1.0 coordinate space) for direction finding.
+    # Separators are ignored here — this is purely for adjacency/direction logic.
     def tree_compute_rects(node, top:, left:, height:, width:)
       return {} if node.nil?
 
@@ -1520,35 +1543,18 @@ module RuVim
 
       case node[:type]
       when :vsplit
-        sep_total = n - 1
-        usable = width - sep_total
-        widths = split_sizes_float(usable, n)
-        cur_left = left
+        w_each = width / n.to_f
         children.each_with_index do |child, i|
-          w = widths[i]
-          rects.merge!(tree_compute_rects(child, top: top, left: cur_left, height: height, width: w))
-          cur_left += w + 1
+          rects.merge!(tree_compute_rects(child, top: top, left: left + i * w_each, height: height, width: w_each))
         end
       when :hsplit
-        sep_total = n - 1
-        usable = height - sep_total
-        heights = split_sizes_float(usable, n)
-        cur_top = top
+        h_each = height / n.to_f
         children.each_with_index do |child, i|
-          h = heights[i]
-          rects.merge!(tree_compute_rects(child, top: cur_top, left: left, height: h, width: width))
-          cur_top += h + 1
+          rects.merge!(tree_compute_rects(child, top: top + i * h_each, left: left, height: h_each, width: width))
         end
       end
 
       rects
-    end
-
-    def split_sizes_float(total, n)
-      return [total] if n <= 1
-
-      base = total / n.to_f
-      Array.new(n) { base }
     end
   end
 end

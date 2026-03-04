@@ -1002,6 +1002,23 @@ class AppScenarioTest < Minitest::Test
     assert_equal win2.id, @editor.current_window_id
   end
 
+  def test_shift_left_does_not_split_at_edge_of_existing_vsplit
+    # vsplit creates [win1, win2], focus on win2
+    @editor.split_current_window(layout: :vertical)
+    # Move focus to left (win1)
+    feed(:shift_left)
+    assert_equal 2, @editor.window_count
+
+    # Now we're on win1 (leftmost). Shift+Left should NOT split because
+    # there are already windows on the same axis (horizontal neighbors exist).
+    feed(:shift_left)
+    assert_equal 2, @editor.window_count, "Should not split at edge of existing vsplit"
+
+    # Pressing again should still not split
+    feed(:shift_left)
+    assert_equal 2, @editor.window_count
+  end
+
   def test_same_direction_split_merges_into_parent
     # hsplit[ win1, win2 ], then split win2 again horizontally
     @editor.split_current_window(layout: :horizontal)

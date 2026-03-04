@@ -267,7 +267,7 @@ module RuVim
       ed = ctx.editor
       before = ed.current_window.id
       ed.focus_window_direction(:left)
-      if ed.current_window.id == before
+      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:left)
         ed.split_current_window(layout: :vertical, place: :before)
       end
     end
@@ -276,7 +276,7 @@ module RuVim
       ed = ctx.editor
       before = ed.current_window.id
       ed.focus_window_direction(:right)
-      if ed.current_window.id == before
+      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:right)
         ed.split_current_window(layout: :vertical, place: :after)
       end
     end
@@ -285,7 +285,7 @@ module RuVim
       ed = ctx.editor
       before = ed.current_window.id
       ed.focus_window_direction(:up)
-      if ed.current_window.id == before
+      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:up)
         ed.split_current_window(layout: :horizontal, place: :before)
       end
     end
@@ -294,7 +294,7 @@ module RuVim
       ed = ctx.editor
       before = ed.current_window.id
       ed.focus_window_direction(:down)
-      if ed.current_window.id == before
+      if ed.current_window.id == before && !ed.has_neighbor_on_axis?(:down)
         ed.split_current_window(layout: :horizontal, place: :after)
       end
     end
