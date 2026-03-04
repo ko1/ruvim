@@ -902,4 +902,115 @@ class AppScenarioTest < Minitest::Test
     assert_equal second_win.id, @editor.current_window.id
     assert_equal 2, @editor.window_count
   end
+
+  # --- Nested layout tree tests ---
+
+  def test_vsplit_then_split_creates_nested_layout
+    # Start with 1 window (win1)
+    win1 = @editor.current_window
+    # vsplit → creates win2 to the right
+    @editor.split_current_window(layout: :vertical)
+    win2 = @editor.current_window
+    assert_equal 2, @editor.window_count
+
+    # split the right window (win2) horizontally → creates win3 below win2
+    @editor.split_current_window(layout: :horizontal)
+    win3 = @editor.current_window
+    assert_equal 3, @editor.window_count
+
+    # Layout tree should be: vsplit[ win1, hsplit[ win2, win3 ] ]
+    tree = @editor.layout_tree
+    assert_equal :vsplit, tree[:type]
+    assert_equal 2, tree[:children].length
+    assert_equal :window, tree[:children][0][:type]
+    assert_equal win1.id, tree[:children][0][:id]
+    assert_equal :hsplit, tree[:children][1][:type]
+    assert_equal 2, tree[:children][1][:children].length
+
+    # window_order should traverse leaves left-to-right, top-to-bottom
+    assert_equal [win1.id, win2.id, win3.id], @editor.window_order
+  end
+
+  def test_split_then_vsplit_creates_nested_layout
+    # split → creates win2 below
+    @editor.split_current_window(layout: :horizontal)
+    assert_equal 2, @editor.window_count
+
+    # vsplit the lower window → creates win3 to the right of win2
+    @editor.split_current_window(layout: :vertical)
+    assert_equal 3, @editor.window_count
+
+    # Layout tree should be: hsplit[ win1, vsplit[ win2, win3 ] ]
+    tree = @editor.layout_tree
+    assert_equal :hsplit, tree[:type]
+    assert_equal 2, tree[:children].length
+    assert_equal :window, tree[:children][0][:type]
+    assert_equal :vsplit, tree[:children][1][:type]
+  end
+
+  def test_close_window_simplifies_nested_tree
+    @editor.split_current_window(layout: :vertical)
+    @editor.split_current_window(layout: :horizontal)
+    win3 = @editor.current_window
+    assert_equal 3, @editor.window_count
+
+    # Close win3 → hsplit node should collapse, leaving vsplit[ win1, win2 ]
+    @editor.close_window(win3.id)
+    assert_equal 2, @editor.window_count
+
+    tree = @editor.layout_tree
+    assert_equal :vsplit, tree[:type]
+    assert_equal 2, tree[:children].length
+    assert_equal :window, tree[:children][0][:type]
+    assert_equal :window, tree[:children][1][:type]
+  end
+
+  def test_close_window_to_single_produces_single_layout
+    @editor.split_current_window(layout: :vertical)
+    win2 = @editor.current_window
+    assert_equal 2, @editor.window_count
+
+    @editor.close_window(win2.id)
+    assert_equal 1, @editor.window_count
+    assert_equal :single, @editor.window_layout
+  end
+
+  def test_focus_window_direction_in_nested_layout
+    # Create vsplit[ win1, hsplit[ win2, win3 ] ]
+    win1 = @editor.current_window
+    @editor.split_current_window(layout: :vertical)
+    win2 = @editor.current_window
+    @editor.split_current_window(layout: :horizontal)
+    win3 = @editor.current_window
+
+    # From win3 (bottom-right), going left should reach win1
+    @editor.focus_window(win3.id)
+    @editor.focus_window_direction(:left)
+    assert_equal win1.id, @editor.current_window_id
+
+    # From win1 (left), going right should reach win2 or win3
+    @editor.focus_window_direction(:right)
+    assert_includes [win2.id, win3.id], @editor.current_window_id
+
+    # From win2 (top-right), going down should reach win3
+    @editor.focus_window(win2.id)
+    @editor.focus_window_direction(:down)
+    assert_equal win3.id, @editor.current_window_id
+
+    # From win3 (bottom-right), going up should reach win2
+    @editor.focus_window_direction(:up)
+    assert_equal win2.id, @editor.current_window_id
+  end
+
+  def test_same_direction_split_merges_into_parent
+    # hsplit[ win1, win2 ], then split win2 again horizontally
+    @editor.split_current_window(layout: :horizontal)
+    @editor.split_current_window(layout: :horizontal)
+    assert_equal 3, @editor.window_count
+
+    # All three should be in a single hsplit (no nested hsplit inside hsplit)
+    tree = @editor.layout_tree
+    assert_equal :hsplit, tree[:type]
+    assert_equal 3, tree[:children].length
+  end
 end

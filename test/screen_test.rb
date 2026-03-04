@@ -523,4 +523,45 @@ class ScreenTest < Minitest::Test
     assert_operator cursor_col, :>=, 1
     assert_operator cursor_col, :<=, cols_key
   end
+
+  def test_window_rects_nested_vsplit_hsplit
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    # win1
+    editor.add_window(buffer_id: buf.id)
+    win1 = editor.current_window
+    # vsplit → win2
+    editor.split_current_window(layout: :vertical)
+    win2 = editor.current_window
+    # split win2 → win3
+    editor.split_current_window(layout: :horizontal)
+    win3 = editor.current_window
+
+    term = TerminalStub.new([22, 80])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+
+    # All three windows should have rects
+    assert rects.key?(win1.id), "win1 should have a rect"
+    assert rects.key?(win2.id), "win2 should have a rect"
+    assert rects.key?(win3.id), "win3 should have a rect"
+
+    # win1 should be on the left, win2/win3 should be on the right
+    assert_operator rects[win1.id][:left], :<, rects[win2.id][:left]
+    assert_operator rects[win1.id][:left], :<, rects[win3.id][:left]
+
+    # win2 and win3 should share the same left position (same column)
+    assert_equal rects[win2.id][:left], rects[win3.id][:left]
+
+    # win2 should be above win3
+    assert_operator rects[win2.id][:top], :<, rects[win3.id][:top]
+
+    # win1 should span the full height
+    assert_equal rects[win1.id][:height], text_rows
+
+    # win2 + win3 heights + separator should equal text_rows
+    assert_equal text_rows, rects[win2.id][:height] + rects[win3.id][:height] + 1
+  end
 end

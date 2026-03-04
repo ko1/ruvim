@@ -69,6 +69,7 @@
 - コマンドライン改善（履歴 / 補完 / エラー表示）
 - カーソル位置の強調表示
 - 複数 window / split UI（`:split`, `:vsplit`, window 間移動）
+- ネストしたウィンドウ分割（layout tree: vsplit→split でカラム内だけ上下分割）
 - Tabpage（`:tabnew`, `:tabnext`, `:tabprev`）
 - ヘルプ / コマンド一覧の read-only 仮想バッファ表示
 - intro screen（Vim 風 welcome buffer）

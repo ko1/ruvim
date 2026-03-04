@@ -89,8 +89,8 @@ RuVim は Vim と同様に、用途ごとに座標系を分けています。
 エディタ全体の実行状態です。
 
 - buffers / windows 管理
-- window order / split layout（`single` / `horizontal` / `vertical`）
-- tabpages 管理（タブごとに window set / current window / layout を保持）
+- layout tree（ネストしたウィンドウ分割をツリーで管理）
+- tabpages 管理（タブごとに layout tree / current window を保持）
 - current window の管理
 - mode 管理（`:normal`, `:insert`, `:command_line`, `:rich`）
 - ステータスメッセージ
@@ -477,13 +477,16 @@ ANSI エスケープシーケンスによる再描画です。
 - ファイル未指定起動時は Vim 風 intro screen を表示（RuVim では intro 用の read-only 特殊バッファ）
 - カーソル位置の文字を反転表示（見やすさ向上）
 
-### split UI（現状）
+### split UI
 
 - `:split` / `:vsplit` で複数 window を作成
-- レイアウトは簡易タイル（等分割）
-  - `horizontal`: 上下分割
-  - `vertical`: 左右分割
-- nested split / Vim の厳密な window tree は未実装
+- レイアウトはツリー構造（ネストした分割に対応）
+  - `hsplit`: 上下分割
+  - `vsplit`: 左右分割
+  - 例: vsplit 後に右ウィンドウを split すると、右カラムだけが上下分割される
+- 同方向の分割は親ノードにマージ（hsplit の中で hsplit しても 1 レベルに統合）
+- `close_window` でツリーを簡略化（子が 1 個になった分割ノードは子に置き換え）
+- `focus_window_direction` は正規化座標空間で最近接ウィンドウを選択
 - 各 window は cursor / scroll を独立して保持
 
 ### Tabpage（現状）

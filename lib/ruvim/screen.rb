@@ -135,65 +135,110 @@ module RuVim
     end
 
     def render_window_area(editor, lines, rects, text_rows:, text_cols:)
-      if rects.values.any? { |r| r[:separator] == :vertical }
-        render_vertical_windows(editor, lines, rects, text_rows:, text_cols:)
-      else
-        render_horizontal_windows(editor, lines, rects, text_rows:, text_cols:)
-      end
+      render_tree_windows(editor, lines, rects, text_rows:, text_cols:)
     end
 
-    def render_horizontal_windows(editor, lines, rects, text_rows:, text_cols:)
-      1.upto(text_rows) { |row_no| lines[row_no] = " " * text_cols }
-
+    def render_tree_windows(editor, lines, rects, text_rows:, text_cols:)
+      # Pre-render each window's rows
+      window_rows_cache = {}
       editor.window_order.each do |win_id|
         rect = rects[win_id]
         next unless rect
-
         window = editor.windows.fetch(win_id)
         buffer = editor.buffers.fetch(window.buffer_id)
         gutter_w = number_column_width(editor, window, buffer)
         content_w = [rect[:width] - gutter_w, 1].max
-        rows = window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
-        rect[:height].times do |dy|
-          row_no = rect[:top] + dy
-          lines[row_no] = rows[dy] || (" " * rect[:width])
-        end
+        window_rows_cache[win_id] = window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
       end
 
-      rects.each_value do |rect|
-        next unless rect[:separator] == :horizontal
-        lines[rect[:sep_row]] = ("-" * text_cols)
-      end
-    end
+      # Build a row-plan: for each screen row, collect the pieces to concatenate
+      row_plans = build_row_plans(editor.layout_tree, rects, text_rows, text_cols)
 
-    def render_vertical_windows(editor, lines, rects, text_rows:, text_cols:)
       1.upto(text_rows) do |row_no|
+        plan = row_plans[row_no]
+        unless plan
+          lines[row_no] = " " * text_cols
+          next
+        end
+
         pieces = +""
-        editor.window_order.each_with_index do |win_id, idx|
-          rect = rects[win_id]
-          next unless rect
-          window = editor.windows.fetch(win_id)
-          buffer = editor.buffers.fetch(window.buffer_id)
-          gutter_w = number_column_width(editor, window, buffer)
-          content_w = [rect[:width] - gutter_w, 1].max
-          dy = row_no - rect[:top]
-          text =
-            if dy >= 0 && dy < rect[:height]
-              @__window_rows_cache ||= {}
-              key = [window.id, rect[:height], gutter_w, content_w, window.row_offset, window.col_offset, window.cursor_y, window.cursor_x,
-                     editor.effective_option("wrap", window:, buffer:), editor.effective_option("linebreak", window:, buffer:),
-                     editor.effective_option("breakindent", window:, buffer:), editor.effective_option("showbreak", window:, buffer:)]
-              @__window_rows_cache[key] ||= window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
-              @__window_rows_cache[key][dy] || (" " * rect[:width])
-            else
-              " " * rect[:width]
-            end
-          pieces << text
-          pieces << "|" if idx < editor.window_order.length - 1
+        plan.each do |piece|
+          case piece[:type]
+          when :window
+            rect = rects[piece[:id]]
+            dy = row_no - rect[:top]
+            rows = window_rows_cache[piece[:id]]
+            text = (rows && dy >= 0 && dy < rect[:height]) ? (rows[dy] || " " * rect[:width]) : " " * rect[:width]
+            pieces << text
+          when :vsep
+            pieces << "|"
+          when :hsep
+            pieces << "-" * piece[:width]
+          when :blank
+            pieces << " " * piece[:width]
+          end
         end
         lines[row_no] = pieces
       end
-      @__window_rows_cache = nil
+    end
+
+    # Build a row-by-row plan for compositing. Each row's plan is an array of
+    # pieces to concatenate left-to-right.
+    def build_row_plans(node, rects, text_rows, text_cols)
+      plans = {}
+      fill_row_plans(node, rects, plans, 1, text_rows)
+      plans
+    end
+
+    def fill_row_plans(node, rects, plans, row_start, row_end)
+      return unless node
+
+      if node[:type] == :window
+        rect = rects[node[:id]]
+        return unless rect
+        rect[:height].times do |dy|
+          row_no = rect[:top] + dy
+          next if row_no < row_start || row_no > row_end
+          plans[row_no] ||= []
+          plans[row_no] << { type: :window, id: node[:id] }
+        end
+        return
+      end
+
+      children = node[:children]
+      if node[:type] == :vsplit
+        children.each_with_index do |child, i|
+          fill_row_plans(child, rects, plans, row_start, row_end)
+          if i < children.length - 1
+            # Insert vsep marker for the rows spanned by these children
+            child_leaves = tree_leaves_for_rects(child)
+            child_rects_list = child_leaves.filter_map { |id| rects[id] }
+            next if child_rects_list.empty?
+            top = child_rects_list.map { |r| r[:top] }.min
+            bottom = child_rects_list.map { |r| r[:top] + r[:height] - 1 }.max
+            top.upto(bottom) do |row_no|
+              next if row_no < row_start || row_no > row_end
+              plans[row_no] ||= []
+              plans[row_no] << { type: :vsep }
+            end
+          end
+        end
+      elsif node[:type] == :hsplit
+        children.each_with_index do |child, i|
+          fill_row_plans(child, rects, plans, row_start, row_end)
+          if i < children.length - 1
+            child_leaves = tree_leaves_for_rects(child)
+            child_rects_list = child_leaves.filter_map { |id| rects[id] }
+            next if child_rects_list.empty?
+            sep_row = child_rects_list.map { |r| r[:top] + r[:height] }.max
+            left = child_rects_list.map { |r| r[:left] }.min
+            right = child_rects_list.map { |r| r[:left] + r[:width] - 1 }.max
+            next unless sep_row >= row_start && sep_row <= row_end
+            plans[sep_row] ||= []
+            plans[sep_row] << { type: :hsep, width: right - left + 1 }
+          end
+        end
+      end
     end
 
     def can_diff_render?(frame)
@@ -986,39 +1031,64 @@ module RuVim
     end
 
     def window_rects(editor, text_rows:, text_cols:)
+      tree = editor.layout_tree
+      return {} if tree.nil?
       ids = editor.window_order
       return {} if ids.empty?
-      return { ids.first => { top: 1, left: 1, height: text_rows, width: text_cols } } if ids.length == 1 || editor.window_layout == :single
+      return { ids.first => { top: 1, left: 1, height: text_rows, width: text_cols } } if ids.length == 1
 
-      if editor.window_layout == :vertical
-        sep = ids.length - 1
-        usable = [text_cols - sep, ids.length].max
-        widths = split_sizes(usable, ids.length)
-        left = 1
-        rects = {}
-        ids.each_with_index do |id, i|
-          w = widths[i]
-          rects[id] = { top: 1, left: left, height: text_rows, width: w, separator: :vertical }
-          left += w + 1
-        end
-        rects
-      else
-        sep = ids.length - 1
-        usable = [text_rows - sep, ids.length].max
-        heights = split_sizes(usable, ids.length)
-        top = 1
-        rects = {}
-        ids.each_with_index do |id, i|
-          h = heights[i]
-          rects[id] = { top: top, left: 1, height: h, width: text_cols, separator: :horizontal }
-          top += h
-          if i < ids.length - 1
-            rects[id][:sep_row] = top
-            top += 1
-          end
-        end
-        rects
+      compute_tree_rects(tree, top: 1, left: 1, height: text_rows, width: text_cols)
+    end
+
+    def compute_tree_rects(node, top:, left:, height:, width:)
+      if node[:type] == :window
+        return { node[:id] => { top: top, left: left, height: height, width: width } }
       end
+
+      children = node[:children]
+      n = children.length
+      rects = {}
+
+      case node[:type]
+      when :vsplit
+        sep_count = n - 1
+        usable = [width - sep_count, n].max
+        widths = split_sizes(usable, n)
+        cur_left = left
+        children.each_with_index do |child, i|
+          w = widths[i]
+          child_rects = compute_tree_rects(child, top: top, left: cur_left, height: height, width: w)
+          child_rects.each_value { |r| r[:separator] = :vertical }
+          rects.merge!(child_rects)
+          cur_left += w + 1
+        end
+      when :hsplit
+        sep_count = n - 1
+        usable = [height - sep_count, n].max
+        heights = split_sizes(usable, n)
+        cur_top = top
+        children.each_with_index do |child, i|
+          h = heights[i]
+          child_rects = compute_tree_rects(child, top: cur_top, left: left, height: h, width: width)
+          child_rects.each_value { |r| r[:separator] = :horizontal }
+          rects.merge!(child_rects)
+          if i < n - 1
+            # Mark separator row for the last window in this child
+            child_leaves = tree_leaves_for_rects(child)
+            last_leaf = child_leaves.last
+            rects[last_leaf][:sep_row] = cur_top + h if last_leaf && rects[last_leaf]
+          end
+          cur_top += h + 1
+        end
+      end
+
+      rects
+    end
+
+    def tree_leaves_for_rects(node)
+      return [node[:id]] if node[:type] == :window
+
+      node[:children].flat_map { |c| tree_leaves_for_rects(c) }
     end
 
     def split_sizes(total, n)

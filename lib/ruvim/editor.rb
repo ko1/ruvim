@@ -70,13 +70,13 @@ module RuVim
       [/\Aperl(?:\d+(?:\.\d+)*)?\z/, "perl"]
     ].freeze
 
-    attr_reader :buffers, :windows
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :window_layout, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler
+    attr_reader :buffers, :windows, :layout_tree
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler
 
     def initialize
       @buffers = {}
       @windows = {}
-      @window_order = []
+      @layout_tree = nil
       @tabpages = []
       @current_tabpage_index = nil
       @next_tabpage_id = 1
@@ -86,7 +86,6 @@ module RuVim
       @current_window_id = nil
       @alternate_buffer_id = nil
       @mode = :normal
-      @window_layout = :single
       @message = ""
       @message_kind = :info
       @message_deadline = nil
@@ -606,7 +605,17 @@ module RuVim
       id = next_window_id
       window = Window.new(id:, buffer_id:)
       @windows[id] = window
-      @window_order << id
+      leaf = { type: :window, id: id }
+      if @layout_tree.nil?
+        @layout_tree = leaf
+      else
+        # Append as sibling — used for initial bootstrap only
+        if @layout_tree[:type] == :window
+          @layout_tree = { type: :hsplit, children: [@layout_tree, leaf] }
+        else
+          @layout_tree[:children] << leaf
+        end
+      end
       @current_window_id ||= id
       ensure_initial_tabpage!
       save_current_tabpage_state! unless @suspend_tab_autosave
@@ -619,15 +628,17 @@ module RuVim
       id = next_window_id
       win = Window.new(id:, buffer_id: src.buffer_id)
       @windows[id] = win
-      src_idx = @window_order.index(src.id) || (@window_order.length - 1)
-      insert_idx = (place.to_sym == :before ? src_idx : src_idx + 1)
-      @window_order.insert(insert_idx, win.id)
       ensure_initial_tabpage!
       win.cursor_x = src.cursor_x
       win.cursor_y = src.cursor_y
       win.row_offset = src.row_offset
       win.col_offset = src.col_offset
-      @window_layout = layout.to_sym
+
+      split_type = (layout.to_sym == :vertical ? :vsplit : :hsplit)
+      new_leaf = { type: :window, id: win.id }
+
+      @layout_tree = tree_split_leaf(@layout_tree, src.id, split_type, new_leaf, place.to_sym)
+
       @current_window_id = win.id
       save_current_tabpage_state! unless @suspend_tab_autosave
       win
@@ -638,18 +649,21 @@ module RuVim
     end
 
     def close_window(id)
-      return nil if @window_order.empty?
-      return nil if @window_order.length <= 1
-      return nil unless @window_order.include?(id)
+      leaves = tree_leaves(@layout_tree)
+      return nil if leaves.empty?
+      return nil if leaves.length <= 1
+      return nil unless leaves.include?(id)
 
       save_current_tabpage_state! unless @suspend_tab_autosave
-      idx = @window_order.index(id) || 0
+      idx = leaves.index(id) || 0
       @windows.delete(id)
-      @window_order.delete(id)
       @location_lists.delete(id)
-      @current_window_id = @window_order[[idx, @window_order.length - 1].min] if @current_window_id == id
-      @current_window_id ||= @window_order.first
-      @window_layout = :single if @window_order.length <= 1
+
+      @layout_tree = tree_remove(@layout_tree, id)
+
+      new_leaves = tree_leaves(@layout_tree)
+      @current_window_id = new_leaves[[idx, new_leaves.length - 1].min] if @current_window_id == id
+      @current_window_id ||= new_leaves.first
       save_current_tabpage_state! unless @suspend_tab_autosave
       current_window
     end
@@ -660,7 +674,8 @@ module RuVim
 
       save_current_tabpage_state!
       removed = @tabpages.delete_at(@current_tabpage_index)
-      Array(removed && removed[:window_order]).each do |wid|
+      removed_tree = removed && removed[:layout_tree]
+      tree_leaves(removed_tree).each do |wid|
         @windows.delete(wid)
         @location_lists.delete(wid)
       end
@@ -678,42 +693,55 @@ module RuVim
     end
 
     def focus_next_window
-      return current_window if @window_order.length <= 1
+      order = window_order
+      return current_window if order.length <= 1
 
-      idx = @window_order.index(@current_window_id) || 0
-      focus_window(@window_order[(idx + 1) % @window_order.length])
+      idx = order.index(@current_window_id) || 0
+      focus_window(order[(idx + 1) % order.length])
     end
 
     def focus_prev_window
-      return current_window if @window_order.length <= 1
+      order = window_order
+      return current_window if order.length <= 1
 
-      idx = @window_order.index(@current_window_id) || 0
-      focus_window(@window_order[(idx - 1) % @window_order.length])
+      idx = order.index(@current_window_id) || 0
+      focus_window(order[(idx - 1) % order.length])
     end
 
     def focus_window_direction(dir)
-      return current_window if @window_order.length <= 1
+      leaves = tree_leaves(@layout_tree)
+      return current_window if leaves.length <= 1
 
-      case @window_layout
-      when :vertical
-        if dir == :left
-          focus_prev_window
-        elsif dir == :right
-          focus_next_window
-        else
-          current_window
+      rects = tree_compute_rects(@layout_tree, top: 0.0, left: 0.0, height: 1.0, width: 1.0)
+      cur = rects[@current_window_id]
+      return current_window unless cur
+
+      best_id = nil
+      best_dist = Float::INFINITY
+      cur_cx = cur[:left] + cur[:width] / 2.0
+      cur_cy = cur[:top] + cur[:height] / 2.0
+
+      rects.each do |wid, r|
+        next if wid == @current_window_id
+        rcx = r[:left] + r[:width] / 2.0
+        rcy = r[:top] + r[:height] / 2.0
+
+        in_direction = case dir
+                       when :left  then rcx < cur_cx
+                       when :right then rcx > cur_cx
+                       when :up    then rcy < cur_cy
+                       when :down  then rcy > cur_cy
+                       end
+        next unless in_direction
+
+        dist = (rcx - cur_cx).abs + (rcy - cur_cy).abs
+        if dist < best_dist
+          best_dist = dist
+          best_id = wid
         end
-      when :horizontal
-        if dir == :up
-          focus_prev_window
-        elsif dir == :down
-          focus_next_window
-        else
-          current_window
-        end
-      else
-        focus_next_window
       end
+
+      best_id ? focus_window(best_id) : current_window
     end
 
     def switch_to_buffer(buffer_id)
@@ -849,7 +877,16 @@ module RuVim
     end
 
     def window_order
-      @window_order
+      tree_leaves(@layout_tree)
+    end
+
+    def window_layout
+      return :single if @layout_tree.nil? || @layout_tree[:type] == :window
+      case @layout_tree[:type]
+      when :vsplit then :vertical
+      when :hsplit then :horizontal
+      else :single
+      end
     end
 
     def tabpages
@@ -869,7 +906,7 @@ module RuVim
     end
 
     def window_count
-      @window_order.length
+      tree_leaves(@layout_tree).length
     end
 
     def quickfix_items
@@ -959,7 +996,7 @@ module RuVim
 
     def find_window_ids_by_buffer_kind(kind)
       sym = kind.to_sym
-      @window_order.select do |wid|
+      window_order.select do |wid|
         win = @windows[wid]
         buf = win && @buffers[win.buffer_id]
         buf && buf.kind == sym
@@ -971,9 +1008,8 @@ module RuVim
       save_current_tabpage_state!
 
       with_tab_autosave_suspended do
-        @window_order = []
+        @layout_tree = nil
         @current_window_id = nil
-        @window_layout = :single
 
         buffer = path ? add_buffer_from_file(path) : add_empty_buffer
         add_window(buffer_id: buffer.id)
@@ -1366,7 +1402,7 @@ module RuVim
 
     def ensure_initial_tabpage!
       return unless @tabpages.empty?
-      return if @window_order.empty?
+      return if @layout_tree.nil?
 
       @tabpages << new_tabpage_snapshot
       @current_tabpage_index = 0
@@ -1380,18 +1416,16 @@ module RuVim
     end
 
     def load_tabpage_state!(tab)
-      @window_order = tab[:window_order].dup
+      @layout_tree = tree_deep_dup(tab[:layout_tree])
       @current_window_id = tab[:current_window_id]
-      @window_layout = tab[:window_layout]
       current_window
     end
 
     def new_tabpage_snapshot(id: nil)
       {
         id: id || next_tabpage_id,
-        window_order: @window_order.dup,
-        current_window_id: @current_window_id,
-        window_layout: @window_layout
+        layout_tree: tree_deep_dup(@layout_tree),
+        current_window_id: @current_window_id
       }
     end
 
@@ -1419,6 +1453,102 @@ module RuVim
       yield
     ensure
       @suspend_tab_autosave = prev
+    end
+
+    # --- Layout tree helpers ---
+
+    def tree_leaves(node)
+      return [] if node.nil?
+      return [node[:id]] if node[:type] == :window
+
+      node[:children].flat_map { |c| tree_leaves(c) }
+    end
+
+    def tree_deep_dup(node)
+      return nil if node.nil?
+      return { type: :window, id: node[:id] } if node[:type] == :window
+
+      { type: node[:type], children: node[:children].map { |c| tree_deep_dup(c) } }
+    end
+
+    # Split a leaf node into a new split node. If the parent is already the same
+    # split type, merge into the parent instead of nesting.
+    def tree_split_leaf(node, target_id, split_type, new_leaf, place)
+      if node[:type] == :window
+        if node[:id] == target_id
+          children = place == :before ? [new_leaf, node] : [node, new_leaf]
+          return { type: split_type, children: children }
+        end
+        return node
+      end
+
+      new_children = node[:children].flat_map do |child|
+        result = tree_split_leaf(child, target_id, split_type, new_leaf, place)
+        # If the child was replaced with the same split type as this node, merge
+        if result[:type] == node[:type] && result != child
+          result[:children]
+        else
+          [result]
+        end
+      end
+
+      { type: node[:type], children: new_children }
+    end
+
+    def tree_remove(node, target_id)
+      return nil if node.nil?
+      return nil if node[:type] == :window && node[:id] == target_id
+      return node if node[:type] == :window
+
+      new_children = node[:children].filter_map { |c| tree_remove(c, target_id) }
+      return nil if new_children.empty?
+      return new_children.first if new_children.length == 1
+
+      { type: node[:type], children: new_children }
+    end
+
+    def tree_compute_rects(node, top:, left:, height:, width:)
+      return {} if node.nil?
+
+      if node[:type] == :window
+        return { node[:id] => { top: top, left: left, height: height, width: width } }
+      end
+
+      children = node[:children]
+      n = children.length
+      rects = {}
+
+      case node[:type]
+      when :vsplit
+        sep_total = n - 1
+        usable = width - sep_total
+        widths = split_sizes_float(usable, n)
+        cur_left = left
+        children.each_with_index do |child, i|
+          w = widths[i]
+          rects.merge!(tree_compute_rects(child, top: top, left: cur_left, height: height, width: w))
+          cur_left += w + 1
+        end
+      when :hsplit
+        sep_total = n - 1
+        usable = height - sep_total
+        heights = split_sizes_float(usable, n)
+        cur_top = top
+        children.each_with_index do |child, i|
+          h = heights[i]
+          rects.merge!(tree_compute_rects(child, top: cur_top, left: left, height: h, width: width))
+          cur_top += h + 1
+        end
+      end
+
+      rects
+    end
+
+    def split_sizes_float(total, n)
+      return [total] if n <= 1
+
+      base = total / n.to_f
+      Array.new(n) { base }
     end
   end
 end
