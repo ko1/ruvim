@@ -880,7 +880,7 @@ module RuVim
 
     def set_quickfix_list(items)
       ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
-      @quickfix_list = { items: ary, index: ary.empty? ? nil : 0 }
+      @quickfix_list = { items: ary, index: nil }
       @quickfix_list
     end
 
@@ -893,7 +893,12 @@ module RuVim
       items = @quickfix_list[:items]
       return nil if items.empty?
 
-      @quickfix_list[:index] = ((@quickfix_list[:index] || 0) + step.to_i) % items.length
+      cur = @quickfix_list[:index]
+      @quickfix_list[:index] = if cur.nil?
+                                  step.to_i > 0 ? 0 : items.length - 1
+                                else
+                                  (cur + step.to_i) % items.length
+                                end
       current_quickfix_item
     end
 
@@ -916,7 +921,7 @@ module RuVim
 
     def set_location_list(items, window_id: current_window_id)
       ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
-      @location_lists[window_id] = { items: ary, index: ary.empty? ? nil : 0 }
+      @location_lists[window_id] = { items: ary, index: nil }
       @location_lists[window_id]
     end
 
@@ -931,7 +936,12 @@ module RuVim
       items = list[:items]
       return nil if items.empty?
 
-      list[:index] = ((list[:index] || 0) + step.to_i) % items.length
+      cur = list[:index]
+      list[:index] = if cur.nil?
+                       step.to_i > 0 ? 0 : items.length - 1
+                     else
+                       (cur + step.to_i) % items.length
+                     end
       current_location_list_item(window_id)
     end
 

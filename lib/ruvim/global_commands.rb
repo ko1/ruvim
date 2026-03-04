@@ -1106,6 +1106,7 @@ module RuVim
       end
 
       ctx.editor.set_quickfix_list(items)
+      ctx.editor.select_quickfix(0)
       ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
       ctx.editor.echo("quickfix: #{items.length} item(s)")
     end
@@ -1120,6 +1121,7 @@ module RuVim
       end
 
       ctx.editor.set_location_list(items, window_id: ctx.window.id)
+      ctx.editor.select_location_list(0, window_id: ctx.window.id)
       ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
       ctx.editor.echo("location list: #{items.length} item(s)")
     end
@@ -1338,10 +1340,12 @@ module RuVim
       case target
       when :quickfix
         ctx.editor.set_quickfix_list(items)
+        ctx.editor.select_quickfix(0)
         ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
         ctx.editor.echo("quickfix: #{items.length} item(s)")
       when :location_list
         ctx.editor.set_location_list(items, window_id: ctx.window.id)
+        ctx.editor.select_location_list(0, window_id: ctx.window.id)
         ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
         ctx.editor.echo("location list: #{items.length} item(s)")
       end

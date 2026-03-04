@@ -88,16 +88,16 @@ class OnSaveHookTest < Minitest::Test
       ":w\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
 
       refute_empty editor.quickfix_items, "quickfix should be populated after :w with syntax error"
-      assert_equal 0, editor.quickfix_index
+      assert_nil editor.quickfix_index, "quickfix index should be nil before navigation"
 
-      # :w should auto-jump to first error location
-      first_item = editor.quickfix_items.first
-      assert_equal first_item[:row], editor.current_window.cursor_y,
-        "cursor should jump to first quickfix item after :w"
-
-      # Press ]q to navigate to next item
+      # Press ]q — should jump to first item (index 0)
       app.send(:handle_key, "]")
       app.send(:handle_key, "q")
+
+      assert_equal 0, editor.quickfix_index
+      first_item = editor.quickfix_items.first
+      assert_equal first_item[:row], editor.current_window.cursor_y,
+        "cursor should jump to first quickfix item on ]q"
 
       assert_match(/qf/, editor.message)
     end
