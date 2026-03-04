@@ -916,7 +916,7 @@ module RuVim
       tab = tab_status_token(editor)
       msg = editor.message_error? ? "" : editor.message.to_s
       left = "#{mode} #{path}#{mod}#{stream}#{loading}"
-      right = "#{tab} #{window.cursor_y + 1}:#{window.cursor_x + 1} "
+      right = " #{window.cursor_y + 1}:#{window.cursor_x + 1}#{tab} "
       body_width = [width - right.length, 0].max
       "#{compose_status_body(left, msg, body_width)}#{right}"
     end

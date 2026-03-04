@@ -768,7 +768,7 @@ module RuVim
     def open_path_sync(path)
       buffer = add_buffer_from_file(path)
       switch_to_buffer(buffer.id)
-      echo(path && File.exist?(path) ? "\"#{path}\" #{buffer.line_count}L" : "\"#{path}\" [New File]")
+      echo("[New File]") unless path && File.exist?(path)
       buffer
     end
 

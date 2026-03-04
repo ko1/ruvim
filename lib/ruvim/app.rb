@@ -2630,7 +2630,6 @@ module RuVim
       if io.eof?
         buf.finalize_async_file_load!(ended_with_newline: state[:ended_with_newline])
         buf.loading_state = :closed
-        @editor.echo("\"#{path}\" #{buf.line_count}L")
         io.close unless io.closed?
         return buf
       end
@@ -2855,18 +2854,12 @@ module RuVim
     end
 
     def finish_async_file_load!(buffer_id, ended_with_newline:)
-      state = @async_file_loads.delete(buffer_id)
+      @async_file_loads.delete(buffer_id)
       buf = @editor.buffers[buffer_id]
       return false unless buf
 
       buf.finalize_async_file_load!(ended_with_newline: !!ended_with_newline)
       buf.loading_state = :closed
-
-      current_win = @editor.current_window rescue nil
-      if current_win&.buffer_id == buffer_id
-        loaded_name = (state && state[:path]) || buf.display_name
-        @editor.echo("\"#{loaded_name}\" #{buf.line_count}L")
-      end
       true
     end
 
