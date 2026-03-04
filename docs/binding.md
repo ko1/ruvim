@@ -49,6 +49,7 @@
 - `'{mark}` / `` `{mark} `` : mark へ jump（行頭寄せ / 正確位置）
 - `''` / `` `` `` : jumplist で前の位置へ jump（行頭寄せ / 正確位置）
 - `r<char>` : 1文字置換
+- `=` + motion / `==` : auto-indent（Ruby filetype 対応）
 - `c` + motion / `cc` : change（削除して Insert mode）
 - `ciw` / `caw` : 単語 text object change（簡易）
 - `ci"` / `ca"` : quote text object change（簡易）
@@ -107,6 +108,7 @@
 - `V` : linewise Visual の開始/切替
 - `y` : 選択範囲を yank
 - `d` : 選択範囲を delete
+- `=` : 選択範囲を auto-indent
 - `i` / `a` + object : text object を選択（`iw`, `aw`, `ip`, `ap`, `i"`, `a"`, ``i` ``, ``a` ``, `i)`, `a)`, `i]`, `a]`, `i}`, `a}`）
 - `Esc` / `Ctrl-c` : Normal mode に戻る
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）

@@ -92,7 +92,75 @@ module RuVim
         CONSTANT
       ].freeze
 
+      # Keywords that open a new indentation level
+      INDENT_OPEN_RE = /\A\s*(?:def|class|module|if|unless|while|until|for|begin|case)\b/
+      # `do` at end of line (block form)
+      INDENT_DO_RE = /\bdo\s*(\|[^|]*\|)?\s*$/
+      # Opening brackets at end of line
+      INDENT_BRACKET_OPEN_RE = /[\[({]\s*$/
+      # Keywords that close an indentation level
+      INDENT_CLOSE_RE = /\A\s*(?:end|[}\])])/
+      # Keywords at same level as their opening keyword (dedent for the line itself)
+      INDENT_MID_RE = /\A\s*(?:else|elsif|when|rescue|ensure|in)\b/
+      # Modifier keywords that do NOT open indentation
+      MODIFIER_RE = /\b(?:if|unless|while|until|rescue)\b/
+
       module_function
+
+      def calculate_indent(lines, target_row, shiftwidth)
+        depth = 0
+        (0...target_row).each do |row|
+          line = lines[row]
+          stripped = line.to_s.lstrip
+
+          # Skip blank and comment lines for indent computation
+          next if stripped.empty? || stripped.start_with?("#")
+
+          # Check if the line opens a new level
+          if stripped.match?(INDENT_OPEN_RE)
+            # Check for modifier form: something before the keyword on the same line
+            # e.g. "return if true" — if keyword is not at start, it's a modifier
+            first_word = stripped[/\A(\w+)/, 1]
+            if %w[if unless while until rescue].include?(first_word)
+              depth += 1
+            elsif %w[def class module begin case for].include?(first_word)
+              depth += 1
+            end
+          elsif stripped.match?(INDENT_DO_RE)
+            depth += 1
+          end
+
+          # Count opening brackets (not at end-of-line pattern, but individual)
+          stripped.each_char do |ch|
+            case ch
+            when "{", "[", "("
+              depth += 1
+            when "}", "]", ")"
+              depth -= 1
+            end
+          end if !stripped.match?(INDENT_OPEN_RE) && !stripped.match?(INDENT_DO_RE)
+
+          # Handle closing keywords
+          if stripped.match?(/\A\s*end\b/)
+            depth -= 1
+          end
+
+          # Handle mid keywords (else/elsif/when/rescue/ensure) — they don't change depth for following lines
+        end
+
+        # Now compute indent for target_row
+        target_line = lines[target_row].to_s.lstrip
+
+        # If target line is a closing keyword, dedent
+        if target_line.match?(INDENT_CLOSE_RE)
+          depth -= 1
+        elsif target_line.match?(INDENT_MID_RE)
+          depth -= 1
+        end
+
+        depth = 0 if depth < 0
+        depth * shiftwidth
+      end
 
       def color_columns(text)
         cols = {}

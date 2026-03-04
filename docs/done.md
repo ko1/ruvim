@@ -30,6 +30,7 @@
 - quickfix / location list（最小）
 - Visual block（`Ctrl-v`、最小）
 - `.` repeat の精度向上（operator + text object + macro 連携）
+- `=` operator（自動インデント: `==`, `=j`, `=k`, `=G`, `=gg`, Visual `=`。Ruby filetype 対応）
 
 ## コマンド / 設計 / 拡張基盤
 

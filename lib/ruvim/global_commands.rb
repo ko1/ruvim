@@ -648,6 +648,45 @@ module RuVim
       ctx.editor.enter_normal_mode
     end
 
+    def indent_lines(ctx, count:, **)
+      count = normalized_count(count)
+      start_row = ctx.window.cursor_y
+      end_row = [start_row + count - 1, ctx.buffer.line_count - 1].min
+      reindent_range(ctx, start_row, end_row)
+    end
+
+    def indent_motion(ctx, count:, kwargs:, **)
+      motion = (kwargs[:motion] || kwargs["motion"]).to_s
+      ncount = normalized_count(count)
+      start_row = ctx.window.cursor_y
+      case motion
+      when "j"
+        end_row = [start_row + ncount, ctx.buffer.line_count - 1].min
+      when "k"
+        end_row = start_row
+        start_row = [start_row - ncount, 0].max
+      when "G"
+        end_row = ctx.buffer.line_count - 1
+      when "gg"
+        end_row = start_row
+        start_row = 0
+      else
+        ctx.editor.echo("Unsupported motion for =: #{motion}")
+        return
+      end
+      reindent_range(ctx, start_row, end_row)
+    end
+
+    def visual_indent(ctx, **)
+      sel = ctx.editor.visual_selection
+      return unless sel
+
+      start_row = sel[:start_row]
+      end_row = sel[:end_row]
+      reindent_range(ctx, start_row, end_row)
+      ctx.editor.enter_normal_mode
+    end
+
     def visual_select_text_object(ctx, kwargs:, **)
       motion = (kwargs[:motion] || kwargs["motion"]).to_s
       span = text_object_span(ctx.buffer, ctx.window, motion)
@@ -1234,6 +1273,38 @@ module RuVim
     end
 
     private
+
+    def reindent_range(ctx, start_row, end_row)
+      buf = ctx.buffer
+      ft = ctx.editor.effective_option("filetype", buffer: buf)
+      sw = ctx.editor.effective_option("shiftwidth", buffer: buf).to_i
+      sw = 2 if sw <= 0
+
+      buf.begin_change_group
+      (start_row..end_row).each do |row|
+        if ft == "ruby" && defined?(Lang::Ruby)
+          target_indent = Lang::Ruby.calculate_indent(buf.lines, row, sw)
+        else
+          next # fallback: keep current indent for unsupported filetypes
+        end
+        line = buf.line_at(row)
+        current_indent = line[/\A */].to_s.length
+        next if current_indent == target_indent
+
+        # Remove old indent, insert new indent
+        old_end = line[/\A */].to_s.length
+        buf.delete_span(row, 0, row, old_end) if old_end > 0
+        buf.insert_text(row, 0, " " * target_indent) if target_indent > 0
+      end
+      buf.end_change_group
+
+      ctx.window.cursor_y = start_row
+      line = buf.line_at(start_row)
+      ctx.window.cursor_x = (line[/\A */]&.length || 0)
+      ctx.window.clamp_to_buffer(buf)
+      count = end_row - start_row + 1
+      ctx.editor.echo("#{count} line#{"s" if count > 1} indented")
+    end
 
     def parse_vimgrep_pattern(argv)
       raw = Array(argv).join(" ").strip

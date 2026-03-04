@@ -657,4 +657,38 @@ class AppScenarioTest < Minitest::Test
     assert_match(/1.*\[No Name\]/, lines[0])
     assert_match(/2.*"second\.rb"/, lines[1])
   end
+
+  def test_equal_equal_indents_current_line
+    @editor.current_buffer.replace_all_lines!(["def foo", "bar", "end"])
+    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.current_window.cursor_y = 1
+    @editor.current_window.cursor_x = 0
+
+    feed("=", "=")
+
+    assert_equal ["def foo", "  bar", "end"], @editor.current_buffer.lines
+  end
+
+  def test_equal_j_indents_two_lines
+    @editor.current_buffer.replace_all_lines!(["def foo", "bar", "baz", "end"])
+    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.current_window.cursor_y = 1
+    @editor.current_window.cursor_x = 0
+
+    feed("=", "j")
+
+    assert_equal ["def foo", "  bar", "  baz", "end"], @editor.current_buffer.lines
+  end
+
+  def test_visual_equal_indents_selection
+    @editor.current_buffer.replace_all_lines!(["def foo", "bar", "end"])
+    @editor.current_buffer.options["filetype"] = "ruby"
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    feed("V", "j", "j", "=")
+
+    assert_equal ["def foo", "  bar", "end"], @editor.current_buffer.lines
+    assert_equal :normal, @editor.mode
+  end
 end

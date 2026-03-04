@@ -47,7 +47,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
-| `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer |
+| `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex |
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
@@ -61,7 +61,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 ### Tests (test/)
 
-- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`
+- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`
 - Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 

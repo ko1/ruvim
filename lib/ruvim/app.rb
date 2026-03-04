@@ -277,6 +277,10 @@ module RuVim
       register_internal_unless(cmd, "normal.operator_delete_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :delete) }, desc: "Start delete operator")
       register_internal_unless(cmd, "normal.operator_yank_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :yank) }, desc: "Start yank operator")
       register_internal_unless(cmd, "normal.operator_change_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :change) }, desc: "Start change operator")
+      register_internal_unless(cmd, "normal.operator_indent_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_operator_start, name: :indent) }, desc: "Start indent operator")
+      register_internal_unless(cmd, "buffer.indent_lines", call: :indent_lines, desc: "Auto-indent lines")
+      register_internal_unless(cmd, "buffer.indent_motion", call: :indent_motion, desc: "Auto-indent motion range")
+      register_internal_unless(cmd, "buffer.visual_indent", call: :visual_indent, desc: "Auto-indent visual selection")
       register_internal_unless(cmd, "normal.replace_pending_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_replace_pending_start) }, desc: "Start replace-char pending")
       register_internal_unless(cmd, "normal.find_char_forward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "f") }, desc: "Start char find forward")
       register_internal_unless(cmd, "normal.find_char_backward_start", call: ->(ctx, **) { ctx.editor.invoke_app_action(:normal_find_pending_start, token: "F") }, desc: "Start char find backward")
@@ -390,6 +394,7 @@ module RuVim
       @keymaps.bind(:normal, "d", "normal.operator_delete_start")
       @keymaps.bind(:normal, "y", "normal.operator_yank_start")
       @keymaps.bind(:normal, "c", "normal.operator_change_start")
+      @keymaps.bind(:normal, "=", "normal.operator_indent_start")
       @keymaps.bind(:normal, "r", "normal.replace_pending_start")
       @keymaps.bind(:normal, "f", "normal.find_char_forward_start")
       @keymaps.bind(:normal, "F", "normal.find_char_backward_start")
@@ -706,6 +711,8 @@ module RuVim
       when "d"
         @visual_pending = nil
         @dispatcher.dispatch(@editor, CommandInvocation.new(id: "buffer.visual_delete"))
+      when "="
+        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "buffer.visual_indent"))
       when "\""
         start_register_pending
       when "i", "a"
@@ -1295,6 +1302,18 @@ module RuVim
 
       if op[:name] == :yank
         inv = CommandInvocation.new(id: "buffer.yank_motion", count: op[:count], kwargs: { motion: motion })
+        @dispatcher.dispatch(@editor, inv)
+        return
+      end
+
+      if op[:name] == :indent && motion == "="
+        inv = CommandInvocation.new(id: "buffer.indent_lines", count: op[:count])
+        @dispatcher.dispatch(@editor, inv)
+        return
+      end
+
+      if op[:name] == :indent
+        inv = CommandInvocation.new(id: "buffer.indent_motion", count: op[:count], kwargs: { motion: motion })
         @dispatcher.dispatch(@editor, inv)
         return
       end
