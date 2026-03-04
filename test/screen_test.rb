@@ -462,6 +462,41 @@ class ScreenTest < Minitest::Test
                  "Pipe separators should align at same display column: #{pipe_display_cols.inspect} in #{visible_rows.inspect}"
   end
 
+  def test_truncate_respects_display_width_for_wide_chars
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    # "Unknown key: あ" => 13 ASCII + 1 wide char (display width 2) = 15 display cols
+    result = screen.send(:truncate, "Unknown key: あ", 20)
+    dw = RuVim::DisplayWidth.display_width(result)
+    assert_equal 20, dw, "truncate must produce exactly 20 display columns, got #{dw}"
+  end
+
+  def test_error_message_with_wide_char_does_not_exceed_terminal_width
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+
+    editor.echo_error("Unknown key: あ")
+
+    term = TerminalStub.new([6, 20])
+    screen = RuVim::Screen.new(terminal: term)
+
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    error_row = frame[:lines][text_rows + 2]
+    # Strip ANSI codes and measure display width
+    plain = error_row.to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "")
+    dw = RuVim::DisplayWidth.display_width(plain)
+    assert_operator dw, :<=, cols, "error line display width #{dw} exceeds terminal cols #{cols}"
+  end
+
   def test_rich_mode_cursor_visible_after_end_of_line
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

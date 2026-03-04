@@ -907,7 +907,8 @@ module RuVim
     end
 
     def truncate(str, width)
-      RuVim::TextMetrics.terminal_safe_text(str).ljust(width)[0, width]
+      safe = RuVim::TextMetrics.terminal_safe_text(str)
+      RuVim::TextMetrics.pad_plain_to_screen_width(safe, width)
     end
 
     def error_message_line(msg, cols)
