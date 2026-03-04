@@ -46,7 +46,7 @@ module RuVim
       "shiftwidth" => { default_scope: :buffer, type: :int, default: 2 },
       "softtabstop" => { default_scope: :buffer, type: :int, default: 0 },
       "autoindent" => { default_scope: :buffer, type: :bool, default: true },
-      "smartindent" => { default_scope: :buffer, type: :bool, default: false },
+      "smartindent" => { default_scope: :buffer, type: :bool, default: true },
       "iskeyword" => { default_scope: :buffer, type: :string, default: nil },
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil },
