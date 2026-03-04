@@ -871,15 +871,19 @@ module RuVim
     end
 
     def search_bg_seq(editor)
-      truecolor_enabled?(editor) ? "\e[48;2;255;215;0m" : "\e[43m"
+      term_color(editor, "\e[48;2;255;215;0m", "\e[43m")
     end
 
     def colorcolumn_bg_seq(editor)
-      truecolor_enabled?(editor) ? "\e[48;2;72;72;72m" : "\e[48;5;238m"
+      term_color(editor, "\e[48;2;72;72;72m", "\e[48;5;238m")
     end
 
     def cursorline_bg_seq(editor)
-      truecolor_enabled?(editor) ? "\e[48;2;58;58;58m" : "\e[48;5;236m"
+      term_color(editor, "\e[48;2;58;58;58m", "\e[48;5;236m")
+    end
+
+    def term_color(editor, truecolor_seq, fallback_seq)
+      truecolor_enabled?(editor) ? truecolor_seq : fallback_seq
     end
 
     def line_number_fg_seq(editor, current_line: false)

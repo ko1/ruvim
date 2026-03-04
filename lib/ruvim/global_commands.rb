@@ -1754,22 +1754,22 @@ module RuVim
     end
 
     def delete_text_object_word(ctx, around:)
-      span = word_object_span(ctx.buffer, ctx.window, around:)
-      return false unless span
-
-      text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
-      ctx.buffer.begin_change_group
-      ctx.buffer.delete_span(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
-      ctx.buffer.end_change_group
-      store_delete_register(ctx, text:, type: :charwise) unless text.empty?
-      ctx.window.cursor_y = span[:start_row]
-      ctx.window.cursor_x = span[:start_col]
-      ctx.window.clamp_to_buffer(ctx.buffer)
-      true
+      delete_span(ctx, word_object_span(ctx.buffer, ctx.window, around:))
     end
 
     def delete_text_object(ctx, motion)
-      span = text_object_span(ctx.buffer, ctx.window, motion)
+      delete_span(ctx, text_object_span(ctx.buffer, ctx.window, motion))
+    end
+
+    def yank_text_object_word(ctx, around:)
+      yank_span(ctx, word_object_span(ctx.buffer, ctx.window, around:))
+    end
+
+    def yank_text_object(ctx, motion)
+      yank_span(ctx, text_object_span(ctx.buffer, ctx.window, motion))
+    end
+
+    def delete_span(ctx, span)
       return false unless span
 
       text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
@@ -1783,18 +1783,7 @@ module RuVim
       true
     end
 
-    def yank_text_object_word(ctx, around:)
-      span = word_object_span(ctx.buffer, ctx.window, around:)
-      return false unless span
-
-      text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
-      store_yank_register(ctx, text:, type: :charwise) unless text.empty?
-      ctx.editor.echo("yanked")
-      true
-    end
-
-    def yank_text_object(ctx, motion)
-      span = text_object_span(ctx.buffer, ctx.window, motion)
+    def yank_span(ctx, span)
       return false unless span
 
       text = ctx.buffer.span_text(span[:start_row], span[:start_col], span[:end_row], span[:end_col])
@@ -1979,9 +1968,9 @@ module RuVim
       x = [window.cursor_x, line.length - 1].min
       return nil if x.negative?
 
-      left = find_left_quote(line, x, quote)
+      left = find_quote(line, x, quote, :left)
       right_from = [x, (left ? left + 1 : 0)].max
-      right = find_right_quote(line, right_from, quote)
+      right = find_quote(line, right_from, quote, :right)
       return nil unless left && right && left < right
 
       if around
@@ -2053,20 +2042,18 @@ module RuVim
       end
     end
 
-    def find_left_quote(line, x, quote)
+    def find_quote(line, x, quote, direction)
       i = x
-      while i >= 0
-        return i if line[i] == quote && !escaped?(line, i)
-        i -= 1
-      end
-      nil
-    end
-
-    def find_right_quote(line, x, quote)
-      i = x
-      while i < line.length
-        return i if line[i] == quote && !escaped?(line, i)
-        i += 1
+      if direction == :left
+        while i >= 0
+          return i if line[i] == quote && !escaped?(line, i)
+          i -= 1
+        end
+      else
+        while i < line.length
+          return i if line[i] == quote && !escaped?(line, i)
+          i += 1
+        end
       end
       nil
     end
