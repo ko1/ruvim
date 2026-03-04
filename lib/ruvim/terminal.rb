@@ -20,7 +20,7 @@ module RuVim
 
     def with_ui
       @stdin.raw do
-        write("\e[?1049h\e[?25l")
+        write("\e]112\a\e[?1049h\e[?25l")
         yield
       ensure
         write("\e[?25h\e[?1049l")
