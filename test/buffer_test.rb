@@ -1,4 +1,5 @@
 require_relative "test_helper"
+require "tmpdir"
 
 class BufferTest < Minitest::Test
   def test_insert_and_undo_redo_group
@@ -25,7 +26,7 @@ class BufferTest < Minitest::Test
   end
 
   def test_reload_from_file_clears_modified_and_history
-    path = "/tmp/ruvim_buffer_reload_test.txt"
+    path = File.join(Dir.tmpdir, "ruvim_buffer_reload_test.txt")
     File.write(path, "one\n")
     b = RuVim::Buffer.from_file(id: 1, path: path)
     b.insert_char(0, 0, "X")
@@ -39,7 +40,7 @@ class BufferTest < Minitest::Test
   end
 
   def test_utf8_file_is_loaded_as_utf8_text_not_binary_bytes
-    path = "/tmp/ruvim_utf8_test.txt"
+    path = File.join(Dir.tmpdir, "ruvim_utf8_test.txt")
     File.binwrite(path, "bar 日本語 編集\n".encode("UTF-8"))
 
     b = RuVim::Buffer.from_file(id: 1, path: path)
@@ -49,7 +50,7 @@ class BufferTest < Minitest::Test
   end
 
   def test_invalid_bytes_are_decoded_to_valid_utf8_with_replacement
-    path = "/tmp/ruvim_invalid_bytes_test.txt"
+    path = File.join(Dir.tmpdir, "ruvim_invalid_bytes_test.txt")
     File.binwrite(path, "A\xFFB\n".b)
 
     b = RuVim::Buffer.from_file(id: 1, path: path)
@@ -60,7 +61,7 @@ class BufferTest < Minitest::Test
   end
 
   def test_write_to_saves_utf8_text
-    path = "/tmp/ruvim_write_utf8_test.txt"
+    path = File.join(Dir.tmpdir, "ruvim_write_utf8_test.txt")
     b = RuVim::Buffer.new(id: 1, lines: ["日本語", "abc"])
     b.write_to(path)
 
