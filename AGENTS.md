@@ -45,8 +45,12 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `display_width.rb` | Character display width (CJK, emoji, combining marks) |
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
-| `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules and Prism) |
+| `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
+| `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer |
+| `lang/json.rb` | JSON syntax highlighting via regex |
+| `lang/tsv.rb` | TSV detection and RichView renderer registration |
+| `lang/csv.rb` | CSV detection and RichView renderer registration |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
 | `command_invocation.rb` | Single command invocation (id, argv, count, bang) |

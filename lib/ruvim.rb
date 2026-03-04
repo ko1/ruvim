@@ -12,6 +12,8 @@ require_relative "ruvim/keyword_chars"
 require_relative "ruvim/text_metrics"
 require_relative "ruvim/clipboard"
 require_relative "ruvim/lang/markdown"
+require_relative "ruvim/lang/ruby"
+require_relative "ruvim/lang/json"
 require_relative "ruvim/highlighter"
 require_relative "ruvim/context"
 require_relative "ruvim/buffer"
@@ -26,6 +28,12 @@ require_relative "ruvim/command_line"
 require_relative "ruvim/input"
 require_relative "ruvim/terminal"
 require_relative "ruvim/rich_view"
+
+# Register renderers after RichView is defined
+RuVim::RichView.register("markdown", RuVim::RichView::MarkdownRenderer)
+
+require_relative "ruvim/lang/tsv"
+require_relative "ruvim/lang/csv"
 require_relative "ruvim/screen"
 require_relative "ruvim/config_dsl"
 require_relative "ruvim/config_loader"

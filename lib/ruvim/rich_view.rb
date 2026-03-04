@@ -4,11 +4,13 @@ require_relative "rich_view/markdown_renderer"
 module RuVim
   module RichView
     @renderers = {}
+    @detectors = []
 
     module_function
 
-    def register(filetype, renderer)
+    def register(filetype, renderer, detector: nil)
       @renderers[filetype.to_s] = renderer
+      @detectors << { filetype: filetype.to_s, detector: detector } if detector
     end
 
     def renderer_for(filetype)
@@ -20,21 +22,17 @@ module RuVim
     end
 
     # Detect format from filetype or buffer content.
-    # Returns a filetype string ("tsv", "csv") or nil.
+    # Returns a filetype string ("tsv", "csv", "markdown") or nil.
     def detect_format(buffer)
       ft = buffer.options["filetype"].to_s
       return ft if @renderers.key?(ft)
 
-      # Auto-detect from content: count tabs vs commas in first few lines
-      sample = (0...[buffer.line_count, 20].min).map { |i| buffer.line_at(i) }
-      tabs = sample.sum { |l| l.count("\t") }
-      commas = sample.sum { |l| l.count(",") }
-
-      if tabs > 0 && tabs >= commas
-        "tsv"
-      elsif commas > 0
-        "csv"
+      # Ask registered detectors
+      @detectors.each do |entry|
+        return entry[:filetype] if entry[:detector].call(buffer)
       end
+
+      nil
     end
 
     # Enter rich mode on the current buffer (same buffer, no virtual buffer).
@@ -89,10 +87,5 @@ module RuVim
 
       editor.exit_rich_mode
     end
-
-    # Register built-in renderers
-    register("tsv", TableRenderer)
-    register("csv", TableRenderer)
-    register("markdown", MarkdownRenderer)
   end
 end
