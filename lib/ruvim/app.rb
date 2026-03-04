@@ -346,6 +346,7 @@ module RuVim
       register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
+      register_internal_unless(cmd, "quickfix.open", call: :ex_copen, desc: "Open quickfix list")
     end
 
     def bind_default_keys!
@@ -434,6 +435,7 @@ module RuVim
       @keymaps.bind(:normal, "g#", "search.word_backward_partial")
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
       @keymaps.bind(:normal, "gr", "rich.toggle")
+      @keymaps.bind(:normal, "Q", "quickfix.open")
       @keymaps.bind(:normal, ["]", "q"], "quickfix.next")
       @keymaps.bind(:normal, ["[", "q"], "quickfix.prev")
       @keymaps.bind(:normal, ["<PageUp>"], "cursor.page_up.default")

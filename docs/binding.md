@@ -80,6 +80,7 @@
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
 - `矢印キー` : 移動
 - `PageUp` / `PageDown` : 画面単位で移動（概ね表示高さ - 1 行）
+- `Q` : quickfix list を開く（`:copen` 相当）
 - `]q` : 次の quickfix item へジャンプ（`:cnext` 相当）
 - `[q` : 前の quickfix item へジャンプ（`:cprev` 相当）
 - `Enter` : quickfix / location list バッファ上では選択項目へジャンプ（一覧ウィンドウから元の編集ウィンドウへ戻る）
