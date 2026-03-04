@@ -80,7 +80,8 @@ class OnSaveHookTest < Minitest::Test
 
     Dir.mktmpdir do |dir|
       path = File.join(dir, "bad.rb")
-      File.write(path, "def foo(\n")
+      # Two lines so error is on line 2 — verifiable jump target
+      File.write(path, "x = 1\ndef foo(\n")
 
       # Open and write the file
       ":e #{path}\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
@@ -89,7 +90,12 @@ class OnSaveHookTest < Minitest::Test
       refute_empty editor.quickfix_items, "quickfix should be populated after :w with syntax error"
       assert_equal 0, editor.quickfix_index
 
-      # Press ]q
+      # :w should auto-jump to first error location
+      first_item = editor.quickfix_items.first
+      assert_equal first_item[:row], editor.current_window.cursor_y,
+        "cursor should jump to first quickfix item after :w"
+
+      # Press ]q to navigate to next item
       app.send(:handle_key, "]")
       app.send(:handle_key, "q")
 

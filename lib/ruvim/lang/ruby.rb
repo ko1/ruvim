@@ -199,6 +199,7 @@ module RuVim
           }
           items = [{ buffer_id: buffer_id, row: 0, col: 0, text: message }] if items.empty?
           ctx.editor.set_quickfix_list(items)
+          ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
           first = message.lines.first.to_s.strip
           hint = items.size > 1 ? " (]q to see next, #{items.size} total)" : ""
           ctx.editor.echo_error("#{first}#{hint}")
