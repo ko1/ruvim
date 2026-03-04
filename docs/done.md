@@ -56,6 +56,9 @@
 - filetype 検出に `.tsv` / `.csv` 追加
 - Rich View → Rich mode へ変換（仮想バッファ方式から同一バッファ上のモード方式へ）
 - Rich mode の横スクロール修正（`$` で行末に移動した際の縦揃えズレを解消）
+- Markdown Rich mode（見出し・インライン装飾・テーブル罫線・コードブロック・HR・ブロック引用の ANSI レンダリング）
+- `render_rich_view_line_sc` の ANSI エスケープシーケンス対応
+- `ensure_visible_rich` の汎用化（`renderer.cursor_display_col` インターフェース）
 
 ## UI / 画面描画 / 端末挙動
 

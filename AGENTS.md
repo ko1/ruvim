@@ -49,8 +49,9 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
 | `command_invocation.rb` | Single command invocation (id, argv, count, bang) |
-| `rich_view.rb` | Rich view mode (TSV/CSV table rendering) |
+| `rich_view.rb` | Rich view mode (TSV/CSV/Markdown rendering) |
 | `rich_view/table_renderer.rb` | Table formatting with display-width-aware column alignment |
+| `rich_view/markdown_renderer.rb` | Markdown rendering (headings, inline, tables, code blocks, HR) |
 
 ### Tests (test/)
 

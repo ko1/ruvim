@@ -365,7 +365,8 @@ module RuVim
       end
 
       non_nil = raw_lines.compact
-      formatted = RuVim::RichView.render_visible_lines(editor, non_nil)
+      context = rich_view_context(editor, window, buffer)
+      formatted = RuVim::RichView.render_visible_lines(editor, non_nil, context: context)
       fmt_idx = 0
       col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
 
@@ -383,15 +384,44 @@ module RuVim
       end
     end
 
+    def rich_view_context(editor, window, buffer)
+      state = editor.rich_state
+      return {} unless state
+
+      format = state[:format]
+      renderer = RuVim::RichView.renderer_for(format)
+      return {} unless renderer && renderer.respond_to?(:needs_pre_context?) && renderer.needs_pre_context?
+
+      # Collect lines before the visible area for state tracking (e.g., code fences)
+      pre_lines = []
+      (0...window.row_offset).each do |row|
+        pre_lines << buffer.line_at(row) if row < buffer.line_count
+      end
+      { pre_context_lines: pre_lines }
+    end
+
     # Render a formatted rich-view line by skipping `skip_sc` display columns
     # then showing the next `width` display columns.  Using screen columns
     # instead of character indices keeps alignment correct when lines mix
     # CJK and ASCII characters with different char-to-display-width ratios.
+    # ANSI escape sequences (\e[...m) are treated as zero-width and passed
+    # through to the output unchanged.
     def render_rich_view_line_sc(text, width:, skip_sc:)
       # Phase 1: skip `skip_sc` display columns
+      # Collect ANSI sequences encountered during skip so active styles carry over.
+      chars = text.to_s
       pos = 0
       skipped = 0
-      text.each_char do |ch|
+      len = chars.length
+      pending_ansi = +""
+      while pos < len
+        if chars[pos] == "\e"
+          end_pos = find_ansi_end(chars, pos)
+          pending_ansi << chars[pos...end_pos]
+          pos = end_pos
+          next
+        end
+        ch = chars[pos]
         cw = RuVim::DisplayWidth.cell_width(ch, col: skipped, tabstop: 8)
         break if skipped + cw > skip_sc
         skipped += cw
@@ -402,25 +432,47 @@ module RuVim
 
       # Phase 2: collect `width` display columns
       out = +""
+      out << pending_ansi unless pending_ansi.empty?
       col = 0
       if leading_pad > 0
-        # The character at `pos` straddles the viewport left edge —
-        # its left part is outside and its right part is inside.
-        # We cannot display a partial wide character, so replace the
-        # visible portion with spaces and skip the character entirely.
         out << " " * leading_pad
         col += leading_pad
-        pos += 1
+        pos += 1 if pos < len && chars[pos] != "\e"
       end
-      rest = text[pos..] || ""
-      rest.each_char do |ch|
+      while pos < len
+        if chars[pos] == "\e"
+          end_pos = find_ansi_end(chars, pos)
+          out << chars[pos...end_pos]
+          pos = end_pos
+          next
+        end
+        ch = chars[pos]
         cw = RuVim::DisplayWidth.cell_width(ch, col: skipped + col, tabstop: 8)
         break if col + cw > width
         out << ch
         col += cw
+        pos += 1
       end
       out << " " * [width - col, 0].max
+      out << "\e[m"
       out
+    end
+
+    # Find the end position of an ANSI escape sequence starting at `pos`.
+    # Handles CSI sequences (\e[...X) where X is a letter.
+    def find_ansi_end(str, pos)
+      i = pos + 1  # skip \e
+      return i if i >= str.length
+      if str[i] == "["
+        i += 1
+        # Skip parameter bytes and intermediate bytes
+        i += 1 while i < str.length && str[i].ord >= 0x20 && str[i].ord <= 0x3F
+        # Final byte
+        i += 1 if i < str.length && str[i].ord >= 0x40 && str[i].ord <= 0x7E
+      else
+        i += 1
+      end
+      i
     end
 
     def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
@@ -485,7 +537,9 @@ module RuVim
         return
       end
 
+      format = state[:format]
       delimiter = state[:delimiter]
+      renderer = RuVim::RichView.renderer_for(format)
       height = [rect[:height], 1].max
 
       raw_lines = height.times.map { |dy|
@@ -493,17 +547,15 @@ module RuVim
         row < buf.line_count ? buf.line_at(row) : nil
       }.compact
 
-      col_widths = RuVim::RichView::TableRenderer.compute_col_widths(raw_lines, delimiter: delimiter)
-      unless col_widths
-        @rich_render_info = nil
-        @rich_col_offset_sc = 0
-        return
-      end
-
       cursor_raw_line = buf.line_at(win.cursor_y)
-      cursor_sc = RuVim::RichView::TableRenderer.raw_to_formatted_display_col(
-        cursor_raw_line, win.cursor_x, delimiter: delimiter, col_widths: col_widths
-      )
+
+      if renderer && renderer.respond_to?(:cursor_display_col)
+        cursor_sc = renderer.cursor_display_col(
+          cursor_raw_line, win.cursor_x, visible_lines: raw_lines, delimiter: delimiter
+        )
+      else
+        cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(cursor_raw_line, win.cursor_x)
+      end
 
       # Use persisted screen-column offset from previous frame
       offset_sc = @rich_col_offset_sc || 0
@@ -524,7 +576,6 @@ module RuVim
         @rich_render_info = {
           col_offset_sc: offset_sc,
           cursor_sc: cursor_sc,
-          col_widths: col_widths,
           delimiter: delimiter
         }
       end

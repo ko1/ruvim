@@ -87,6 +87,14 @@ module RuVim
         display_col
       end
 
+      # Compute the display column for the cursor position in a formatted line.
+      def cursor_display_col(raw_line, cursor_x, visible_lines:, delimiter:)
+        col_widths = compute_col_widths(visible_lines, delimiter: delimiter)
+        return RuVim::TextMetrics.screen_col_for_char_index(raw_line, cursor_x) unless col_widths
+
+        raw_to_formatted_display_col(raw_line, cursor_x, delimiter: delimiter, col_widths: col_widths)
+      end
+
       # Render visible lines: split by delimiter, compute column widths, pad and join.
       # Returns an array of formatted strings.
       def render_visible(lines, delimiter:)

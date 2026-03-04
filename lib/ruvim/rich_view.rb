@@ -1,4 +1,5 @@
 require_relative "rich_view/table_renderer"
+require_relative "rich_view/markdown_renderer"
 
 module RuVim
   module RichView
@@ -57,7 +58,7 @@ module RuVim
 
     # Render visible lines through the appropriate renderer.
     # Takes raw lines from buffer, returns formatted lines for display.
-    def render_visible_lines(editor, lines)
+    def render_visible_lines(editor, lines, context: {})
       state = editor.rich_state
       return lines unless state
 
@@ -66,7 +67,11 @@ module RuVim
       return lines unless renderer
 
       delimiter = state[:delimiter]
-      renderer.render_visible(lines, delimiter: delimiter)
+      if renderer.respond_to?(:needs_pre_context?) && renderer.needs_pre_context?
+        renderer.render_visible(lines, delimiter: delimiter, context: context)
+      else
+        renderer.render_visible(lines, delimiter: delimiter)
+      end
     end
 
     # Toggle: if in rich mode, exit; otherwise enter.
@@ -88,5 +93,6 @@ module RuVim
     # Register built-in renderers
     register("tsv", TableRenderer)
     register("csv", TableRenderer)
+    register("markdown", MarkdownRenderer)
   end
 end
