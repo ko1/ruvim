@@ -905,6 +905,10 @@ module RuVim
       @tabpages.length
     end
 
+    def tabpage_windows(tab)
+      tree_leaves(tab[:layout_tree])
+    end
+
     def window_count
       tree_leaves(@layout_tree).length
     end

@@ -336,6 +336,7 @@ module RuVim
       register_ex_unless(ex, "tabnew", call: :tab_new, desc: "New tab", nargs: :maybe_one)
       register_ex_unless(ex, "tabnext", call: :tab_next, aliases: %w[tabn], desc: "Next tab", nargs: 0)
       register_ex_unless(ex, "tabprev", call: :tab_prev, aliases: %w[tabp], desc: "Prev tab", nargs: 0)
+      register_ex_unless(ex, "tabs", call: :tab_list, desc: "List tabs", nargs: 0)
       register_ex_unless(ex, "vimgrep", call: :ex_vimgrep, desc: "Populate quickfix from regex (minimal)", nargs: :any)
       register_ex_unless(ex, "lvimgrep", call: :ex_lvimgrep, desc: "Populate location list from regex (minimal)", nargs: :any)
       register_ex_unless(ex, "copen", call: :ex_copen, desc: "Open quickfix list", nargs: 0)

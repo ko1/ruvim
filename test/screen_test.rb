@@ -524,6 +524,32 @@ class ScreenTest < Minitest::Test
     assert_operator cursor_col, :<=, cols_key
   end
 
+  def test_status_line_shows_tab_indicator_when_multiple_tabs
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    editor.tabnew
+    editor.tabnew
+
+    term = TerminalStub.new([6, 60])
+    screen = RuVim::Screen.new(terminal: term)
+    line = screen.send(:status_line, editor, 60)
+
+    assert_includes line, "tab:3/3"
+  end
+
+  def test_status_line_hides_tab_indicator_when_single_tab
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+
+    term = TerminalStub.new([6, 60])
+    screen = RuVim::Screen.new(terminal: term)
+    line = screen.send(:status_line, editor, 60)
+
+    refute_includes line, "tab:"
+  end
+
   def test_window_rects_nested_vsplit_hsplit
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer

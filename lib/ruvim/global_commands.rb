@@ -329,6 +329,28 @@ module RuVim
       ctx.editor.echo("tab #{ctx.editor.current_tabpage_number}/#{ctx.editor.tabpage_count}")
     end
 
+    def tab_list(ctx, **)
+      editor = ctx.editor
+      items = []
+      # For current tab, use live window_order; for others, use saved snapshot
+      editor.tabpages.each_with_index do |tab, i|
+        is_current = (i == editor.current_tabpage_index)
+        current_marker = is_current ? ">" : " "
+        items << "#{current_marker}Tab page #{i + 1}"
+        win_ids = is_current ? editor.window_order : editor.tabpage_windows(tab)
+        win_ids.each do |wid|
+          win = editor.windows[wid]
+          next unless win
+          buf = editor.buffers[win.buffer_id]
+          next unless buf
+          active = (is_current && wid == editor.current_window_id) ? ">" : " "
+          name = buf.display_name
+          items << "  #{active} #{name}"
+        end
+      end
+      editor.echo_multiline(items)
+    end
+
     def enter_command_line_mode(ctx, **)
       ctx.editor.enter_command_line_mode(":")
       ctx.editor.clear_message

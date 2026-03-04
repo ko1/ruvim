@@ -285,6 +285,21 @@ class DispatcherTest < Minitest::Test
     refute @editor.message_error?
   end
 
+  def test_tabs_lists_all_tabpages
+    @editor.tabnew(path: nil)
+    @editor.tabnew(path: nil)
+    assert_equal 3, @editor.tabpage_count
+
+    @dispatcher.dispatch_ex(@editor, "tabs")
+
+    lines = @editor.hit_enter_lines
+    refute_nil lines, "tabs should produce multiline output"
+    joined = lines.join("\n")
+    assert_includes joined, "Tab page 1"
+    assert_includes joined, "Tab page 2"
+    assert_includes joined, "Tab page 3"
+  end
+
   def test_splitbelow_and_splitright_change_insertion_side
     @editor.set_option("splitbelow", false, scope: :global)
     first = @editor.current_window_id

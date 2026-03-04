@@ -913,8 +913,9 @@ module RuVim
       mod = buffer.modified? ? " [+]" : ""
       stream = stream_status_token(buffer)
       loading = file_loading_status_token(buffer)
+      tab = tab_status_token(editor)
       msg = editor.message_error? ? "" : editor.message.to_s
-      left = "#{mode} #{path}#{mod}#{stream}#{loading}"
+      left = "#{mode} #{path}#{mod}#{stream}#{loading}#{tab}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1} "
       body_width = [width - right.length, 0].max
       "#{compose_status_body(left, msg, body_width)}#{right}"
@@ -937,6 +938,12 @@ module RuVim
       return "" if state.to_sym == :closed
 
       " [load/#{state}]"
+    end
+
+    def tab_status_token(editor)
+      return "" if editor.tabpage_count <= 1
+
+      " tab:#{editor.current_tabpage_number}/#{editor.tabpage_count}"
     end
 
     def compose_status_body(left, msg, width)

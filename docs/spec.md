@@ -493,6 +493,8 @@ ANSI エスケープシーケンスによる再描画です。
 
 - `:tabnew [path]` で新しいタブを作成
 - `:tabnext`, `:tabprev` で移動
+- `:tabs` で全タブ一覧を表示（各タブのウィンドウとバッファ名）
+- ステータスラインに `tab:n/m` を表示（タブが2つ以上のとき）
 - 各タブは以下を独立に保持
   - window list（表示中 window 群）
   - current window
