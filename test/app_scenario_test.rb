@@ -747,4 +747,53 @@ class AppScenarioTest < Minitest::Test
     assert_equal ["def foo", "  bar", "end"], @editor.current_buffer.lines
     assert_equal :normal, @editor.mode
   end
+
+  # :qa / :qall tests
+
+  def test_qa_quits_with_multiple_windows
+    @dispatcher.dispatch_ex(@editor, "split")
+    assert_equal 2, @editor.window_count
+
+    @dispatcher.dispatch_ex(@editor, "qa")
+    assert_equal false, @editor.running?
+  end
+
+  def test_qa_refuses_with_unsaved_changes
+    @editor.current_buffer.replace_all_lines!(["modified"])
+    @editor.current_buffer.instance_variable_set(:@modified, true)
+
+    @dispatcher.dispatch_ex(@editor, "qa")
+    assert @editor.running?
+    assert_match(/unsaved changes/, @editor.message)
+  end
+
+  def test_qa_bang_forces_quit_with_unsaved_changes
+    @editor.current_buffer.replace_all_lines!(["modified"])
+    @editor.current_buffer.instance_variable_set(:@modified, true)
+
+    @dispatcher.dispatch_ex(@editor, "qa!")
+    assert_equal false, @editor.running?
+  end
+
+  def test_wqa_writes_all_and_quits
+    Dir.mktmpdir do |dir|
+      path1 = File.join(dir, "a.txt")
+      path2 = File.join(dir, "b.txt")
+      File.write(path1, "")
+      File.write(path2, "")
+
+      @editor.current_buffer.replace_all_lines!(["hello"])
+      @editor.current_buffer.instance_variable_set(:@path, path1)
+      @editor.current_buffer.instance_variable_set(:@modified, true)
+
+      buf2 = @editor.add_empty_buffer(path: path2)
+      buf2.replace_all_lines!(["world"])
+      buf2.instance_variable_set(:@modified, true)
+
+      @dispatcher.dispatch_ex(@editor, "wqa")
+      assert_equal false, @editor.running?
+      assert_equal "hello", File.read(path1)
+      assert_equal "world", File.read(path2)
+    end
+  end
 end

@@ -736,6 +736,25 @@ module RuVim
       ctx.editor.request_quit!
     end
 
+    def app_quit_all(ctx, bang:, **)
+      unless bang
+        modified = ctx.editor.buffers.values.select { |b| b.file_buffer? && b.modified? }
+        unless modified.empty?
+          ctx.editor.echo_error("#{modified.size} buffer(s) have unsaved changes (add ! to override)")
+          return
+        end
+      end
+      ctx.editor.request_quit!
+    end
+
+    def file_write_quit_all(ctx, bang:, **)
+      ctx.editor.buffers.each_value do |buf|
+        next unless buf.file_buffer? && buf.modified? && buf.path
+        buf.write_to(buf.path)
+      end
+      app_quit_all(ctx, bang: true)
+    end
+
     def file_write_quit(ctx, argv:, bang:, **)
       file_write(ctx, argv:, bang:)
       return unless ctx.editor.running?

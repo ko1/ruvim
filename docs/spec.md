@@ -346,7 +346,9 @@ RuVim::ExCommandRegistry.instance.register(
 
 - `:w [path]` / `:write [path]`
 - `:q[!]` / `:quit[!]`
+- `:qa[!]` / `:qall[!]`
 - `:wq[!] [path]`
+- `:wqa[!]` / `:wqall[!]` / `:xa[!]` / `:xall[!]`
 - `:e <path>` / `:edit <path>`
 - `:e[!] [path]` / `:edit[!] [path]`
 - `:help [topic]`
@@ -393,6 +395,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `:q` は未保存変更があると拒否
 - `:q` は Vim 寄りに、複数 window 時は current window を閉じる（window が1つで tab が複数なら current tab を閉じる）
 - `:q!` は強制的に window / tab / app を閉じる
+- `:qa` は全ウィンドウ/タブを無視して一括終了（未保存バッファがあると拒否、`:qa!` で強制）
+- `:wqa` は全バッファを保存して一括終了
 - `:e` は未保存変更があると拒否（`!` で破棄可）
 - `:e!`（引数なし）は現在ファイルの再読込（undo/redo クリア）
 - `:buffer!`, `:bnext!`, `:bprev!` は未保存変更があっても切替
