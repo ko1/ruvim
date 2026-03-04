@@ -332,7 +332,6 @@ module RuVim
 
       y = ctx.window.cursor_y
       x = ctx.window.cursor_x
-      changed = false
       processed = false
 
       ctx.buffer.begin_change_group
@@ -345,7 +344,6 @@ module RuVim
         if !swapped.empty? && swapped != ch
           ctx.buffer.delete_span(y, x, y, x + 1)
           ctx.buffer.insert_char(y, x, swapped[0])
-          changed = true
         end
         processed = true
         x += 1
