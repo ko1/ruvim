@@ -1,180 +1,102 @@
-# RuVim と Vim の違い（現状）
+# RuVim と Vim の違い
 
-この文書は、現時点の RuVim 実装と本家 Vim の違いをまとめたものです。
+RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 完全互換ではなく、Vim の操作感を優先しつつ一部を独自拡張・簡略化しています。
 
-## 位置づけ
+## RuVim の独自機能・強み
 
-- RuVim は「Vim ライクな Ruby 製ターミナルエディタ」
-- 現状は Vim 完全互換ではない
-- Vim の操作感を優先して、一部を簡略化している
+### Ruby ネイティブな拡張性
 
-## 大きな違い（全体）
+- 設定ファイルは Ruby DSL（`~/.config/ruvim/init.rb`）
+  - `nmap`, `imap`, `map_global`, `command`, `ex_command`, `ex_command_call`
+  - Vim script 不要で Ruby の全機能を利用可能
+- `:ruby` / `:rb` で実行中に Ruby eval が可能（Vim の `:ruby` とは別物）
+- plugin 向け `ctx.editor / ctx.buffer / ctx.window` API
 
-- Vim script 互換はない
-  - 代わりに `:ruby` / `:rb`
-- プラグイン互換はない
-- split UI は簡易実装（等分割タイル）
-  - `:split`, `:vsplit` はある
-  - Vim の nested window tree / 高度な window 操作は未実装
-- tabpage は最小実装
-  - `:tabnew`, `:tabnext`, `:tabprev` はある
-  - Vim の高度な tab 操作/コマンド群は未実装
-- register は `unnamed` / `named` / `"_` / `0` / `1-9` / `"+` / `"*` の基礎を実装
-- option system は基礎のみ（`:set`, `:setlocal`, `:setglobal`, `number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype`）
-- filetype 検出 / ftplugin は基礎のみ（拡張子中心の簡易判定）
-- Ex コマンドは一部のみ
+### ネストしたウィンドウ分割（Layout Tree）
 
-## コマンドライン / Ex の違い
+- `:vsplit` 後に `:split` すると、対象カラムだけが上下分割される（Vim と同様のツリー構造）
+- 同方向の連続分割は自動的にフラット化（例: hsplit の中で hsplit → 1 レベルに統合）
+- `Shift+Arrow` キーによるスマート分割
+  - 同軸方向に既存ウィンドウがあればフォーカス移動
+  - なければ新規分割（cross-direction split にも対応）
+  - ツリーパスベースの判定で、別領域のウィンドウに影響されない
 
-- `:w`, `:q`, `:wq`, `:e`, `:buffer`, `:bnext`, `:bprev`, `:ls` などはあるが一部のみ
-- quickfix / location list は最小実装のみ
-  - `:vimgrep`, `:lvimgrep`, `:copen/:cnext`, `:lopen/:lnext` など
-  - `qf/location list` 一覧バッファで `Enter` による選択ジャンプは対応
-  - `:grep`, `:make`, `:cfile`, `:lgrep` は未実装
-- `:command` はあるが、現状は「Ex 文字列エイリアス展開」に近い簡易実装
-- `:ruby` はあるが、Vim の `:ruby` 機能互換ではなく RuVim 独自の Ruby eval 入口
-- `:w!` は現状 `:w` とほぼ同じ（権限昇格や readonly 強制保存の完全な意味は未実装）
+### Rich View モード
 
-## モード / 編集操作の違い
+- TSV / CSV / Markdown をフォーマットして閲覧できる構造化データ表示モード
+- CJK 文字幅を考慮したカラム整列
 
-- Normal / Insert / Command-line / Visual（charwise, linewise, blockwise 最小）は実装済み
-- Visual mode は最小実装
-  - `y`, `d` 中心
-  - `Ctrl-v` blockwise は矩形選択 + `y/d` の最小対応
-  - blockwise text object / paste の Vim 互換挙動は未実装
-  - Vim の細かい選択挙動や text object は一部未実装
-- operator-pending は `d`, `y`, `c` の一部を実装
-  - text object は `iw/aw`, `ip/ap`, `i"/a"`, ``i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}` を実装（簡易）
-  - Vim の text object 群全体は未実装
-- word motion（`w`, `b`, `e`）は簡易定義
-  - Vim の厳密な単語境界とは一致しない場合がある
-- undo 粒度は簡略化
-  - Insert mode は「入ってから出るまで」を 1 undo 単位
-- `.` repeat は拡張済みだが完全互換ではない
-  - `x`, `dd`, `d{motion}`, `p/P`, `r<char>`, `i/a/A/I/o/O`, `cc`, `c{motion}` を対象
+### 検索は Ruby 正規表現
+
+- `/`, `?`, `:s` はすべて Ruby の `Regexp` を使用
+- Vim regex と異なる点はあるが、Ruby 利用者には馴染みやすい
+- `:help regex` でヘルプ表示
+
+## Vim と同等に実装済みの機能
+
+### モード・編集操作
+
+- Normal / Insert / Command-line / Visual（charwise, linewise, blockwise）
+- operator-pending: `d`, `y`, `c` + motion / text object
+- text object: `iw/aw`, `ip/ap`, `i"/a"`, `` i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}`
+- `.` repeat: `x`, `dd`, `d{motion}`, `p/P`, `r<char>`, `i/a/A/I/o/O`, `cc`, `c{motion}`
   - macro 記録中の `.` は内部再生キーを macro に混ぜない
-  - Vim の細かい repeat 粒度/カウント互換は未実装
+- word motion: `w`, `b`, `e`（`iskeyword` 対応）
+- macros: `q{reg}`, `@{reg}`, `@@`
+- marks / jumps: `m`, `'`, `` ` ``, `''`, ` `` `, `<C-o>`, `<C-i>`
 
-## レジスタ / yank / paste の違い
+### レジスタ
 
-- unnamed register（`"`）と named register（`"a`, `"A` append）を実装
-- black hole（`"_`）、yank `0`、numbered delete `1-9`（簡易）を実装
-- `"+`, `"*` は環境依存の system clipboard と連携（`pbcopy/pbpaste`, `wl-copy/wl-paste`, `xclip`, `xsel` のいずれか）
-- small delete register `-` など Vim の全 register 種別は未実装
-- paste の挙動は基本的な `charwise` / `linewise` 対応まで
-- Vim の細かいカーソル位置ルールとは差がある可能性がある
+- unnamed（`"`）, named（`"a`〜`"z`, `"A` append）, black hole（`"_`）
+- yank `"0`, numbered delete `"1`〜`"9`
+- system clipboard `"+`, `"*`（`pbcopy/pbpaste`, `wl-copy/wl-paste`, `xclip`, `xsel`）
 
-## 画面描画 / 端末挙動の違い
+### Ex コマンド
 
-- ANSI + raw mode の自前描画
-- 行キャッシュによる簡易差分描画（Vim の描画最適化とは別実装）
+- `:w`, `:q`, `:wq`, `:e`, `:buffer`, `:bnext`, `:bprev`, `:ls`, `:split`, `:vsplit`
+- `:qa`, `:qa!`, `:wqa`
+- quickfix / location list: `:vimgrep`, `:lvimgrep`, `:copen`, `:cnext`, `:lopen`, `:lnext`
+- tabpage: `:tabnew`, `:tabnext`, `:tabprev`
+
+### option system
+
+- `:set`, `:setlocal`, `:setglobal`（global / buffer-local / window-local）
+- 表示系: `number`, `relativenumber`, `cursorline`, `wrap`, `linebreak`, `breakindent`, `showbreak`, `list`, `listchars`, `colorcolumn`, `signcolumn`, `numberwidth`, `scrolloff`, `sidescrolloff`, `termguicolors`
+- インデント: `shiftwidth`, `softtabstop`, `expandtab`, `autoindent`, `smartindent`, `tabstop`
+- 検索: `ignorecase`, `smartcase`, `hlsearch`, `incsearch`
+- 分割: `splitbelow`, `splitright`
+- その他: `hidden`, `autowrite`, `clipboard`, `timeoutlen`, `ttimeoutlen`, `backspace`, `whichwrap`, `iskeyword`, `filetype`, `path`, `suffixesadd`, `grepprg`, `grepformat`, 補完系（`completeopt`, `pumheight`, `wildmode`, `wildmenu`, `wildignore`, `wildignorecase`）
+
+### その他
+
+- filetype 検出（拡張子 + shebang）/ ftplugin
+- syntax highlight: Ruby（Prism lexer）, JSON, Markdown, Scheme, TSV/CSV
+- 補完: Ex コマンド名 + 引数補完, Insert mode buffer words（`Ctrl-n` / `Ctrl-p`）
+- CLI: `--help`, `--version`, `--clean`, `-u`, `-R`, `-M`, `-Z`, `-o/-O/-p`, `-c`, `+{cmd}`, `-V`, `--startuptime`, `--cmd`
+
+## 動作の微細な差分
+
+- undo 粒度は簡略化（Insert mode は「入ってから出るまで」が 1 undo 単位）
+- `.` repeat のカウント互換は完全ではない
+- word motion の単語境界定義が Vim と一致しない場合がある
+- paste のカーソル位置ルールに Vim との差がある可能性がある
+- 文字幅対応は近似（CJK / emoji 幅2 / grapheme cluster は対応するが、East Asian Width 完全互換ではない）
+- ANSI + raw mode の自前描画（行キャッシュによる簡易差分描画で Vim の描画最適化とは別実装）
 - `SIGWINCH + self-pipe + IO.select` でリサイズ追従
-- 文字幅対応は近似実装
-  - タブ展開あり
-  - 一部全角/emoji 幅2対応
-  - 左右移動は grapheme cluster を考慮
-  - East Asian Width / grapheme cluster 完全互換ではない
+- `:w!` は現状 `:w` とほぼ同じ（権限昇格や readonly 強制保存は未実装）
+- `:command` は Ex 文字列エイリアス展開の簡易実装
+- Visual blockwise は矩形選択 + `y/d` の最小対応（blockwise text object / paste の Vim 互換挙動は未実装）
+- option 名短縮（`nu`, `ts` 等）は未対応
+- `:set` の高度な構文（`+=`, `-=`, `^=` 等）は未対応
+- small delete register `"-` は未実装
 
-## スクリプト / 設定の違い
+## 未実装の主要機能
 
-- XDG 設定ファイル（`$XDG_CONFIG_HOME/ruvim/init.rb` または `~/.config/ruvim/init.rb`）を Ruby DSL（`ConfigDSL`）で読む
-- Vim script 互換設定ファイルではない
-- CLI の `-u {path|NONE}` / `--clean` は一部実装済み（Vim 互換の全オプションは未実装）
-- 現状の DSL 例:
-  - `nmap`, `imap`, `map_global`
-  - `command`
-  - `ex_command`
-  - `ex_command_call`
-
-## CLI オプションの違い
-
-- 実装済み（現状）
-  - `--help`, `--version`
-  - `--clean`
-  - `-u {path|NONE}`
-  - `-R`, `-M`, `-Z`, `-n`（`-n` は現状 no-op）
-  - `-d`（placeholder: 未実装メッセージ）
-  - `-q {errorfile}`（placeholder: 未実装メッセージ）
-  - `-S [session]`（placeholder: 未実装メッセージ）
-  - `-o[N]`, `-O[N]`, `-p[N]`（基礎）
-  - `-V[N]`, `--verbose[=N]`（簡易）
-  - `--startuptime FILE`（簡易）
-  - `--cmd {cmd}`（pre-config Ex 実行）
-  - `-c {cmd}`
-  - `+{cmd}`, `+{line}`, `+`
-- 未実装（Vim で定番だが RuVim は未対応）
-  - 実処理としては `-S`, `-q`, `-d` など（現状は placeholder のみ）
-- 複数ファイル引数は `-o/-O/-p` 時のみ対応（通常起動の arglist 相当は未実装）
-
-## option（設定）の違い
-
-- 現状の実装済み option は少数（`number`, `relativenumber`, `ignorecase`, `smartcase`, `hlsearch`, `tabstop`, `filetype`）
-- Vim の option 名短縮（例: `nu`, `ts`）は未対応
-- `:set` の高度な構文（`+=`, `-=`, `^=`, `&`, `<` など）は未対応
-- `:set all` や詳細な一覧表示は未対応（簡易表示のみ）
-
-### Vim にあるが未実装の代表例（RuVim 現状）
-
-- 表示系
-  - `relativenumber`
-  - `cursorline`
-  - `wrap`
-  - `list`, `listchars`
-  - `colorcolumn`
-  - `signcolumn`
-  - `numberwidth`
-  - `scrolloff`, `sidescrolloff`
-- インデント/編集系
-  - `shiftwidth`
-  - `softtabstop`
-  - `expandtab`
-  - `autoindent`
-  - `smartindent`
-- 検索系
-  - `ignorecase`
-  - `smartcase`
-  - `hlsearch`
-  - `incsearch`
-- split / window 系
-  - `splitbelow`
-  - `splitright`
-  - `winfixheight`
-  - `winfixwidth`
-- ファイル / 永続化系
-  - `swapfile`
-  - `backup`
-  - `writebackup`
-  - `undofile`
-  - `undodir`
-- UI / 端末 / パフォーマンス系
-  - `termguicolors`
-  - `timeoutlen`
-  - `ttimeoutlen`
-  - `updatetime`
-
-注記:
-- これは網羅一覧ではなく、よく使われるものの代表例です。
-- 実装済み option の一覧は `docs/config.md` を参照。
-
-## 未実装（Vim との差分として大きいもの）
-
-- text objects は一部のみ（`iw/aw`, `ip/ap`, `i"/a"`, ``i`/a` ``, `i)/a)`, `i]/a]`, `i}/a}`）
-- change operator（`c` 系）は基礎のみ
-- macros / replay は基礎のみ（`q{reg}`, `@{reg}`, `@@`）
-- marks / jumps は基礎のみ（`m`, `'`, `` ` ``, `''`, `````, `<C-o>`, `<C-i>`）
-- search regex 互換（現状は Ruby 正規表現）
-- search は Ruby 正規表現ベース（Vim regex と非互換な点あり）
-- substitute は最小実装（`:%s/.../.../g` のみ、Vim の置換フラグ群は未対応）
+- Vim script 互換 / プラグイン互換
 - folds
-- syntax highlight は最小実装（regex ベース / `ruby`, `json` のみ）
-- 補完は基礎のみ
-  - Ex 補完（コマンド名 + 一部引数）
-  - Insert mode buffer words 補完（`Ctrl-n` / `Ctrl-p`）
 - LSP / diagnostics
-- job/channel/terminal 連携
-
-## 互換性の考え方（現状）
-
-- Vim の「概念（buffer / window / mode / operator / Ex）」は寄せる
-- 挙動の細部は MVP 実装として簡略化
-- 後方互換性より、Ruby で拡張しやすい構造を優先
+- job / channel / terminal 連携
+- `:grep`, `:make`, `:cfile`, `:lgrep`
+- substitute の高度なフラグ群（現状は `:%s/.../.../g` のみ）
+- swap / backup / undofile（永続 undo）
+- `-d`（diff mode）, `-q`（quickfix mode）, `-S`（session）は placeholder のみ
