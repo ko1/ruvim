@@ -162,6 +162,28 @@ module RuVim
         depth * shiftwidth
       end
 
+      # Returns true if the line should increase indent for the next line
+      def indent_trigger?(line)
+        stripped = line.to_s.rstrip.lstrip
+        first_word = stripped[/\A(\w+)/, 1].to_s
+        return true if %w[def class module if unless while until for begin case].include?(first_word)
+        return true if stripped.match?(/\bdo\s*(\|[^|]*\|)?\s*$/)
+        false
+      end
+
+      # Dedent trigger patterns keyed by the last character typed
+      DEDENT_TRIGGERS = {
+        "d" => /\A(\s*)end\z/,
+        "e" => /\A(\s*)(?:else|rescue|ensure)\z/,
+        "f" => /\A(\s*)elsif\z/,
+        "n" => /\A(\s*)(?:when|in)\z/
+      }.freeze
+
+      # Returns the dedent pattern for the given character, or nil
+      def dedent_trigger(char)
+        DEDENT_TRIGGERS[char]
+      end
+
       def color_columns(text)
         cols = {}
         Prism.lex(text).value.each do |entry|

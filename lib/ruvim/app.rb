@@ -666,6 +666,7 @@ module RuVim
         @editor.current_buffer.insert_char(@editor.current_window.cursor_y, @editor.current_window.cursor_x, key)
         @editor.current_window.cursor_x += 1
         maybe_showmatch_after_insert(key)
+        maybe_dedent_after_insert(key)
       end
     end
 
@@ -1832,11 +1833,9 @@ module RuVim
       if @editor.effective_option("smartindent", window: win, buffer: buf)
         trimmed = prev.rstrip
         needs_indent = trimmed.end_with?("{", "[", "(")
-        if !needs_indent && @editor.effective_option("filetype", buffer: buf) == "ruby"
-          stripped = trimmed.lstrip
-          first_word = stripped[/\A(\w+)/, 1].to_s
-          needs_indent = %w[def class module if unless while until for begin case].include?(first_word) ||
-                         stripped.match?(/\bdo\s*(\|[^|]*\|)?\s*$/)
+        if !needs_indent
+          lang_mod = lang_module_for(buf)
+          needs_indent = lang_mod.indent_trigger?(trimmed) if lang_mod&.respond_to?(:indent_trigger?)
         end
         if needs_indent
           sw = @editor.effective_option("shiftwidth", window: win, buffer: buf).to_i
@@ -1858,6 +1857,39 @@ module RuVim
       mt = @editor.effective_option("matchtime").to_i
       mt = 5 if mt <= 0
       @editor.echo_temporary("match", duration_seconds: mt * 0.1)
+    end
+
+    def maybe_dedent_after_insert(key)
+      return unless @editor.effective_option("smartindent", window: @editor.current_window, buffer: @editor.current_buffer)
+
+      buf = @editor.current_buffer
+      lang_mod = lang_module_for(buf)
+      return unless lang_mod&.respond_to?(:dedent_trigger) && lang_mod&.respond_to?(:calculate_indent)
+
+      pattern = lang_mod.dedent_trigger(key)
+      return unless pattern
+
+      row = @editor.current_window.cursor_y
+      line = buf.line_at(row)
+      m = line.match(pattern)
+      return unless m
+
+      sw = @editor.effective_option("shiftwidth", buffer: buf).to_i
+      sw = 2 if sw <= 0
+      target_indent = lang_mod.calculate_indent(buf.lines, row, sw)
+      current_indent = m[1].length
+      return if current_indent == target_indent
+
+      stripped = line.to_s.strip
+      buf.delete_span(row, 0, row, current_indent) if current_indent > 0
+      buf.insert_text(row, 0, " " * target_indent) if target_indent > 0
+      @editor.current_window.cursor_x = target_indent + stripped.length
+    end
+
+    def lang_module_for(buf)
+      case @editor.effective_option("filetype", buffer: buf)
+      when "ruby" then Lang::Ruby
+      end
     end
 
     def clear_expired_transient_message_if_any

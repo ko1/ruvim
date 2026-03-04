@@ -1274,19 +1274,23 @@ module RuVim
 
     private
 
+    def lang_module_for_indent(ctx)
+      case ctx.editor.effective_option("filetype", buffer: ctx.buffer)
+      when "ruby" then Lang::Ruby
+      end
+    end
+
     def reindent_range(ctx, start_row, end_row)
       buf = ctx.buffer
-      ft = ctx.editor.effective_option("filetype", buffer: buf)
+      lang_mod = lang_module_for_indent(ctx)
+      return unless lang_mod
+
       sw = ctx.editor.effective_option("shiftwidth", buffer: buf).to_i
       sw = 2 if sw <= 0
 
       buf.begin_change_group
       (start_row..end_row).each do |row|
-        if ft == "ruby" && defined?(Lang::Ruby)
-          target_indent = Lang::Ruby.calculate_indent(buf.lines, row, sw)
-        else
-          next # fallback: keep current indent for unsupported filetypes
-        end
+        target_indent = lang_mod.calculate_indent(buf.lines, row, sw)
         line = buf.line_at(row)
         current_indent = line[/\A */].to_s.length
         next if current_indent == target_indent
