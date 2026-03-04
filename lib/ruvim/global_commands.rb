@@ -265,37 +265,37 @@ module RuVim
 
     def window_focus_or_split_left(ctx, **)
       ed = ctx.editor
-      if ed.window_count <= 1
+      before = ed.current_window.id
+      ed.focus_window_direction(:left)
+      if ed.current_window.id == before
         ed.split_current_window(layout: :vertical, place: :before)
-      else
-        ed.focus_window_direction(:left)
       end
     end
 
     def window_focus_or_split_right(ctx, **)
       ed = ctx.editor
-      if ed.window_count <= 1
+      before = ed.current_window.id
+      ed.focus_window_direction(:right)
+      if ed.current_window.id == before
         ed.split_current_window(layout: :vertical, place: :after)
-      else
-        ed.focus_window_direction(:right)
       end
     end
 
     def window_focus_or_split_up(ctx, **)
       ed = ctx.editor
-      if ed.window_count <= 1
+      before = ed.current_window.id
+      ed.focus_window_direction(:up)
+      if ed.current_window.id == before
         ed.split_current_window(layout: :horizontal, place: :before)
-      else
-        ed.focus_window_direction(:up)
       end
     end
 
     def window_focus_or_split_down(ctx, **)
       ed = ctx.editor
-      if ed.window_count <= 1
+      before = ed.current_window.id
+      ed.focus_window_direction(:down)
+      if ed.current_window.id == before
         ed.split_current_window(layout: :horizontal, place: :after)
-      else
-        ed.focus_window_direction(:down)
       end
     end
 

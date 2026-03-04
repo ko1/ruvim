@@ -835,6 +835,35 @@ class AppScenarioTest < Minitest::Test
     assert_equal :horizontal, @editor.window_layout
   end
 
+  def test_shift_right_splits_even_with_horizontal_split
+    # Horizontal split exists, but no window to the right → vsplit
+    @editor.split_current_window(layout: :horizontal)
+    assert_equal 2, @editor.window_count
+    feed(:shift_right)
+    assert_equal 3, @editor.window_count
+  end
+
+  def test_shift_left_splits_even_with_horizontal_split
+    @editor.split_current_window(layout: :horizontal)
+    assert_equal 2, @editor.window_count
+    feed(:shift_left)
+    assert_equal 3, @editor.window_count
+  end
+
+  def test_shift_down_splits_even_with_vertical_split
+    @editor.split_current_window(layout: :vertical)
+    assert_equal 2, @editor.window_count
+    feed(:shift_down)
+    assert_equal 3, @editor.window_count
+  end
+
+  def test_shift_up_splits_even_with_vertical_split
+    @editor.split_current_window(layout: :vertical)
+    assert_equal 2, @editor.window_count
+    feed(:shift_up)
+    assert_equal 3, @editor.window_count
+  end
+
   def test_shift_arrow_moves_window_focus_when_multiple_windows
     # Create a vertical split so we have two windows
     first_win = @editor.current_window
