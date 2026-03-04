@@ -14,6 +14,10 @@ module RuVim
       def calculate_indent(_lines, _target_row, _shiftwidth)
         nil
       end
+
+      def on_save(_ctx, _path)
+        # no-op
+      end
     end
   end
 end

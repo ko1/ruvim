@@ -1,4 +1,5 @@
 require "prism"
+require "open3"
 
 module RuVim
   module Lang
@@ -182,6 +183,12 @@ module RuVim
       # Returns the dedent pattern for the given character, or nil
       def dedent_trigger(char)
         DEDENT_TRIGGERS[char]
+      end
+
+      def on_save(ctx, path)
+        return unless path && File.exist?(path)
+        output, status = Open3.capture2e("ruby", "-c", path)
+        ctx.editor.echo_error(output.strip) unless status.success?
       end
 
       def color_columns(text)

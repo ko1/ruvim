@@ -1,0 +1,96 @@
+require_relative "test_helper"
+require "tmpdir"
+require "fileutils"
+
+class OnSaveHookTest < Minitest::Test
+  def test_base_on_save_is_noop
+    editor = fresh_editor
+    ctx = RuVim::Context.new(editor: editor)
+    # Should not raise
+    RuVim::Lang::Base.on_save(ctx, "/tmp/nonexistent.txt")
+  end
+
+  def test_ruby_on_save_with_valid_file
+    editor = fresh_editor
+    ctx = RuVim::Context.new(editor: editor)
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "valid.rb")
+      File.write(path, "puts 'hello'\n")
+      RuVim::Lang::Ruby.on_save(ctx, path)
+      # No error message should be set (echo from before should remain)
+      refute editor.message_error?
+    end
+  end
+
+  def test_ruby_on_save_with_syntax_error
+    editor = fresh_editor
+    ctx = RuVim::Context.new(editor: editor)
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "bad.rb")
+      File.write(path, "def foo(\n")
+      RuVim::Lang::Ruby.on_save(ctx, path)
+      assert editor.message_error?
+      assert_match(/syntax error/i, editor.message)
+    end
+  end
+
+  def test_ruby_on_save_with_nil_path
+    editor = fresh_editor
+    ctx = RuVim::Context.new(editor: editor)
+    # Should not raise
+    RuVim::Lang::Ruby.on_save(ctx, nil)
+    refute editor.message_error?
+  end
+
+  def test_file_write_calls_on_save
+    app = RuVim::App.new(clean: true)
+    editor = app.instance_variable_get(:@editor)
+    editor.materialize_intro_buffer!
+
+    called = false
+    hook_module = Module.new do
+      define_method(:on_save) do |_ctx, _path|
+        called = true
+      end
+      module_function :on_save
+    end
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "test.rb")
+      editor.current_buffer.instance_variable_set(:@lang_module, hook_module)
+      editor.current_buffer.replace_all_lines!(["hello"])
+
+      # Execute :w command
+      keys = ":w #{path}\n".chars
+      keys.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+
+      assert called, "on_save hook should have been called"
+    end
+  end
+
+  def test_file_write_skips_on_save_when_onsavehook_disabled
+    app = RuVim::App.new(clean: true)
+    editor = app.instance_variable_get(:@editor)
+    editor.materialize_intro_buffer!
+
+    called = false
+    hook_module = Module.new do
+      define_method(:on_save) do |_ctx, _path|
+        called = true
+      end
+      module_function :on_save
+    end
+
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "test.rb")
+      editor.current_buffer.instance_variable_set(:@lang_module, hook_module)
+      editor.current_buffer.replace_all_lines!(["hello"])
+      editor.set_option("onsavehook", false)
+
+      keys = ":w #{path}\n".chars
+      keys.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+
+      refute called, "on_save hook should NOT have been called when onsavehook is disabled"
+    end
+  end
+end

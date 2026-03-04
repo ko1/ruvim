@@ -50,6 +50,7 @@ module RuVim
       "iskeyword" => { default_scope: :buffer, type: :string, default: nil },
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil },
+      "onsavehook" => { default_scope: :buffer, type: :bool, default: true },
       "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
       "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" }
     }.freeze

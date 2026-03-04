@@ -710,6 +710,9 @@ module RuVim
       size = File.exist?(target) ? File.size(target) : 0
       suffix = bang ? " (force accepted)" : ""
       ctx.editor.echo("\"#{target}\" #{ctx.buffer.line_count}L, #{size}B written#{suffix}")
+      if ctx.editor.get_option("onsavehook")
+        ctx.buffer.lang_module.on_save(ctx, target)
+      end
     end
 
     def app_quit(ctx, bang:, **)
