@@ -75,4 +75,91 @@ class ConfigDSLTest < Minitest::Test
     assert_equal :match, match.status
     assert match.invocation.id.start_with?("user.keymap.global.")
   end
+
+  def test_nmap_with_command_id_string
+    @command_registry.register("test.cmd", call: ->(_ctx, **) {}, desc: "test", source: :builtin)
+    @dsl.nmap("T", "test.cmd")
+    match = @keymaps.resolve(:normal, ["T"])
+    assert_equal :match, match.status
+    assert_equal "test.cmd", match.invocation.id
+  end
+
+  def test_nmap_without_command_id_or_block_raises
+    # ConfigDSL < BasicObject, so raise becomes NoMethodError for ::ArgumentError
+    assert_raises(NoMethodError, ArgumentError) { @dsl.nmap("T") }
+  end
+
+  def test_imap_without_block_or_id_raises
+    assert_raises(NoMethodError, ArgumentError) { @dsl.imap("T") }
+  end
+
+  def test_command_registers_user_command
+    @dsl.command("my.cmd", desc: "custom") { |_ctx, **| }
+    spec = @command_registry.fetch("my.cmd")
+    assert_equal :user, spec.source
+    assert_equal "custom", spec.desc
+  end
+
+  def test_command_without_block_raises
+    assert_raises(NoMethodError, ArgumentError) { @dsl.command("my.cmd") }
+  end
+
+  def test_nmap_with_filetype
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      filetype: "ruby"
+    )
+    dsl.nmap("K", desc: "ft test") { |_ctx, **| }
+    editor = fresh_editor
+    editor.current_buffer.options["filetype"] = "ruby"
+    match = @keymaps.resolve_with_context(:normal, ["K"], editor: editor)
+    assert_equal :match, match.status
+  end
+
+  def test_set_option_requires_editor
+    assert_raises(NoMethodError, ArgumentError) { @dsl.set("number") }
+  end
+
+  def test_set_boolean_option
+    editor = fresh_editor
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      editor: editor
+    )
+    dsl.set("number")
+    assert editor.get_option("number")
+  end
+
+  def test_set_no_prefix_disables_option
+    editor = fresh_editor
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      editor: editor
+    )
+    dsl.set("number")
+    dsl.set("nonumber")
+    refute editor.get_option("number")
+  end
+
+  def test_set_with_value
+    editor = fresh_editor
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      editor: editor
+    )
+    dsl.set("tabstop=4")
+    assert_equal 4, editor.get_option("tabstop")
+  end
 end
