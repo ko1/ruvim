@@ -53,6 +53,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
+| `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
 | `command_invocation.rb` | Single command invocation (id, argv, count, bang) |
@@ -62,8 +63,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 ### Tests (test/)
 
-- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`
-- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`, `on_save_hook_test`
+- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`
+- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 
 ### Docs (docs/)

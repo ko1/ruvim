@@ -133,6 +133,20 @@
 - 列幅は画面に見えている行だけから計算（大規模ファイルでも高速）
 - `Esc` / `Ctrl-C` で Normal mode に戻る
 
+### `:follow`
+
+- 形式: `:follow`
+- ファイルの follow mode をトグルする（`tail -f` 相当）
+- follow 中はファイルへの追記がリアルタイムにバッファへ反映される
+- カーソルが最終行にいる場合は末尾を自動追従（auto-scroll）
+- カーソルが途中にある場合はスクロール位置を維持
+- `G` で末尾に移動すれば追従が再開される
+- `:follow` を再度実行すると停止
+- ステータスラインに `[follow]` と表示される
+- ファイルが紐づいていないバッファではエラー
+- 監視方式: Linux では inotify（fiddle 経由）を優先し、使えない場合は polling にフォールバック
+  - polling は exponential backoff（0.1s → 3s）で CPU 負荷を抑える
+
 ### `:command`
 
 - 形式: `:command Name ex_body`

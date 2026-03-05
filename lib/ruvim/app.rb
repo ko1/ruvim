@@ -2,6 +2,7 @@
 
 require "json"
 require "fileutils"
+require_relative "file_watcher"
 
 module RuVim
   class App
@@ -27,6 +28,7 @@ module RuVim
       @stream_buffer_id = nil
       @stream_stop_requested = false
       @async_file_loads = {}
+      @follow_watchers = {}
       @cmdline_history = Hash.new { |h, k| h[k] = [] }
       @cmdline_history_index = nil
       @cmdline_completion = nil
@@ -352,6 +354,7 @@ module RuVim
       register_ex_unless(ex, "d", call: :ex_delete_lines, aliases: %w[delete], desc: "Delete lines", nargs: :any)
       register_ex_unless(ex, "y", call: :ex_yank_lines, aliases: %w[yank], desc: "Yank lines", nargs: :any)
       register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
+      register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.invoke_app_action(:follow_toggle) }, desc: "Toggle file follow mode", nargs: 0)
       register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
@@ -541,6 +544,8 @@ module RuVim
           linewise: !!(kwargs[:linewise] || kwargs["linewise"]),
           repeat_token: (kwargs[:repeat_token] || kwargs["repeat_token"]).to_s
         )
+      when :follow_toggle
+        ex_follow_toggle
       else
         raise RuVim::CommandError, "Unknown app action: #{name}"
       end
@@ -2808,6 +2813,8 @@ module RuVim
           end
           @editor.echo_error("[stdin] stream error: #{event[:error]}")
           changed = true
+        when :follow_data
+          changed = apply_follow_chunk!(event[:buffer_id], event[:data]) || changed
         when :file_data
           changed = apply_async_file_chunk!(event[:buffer_id], event[:data]) || changed
         when :file_eof
@@ -2902,6 +2909,70 @@ module RuVim
       nil
     end
 
+    def ex_follow_toggle
+      buf = @editor.current_buffer
+      raise RuVim::CommandError, "No file associated with buffer" unless buf.path
+
+      if @follow_watchers[buf.id]
+        stop_follow!(buf)
+      else
+        start_follow!(buf)
+      end
+    end
+
+    def start_follow!(buf)
+      ensure_stream_event_queue!
+      buffer_id = buf.id
+      watcher = FileWatcher.create(buf.path) do |data|
+        @stream_event_queue << { type: :follow_data, buffer_id: buffer_id, data: data }
+        notify_signal_wakeup
+      end
+      watcher.start
+      @follow_watchers[buf.id] = watcher
+      buf.stream_state = :live
+      @editor.echo("[follow] #{buf.display_name}")
+    end
+
+    def stop_follow!(buf)
+      watcher = @follow_watchers.delete(buf.id)
+      watcher&.stop
+      buf.stream_state = nil
+      @editor.echo("[follow] stopped")
+    end
+
+    def apply_follow_chunk!(buffer_id, text)
+      return false if text.to_s.empty?
+
+      buf = @editor.buffers[buffer_id]
+      return false unless buf
+
+      follow_window_ids = @editor.windows.values.filter_map do |win|
+        next unless win.buffer_id == buf.id
+        next unless stream_window_following_end?(win, buf)
+
+        win.id
+      end
+
+      buf.append_stream_text!(text)
+
+      follow_window_ids.each do |win_id|
+        win = @editor.windows[win_id]
+        move_window_to_stream_end!(win, buf) if win
+      end
+
+      true
+    end
+
+    def shutdown_follow_watchers!
+      watchers = @follow_watchers
+      @follow_watchers = {}
+      watchers.each_value do |watcher|
+        watcher.stop
+      rescue StandardError
+        nil
+      end
+    end
+
     def shutdown_async_file_loaders!
       loaders = @async_file_loads
       @async_file_loads = {}
@@ -2924,6 +2995,7 @@ module RuVim
 
     def shutdown_background_readers!
       shutdown_stream_reader!
+      shutdown_follow_watchers!
       shutdown_async_file_loaders!
     end
 
