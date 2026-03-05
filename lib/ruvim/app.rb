@@ -2838,6 +2838,16 @@ module RuVim
           changed = true
         when :follow_data
           changed = apply_follow_chunk!(event[:buffer_id], event[:data]) || changed
+        when :follow_truncated
+          if (buf = @editor.buffers[event[:buffer_id]])
+            @editor.echo("[follow] file truncated: #{buf.display_name}")
+            changed = true
+          end
+        when :follow_deleted
+          if (buf = @editor.buffers[event[:buffer_id]])
+            @editor.echo("[follow] file deleted, waiting for re-creation: #{buf.display_name}")
+            changed = true
+          end
         when :file_data
           changed = apply_async_file_chunk!(event[:buffer_id], event[:data]) || changed
         when :file_eof
@@ -2957,8 +2967,15 @@ module RuVim
         end
       end
       buffer_id = buf.id
-      watcher = FileWatcher.create(buf.path) do |data|
-        @stream_event_queue << { type: :follow_data, buffer_id: buffer_id, data: data }
+      watcher = FileWatcher.create(buf.path) do |type, data|
+        case type
+        when :data
+          @stream_event_queue << { type: :follow_data, buffer_id: buffer_id, data: data }
+        when :truncated
+          @stream_event_queue << { type: :follow_truncated, buffer_id: buffer_id }
+        when :deleted
+          @stream_event_queue << { type: :follow_deleted, buffer_id: buffer_id }
+        end
         notify_signal_wakeup
       end
       watcher.start
