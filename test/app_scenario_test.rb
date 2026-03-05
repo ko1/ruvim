@@ -1147,6 +1147,23 @@ class AppScenarioTest < Minitest::Test
     assert @editor.message_error?
   end
 
+  def test_filter_quit_restores_cursor_position
+    @editor.current_buffer.replace_all_lines!(["aaa", "bbb", "aab", "ccc", "aac"])
+    original_buf_id = @editor.current_buffer.id
+    feed("/", "a", "a", :enter)
+    # Search moves cursor to line 0 (first match)
+    feed("n")
+    # Now on line 2 ("aab")
+    assert_equal 2, @editor.current_window.cursor_y
+    feed("g", "/")
+
+    assert_equal :filter, @editor.current_buffer.kind
+    feed(":", "q", :enter)
+
+    assert_equal original_buf_id, @editor.current_buffer.id
+    assert_equal 2, @editor.current_window.cursor_y
+  end
+
   def test_filter_ex_command
     @editor.current_buffer.replace_all_lines!(["apple", "banana", "apricot"])
     feed("/", "a", "p", :enter)

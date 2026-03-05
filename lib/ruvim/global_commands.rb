@@ -768,7 +768,18 @@ module RuVim
 
     def app_quit(ctx, bang:, **)
       if ctx.buffer.kind == :filter
+        saved_y = ctx.buffer.options["filter_source_cursor_y"]
+        saved_x = ctx.buffer.options["filter_source_cursor_x"]
+        saved_row_offset = ctx.buffer.options["filter_source_row_offset"]
+        saved_col_offset = ctx.buffer.options["filter_source_col_offset"]
         ctx.editor.delete_buffer(ctx.buffer.id)
+        if saved_y
+          win = ctx.editor.current_window
+          win.cursor_y = saved_y
+          win.cursor_x = saved_x || 0
+          win.row_offset = saved_row_offset || 0
+          win.col_offset = saved_col_offset || 0
+        end
         return
       end
 
@@ -1383,6 +1394,10 @@ module RuVim
       )
       filter_buf.options["filter_origins"] = origins
       filter_buf.options["filter_source_buffer_id"] = source_buffer.id
+      filter_buf.options["filter_source_cursor_y"] = ctx.window.cursor_y
+      filter_buf.options["filter_source_cursor_x"] = ctx.window.cursor_x
+      filter_buf.options["filter_source_row_offset"] = ctx.window.row_offset
+      filter_buf.options["filter_source_col_offset"] = ctx.window.col_offset
       editor.switch_to_buffer(filter_buf.id)
       editor.echo("filter: #{matching_lines.length} line(s)")
     end
