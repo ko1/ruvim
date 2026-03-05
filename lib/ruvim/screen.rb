@@ -915,32 +915,14 @@ module RuVim
 
       path = buffer.display_name
       mod = buffer.modified? ? " [+]" : ""
-      stream = stream_status_token(buffer)
-      follow = follow_status_token(buffer)
+      stream = buffer.stream_status ? " [#{buffer.stream_status}]" : ""
       loading = file_loading_status_token(buffer)
       tab = tab_status_token(editor)
       msg = editor.message_error? ? "" : editor.message.to_s
-      left = "#{mode} #{path}#{mod}#{stream}#{follow}#{loading}"
+      left = "#{mode} #{path}#{mod}#{stream}#{loading}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1}#{tab} "
       body_width = [width - right.length, 0].max
       "#{compose_status_body(left, msg, body_width)}#{right}"
-    end
-
-    def stream_status_token(buffer)
-      return "" unless buffer.respond_to?(:stream_state)
-      return "" unless buffer.kind == :stream
-
-      state = (buffer.stream_state || :live).to_s
-      " [stdin/#{state}]"
-    end
-
-    def follow_status_token(buffer)
-      return "" unless buffer.respond_to?(:stream_state)
-      return "" if buffer.kind == :stream
-      return "" unless buffer.stream_state
-
-      suffix = buffer.respond_to?(:follow_backend) && buffer.follow_backend == :inotify ? "/i" : ""
-      " [follow#{suffix}]"
     end
 
     def file_loading_status_token(buffer)
