@@ -2929,17 +2929,17 @@ module RuVim
         notify_signal_wakeup
       end
       watcher.start
-      @follow_watchers[buf.id] = watcher
+      @follow_watchers[buf.id] = { watcher: watcher, was_readonly: buf.readonly? }
       buf.stream_state = :live
       buf.readonly = true
       @editor.echo("[follow] #{buf.display_name}")
     end
 
     def stop_follow!(buf)
-      watcher = @follow_watchers.delete(buf.id)
-      watcher&.stop
+      state = @follow_watchers.delete(buf.id)
+      state[:watcher].stop if state
       buf.stream_state = nil
-      buf.readonly = false
+      buf.readonly = state ? state[:was_readonly] : false
       @editor.echo("[follow] stopped")
     end
 
@@ -2969,8 +2969,8 @@ module RuVim
     def shutdown_follow_watchers!
       watchers = @follow_watchers
       @follow_watchers = {}
-      watchers.each_value do |watcher|
-        watcher.stop
+      watchers.each_value do |state|
+        state[:watcher].stop
       rescue StandardError
         nil
       end

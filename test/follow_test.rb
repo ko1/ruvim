@@ -19,7 +19,7 @@ class FollowTest < Minitest::Test
     return unless @app
 
     watchers = @app.instance_variable_get(:@follow_watchers)
-    watchers.each_value { |w| w.stop rescue nil }
+    watchers.each_value { |s| s[:watcher].stop rescue nil }
     watchers.clear
     @tmpfile&.close!
   end
@@ -63,6 +63,20 @@ class FollowTest < Minitest::Test
 
     @dispatcher.dispatch_ex(@editor, "follow")
     refute buf.readonly?
+  ensure
+    cleanup_follow_app
+  end
+
+  def test_follow_preserves_original_readonly
+    create_follow_app
+    buf = @editor.current_buffer
+    buf.readonly = true
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    assert buf.readonly?
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    assert buf.readonly?, "Should restore original readonly state"
   ensure
     cleanup_follow_app
   end
