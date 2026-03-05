@@ -1077,7 +1077,12 @@ module RuVim
       @jump_pending = nil
       @macro_record_pending = false
       @macro_play_pending = false
-      @editor.clear_message
+      buf = @editor.current_buffer
+      if buf && @follow_watchers[buf.id]
+        stop_follow!(buf)
+      else
+        @editor.clear_message
+      end
     end
 
     def suspend_to_shell

@@ -38,6 +38,19 @@ class FollowTest < Minitest::Test
     cleanup_follow_app
   end
 
+  def test_follow_stops_on_ctrl_c
+    create_follow_app
+    @dispatcher.dispatch_ex(@editor, "follow")
+    buf = @editor.current_buffer
+    assert_equal :live, buf.stream_state
+
+    @app.send(:handle_key, :ctrl_c)
+    assert_nil buf.stream_state
+    assert_includes @editor.message.to_s, "stopped"
+  ensure
+    cleanup_follow_app
+  end
+
   def test_follow_toggle_stops
     create_follow_app
     @dispatcher.dispatch_ex(@editor, "follow")
