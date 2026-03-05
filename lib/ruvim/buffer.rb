@@ -87,7 +87,7 @@ module RuVim
     end
 
     def modifiable?
-      @modifiable && @loading_state != :live
+      @modifiable && @loading_state != :live && @stream_state != :live
     end
 
     def modifiable=(value)

@@ -19,7 +19,7 @@ class FollowTest < Minitest::Test
     return unless @app
 
     watchers = @app.instance_variable_get(:@follow_watchers)
-    watchers.each_value { |s| s[:watcher].stop rescue nil }
+    watchers.each_value { |w| w.stop rescue nil }
     watchers.clear
     @tmpfile&.close!
   end
@@ -53,30 +53,16 @@ class FollowTest < Minitest::Test
     cleanup_follow_app
   end
 
-  def test_follow_sets_readonly_and_restores
+  def test_follow_makes_buffer_not_modifiable
     create_follow_app
     buf = @editor.current_buffer
-    refute buf.readonly?
+    assert buf.modifiable?
 
     @dispatcher.dispatch_ex(@editor, "follow")
-    assert buf.readonly?
+    refute buf.modifiable?, "Buffer should not be modifiable during follow"
 
     @dispatcher.dispatch_ex(@editor, "follow")
-    refute buf.readonly?
-  ensure
-    cleanup_follow_app
-  end
-
-  def test_follow_preserves_original_readonly
-    create_follow_app
-    buf = @editor.current_buffer
-    buf.readonly = true
-
-    @dispatcher.dispatch_ex(@editor, "follow")
-    assert buf.readonly?
-
-    @dispatcher.dispatch_ex(@editor, "follow")
-    assert buf.readonly?, "Should restore original readonly state"
+    assert buf.modifiable?, "Buffer should be modifiable after follow stops"
   ensure
     cleanup_follow_app
   end
