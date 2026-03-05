@@ -148,6 +148,28 @@ class FollowTest < Minitest::Test
     cleanup_follow_app
   end
 
+  def test_startup_follow_applies_to_all_buffers
+    tmp1 = Tempfile.new(["follow_multi1", ".txt"])
+    tmp1.write("aaa\n"); tmp1.flush
+    tmp2 = Tempfile.new(["follow_multi2", ".txt"])
+    tmp2.write("bbb\n"); tmp2.flush
+
+    app = RuVim::App.new(paths: [tmp1.path, tmp2.path], follow: true, clean: true)
+    editor = app.instance_variable_get(:@editor)
+    watchers = app.instance_variable_get(:@follow_watchers)
+
+    bufs = editor.buffers.values.select(&:file_buffer?)
+    assert_equal 2, bufs.size
+    bufs.each do |buf|
+      assert_equal :live, buf.stream_state, "#{buf.display_name} should be in follow mode"
+      assert watchers.key?(buf.id), "#{buf.display_name} should have a watcher"
+    end
+  ensure
+    watchers&.each_value { |w| w.stop rescue nil }
+    tmp1&.close!
+    tmp2&.close!
+  end
+
   private
 
   def assert_eventually(timeout: 2, interval: 0.05)

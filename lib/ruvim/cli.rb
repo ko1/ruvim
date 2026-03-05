@@ -16,6 +16,7 @@ module RuVim
       :no_swap,
       :nomodifiable,
       :restricted_mode,
+      :follow,
       :verbose_level,
       :startup_time_path,
       :startup_open_layout,
@@ -70,6 +71,7 @@ module RuVim
         quickfix_errorfile: opts.quickfix_errorfile,
         session_file: opts.session_file,
         nomodifiable: opts.nomodifiable,
+        follow: opts.follow,
         restricted: opts.restricted_mode,
         verbose_level: opts.verbose_level,
         verbose_io: stderr,
@@ -101,6 +103,7 @@ module RuVim
         no_swap: false,
         nomodifiable: false,
         restricted_mode: false,
+        follow: false,
         verbose_level: 0,
         startup_time_path: nil,
         startup_open_layout: nil,
@@ -160,8 +163,7 @@ module RuVim
         when "-n"
           opts.no_swap = true
         when "-f"
-          opts.startup_actions << { type: :line_end }
-          opts.startup_actions << { type: :ex, value: "follow" }
+          opts.follow = true
         when "-M"
           opts.nomodifiable = true
         when "-Z"

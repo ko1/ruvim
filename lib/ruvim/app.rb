@@ -11,7 +11,7 @@ module RuVim
     ASYNC_FILE_READ_CHUNK_BYTES = 1 * 1024 * 1024
     ASYNC_FILE_EVENT_FLUSH_BYTES = 4 * 1024 * 1024
 
-    def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
+    def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, follow: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       startup_paths = Array(paths || path).compact
       @ui_stdin = ui_stdin || stdin
       @stdin_stream_mode = !!stdin_stream_mode
@@ -45,6 +45,7 @@ module RuVim
       @startup_quickfix_errorfile = quickfix_errorfile
       @startup_session_file = session_file
       @startup_nomodifiable = nomodifiable
+      @startup_follow = follow
       @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
@@ -2502,6 +2503,17 @@ module RuVim
       @editor.echo("readonly: #{buf.display_name}")
     end
 
+    def apply_startup_follow!
+      buf = @editor.current_buffer
+      return unless buf&.file_buffer?
+      return if @follow_watchers[buf.id]
+
+      win = @editor.current_window
+      win.cursor_y = buf.line_count - 1
+      win.clamp_to_buffer(buf)
+      start_follow!(buf)
+    end
+
     def apply_startup_nomodifiable!
       buf = @editor.current_buffer
       return unless buf&.file_buffer?
@@ -2543,6 +2555,7 @@ module RuVim
       @editor.open_path(first)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
+      apply_startup_follow! if @startup_follow
 
       case @startup_open_layout
       when :horizontal
@@ -2558,7 +2571,10 @@ module RuVim
         @editor.tabnext(-(@editor.tabpage_count - 1))
       else
         # Load remaining files as buffers (Vim-like behavior).
-        rest.each { |p| @editor.add_buffer_from_file(p) }
+        rest.each do |p|
+          buf = @editor.add_buffer_from_file(p)
+          start_follow!(buf) if @startup_follow
+        end
       end
     end
 
@@ -2580,12 +2596,14 @@ module RuVim
       @editor.open_path(path)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
+      apply_startup_follow! if @startup_follow
     end
 
     def open_path_in_tab!(path)
       @editor.tabnew(path:)
       apply_startup_readonly! if @startup_readonly
       apply_startup_nomodifiable! if @startup_nomodifiable
+      apply_startup_follow! if @startup_follow
     end
 
     def open_path_with_large_file_support(path)

@@ -157,10 +157,7 @@ class CLITest < Minitest::Test
     opts = RuVim::CLI.parse(["-f", "log.txt"])
 
     assert_equal ["log.txt"], opts.files
-    assert_equal [
-      { type: :line_end },
-      { type: :ex, value: "follow" }
-    ], opts.startup_actions
+    assert_equal true, opts.follow
   end
 
   def test_help_mentions_follow_option
