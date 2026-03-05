@@ -1332,7 +1332,7 @@ module RuVim
 
     def handle_operator_pending_key(token)
       op = @operator_pending
-      if %w[i a].include?(token) && !op[:motion_prefix]
+      if %w[i a g].include?(token) && !op[:motion_prefix]
         @operator_pending[:motion_prefix] = token
         @editor.echo("#{op[:name].to_s[0]}#{token}")
         return

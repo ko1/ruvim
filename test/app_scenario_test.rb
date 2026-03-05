@@ -1172,4 +1172,51 @@ class AppScenarioTest < Minitest::Test
     assert_equal :filter, @editor.current_buffer.kind
     assert_equal ["apple", "apricot"], @editor.current_buffer.lines
   end
+
+  # --- dG / dgg / yG / ygg / cG / cgg ---
+
+  def test_dG_deletes_from_cursor_to_end
+    @editor.current_buffer.replace_all_lines!(["aa", "bb", "cc", "dd", "ee"])
+    @editor.current_window.cursor_y = 2
+    feed("d", "G")
+
+    assert_equal ["aa", "bb"], @editor.current_buffer.lines
+  end
+
+  def test_dgg_deletes_from_cursor_to_start
+    @editor.current_buffer.replace_all_lines!(["aa", "bb", "cc", "dd", "ee"])
+    @editor.current_window.cursor_y = 2
+    feed("d", "g", "g")
+
+    assert_equal ["dd", "ee"], @editor.current_buffer.lines
+  end
+
+  def test_yG_yanks_from_cursor_to_end
+    @editor.current_buffer.replace_all_lines!(["aa", "bb", "cc", "dd"])
+    @editor.current_window.cursor_y = 1
+    feed("y", "G")
+
+    reg = @editor.get_register('"')&.fetch(:text, "")
+    assert_includes reg, "bb"
+    assert_includes reg, "dd"
+  end
+
+  def test_ygg_yanks_from_cursor_to_start
+    @editor.current_buffer.replace_all_lines!(["aa", "bb", "cc", "dd"])
+    @editor.current_window.cursor_y = 2
+    feed("y", "g", "g")
+
+    reg = @editor.get_register('"')&.fetch(:text, "")
+    assert_includes reg, "aa"
+    assert_includes reg, "cc"
+  end
+
+  def test_cG_changes_from_cursor_to_end
+    @editor.current_buffer.replace_all_lines!(["aa", "bb", "cc", "dd"])
+    @editor.current_window.cursor_y = 2
+    feed("c", "G")
+
+    assert_equal ["aa", "bb", ""], @editor.current_buffer.lines
+    assert_equal :insert, @editor.mode
+  end
 end

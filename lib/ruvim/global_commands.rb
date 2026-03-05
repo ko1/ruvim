@@ -467,6 +467,8 @@ module RuVim
         when "k" then delete_lines_up(ctx, ncount)
         when "$" then delete_to_end_of_line(ctx)
         when "w" then delete_word_forward(ctx, ncount)
+        when "G" then delete_lines_to_end(ctx)
+        when "gg" then delete_lines_to_start(ctx)
         when "iw" then delete_text_object_word(ctx, around: false)
         when "aw" then delete_text_object_word(ctx, around: true)
         else
@@ -478,9 +480,22 @@ module RuVim
 
     def change_motion(ctx, count:, kwargs:, **)
       materialize_intro_buffer_if_needed(ctx)
-      handled = delete_motion(ctx, count:, kwargs:)
-      return unless handled
+      motion = (kwargs[:motion] || kwargs["motion"]).to_s
+      result = delete_motion(ctx, count:, kwargs:)
+      return unless result
 
+      if result == :linewise
+        case motion
+        when "G"
+          y = ctx.buffer.lines.length
+          ctx.buffer.insert_lines_at(y, [""])
+          ctx.window.cursor_y = y
+        when "gg"
+          ctx.buffer.insert_lines_at(0, [""])
+          ctx.window.cursor_y = 0
+        end
+        ctx.window.cursor_x = 0
+      end
       enter_insert_mode(ctx)
     end
 
@@ -610,6 +625,10 @@ module RuVim
         text = ctx.buffer.span_text(y, x, target[:row], target[:col])
         store_yank_register(ctx, text:, type: :charwise)
         ctx.editor.echo("yanked")
+      when "G"
+        yank_lines_to_end(ctx)
+      when "gg"
+        yank_lines_to_start(ctx)
       when "iw"
         yank_text_object_word(ctx, around: false)
       when "aw"
@@ -1796,6 +1815,48 @@ module RuVim
       ctx.window.cursor_x = 0 if ctx.window.cursor_x > ctx.buffer.line_length(ctx.window.cursor_y)
       ctx.window.clamp_to_buffer(ctx.buffer)
       true
+    end
+
+    def delete_lines_to_end(ctx)
+      y = ctx.window.cursor_y
+      total = ctx.buffer.lines.length - y
+      deleted = ctx.buffer.line_block_text(y, total)
+      ctx.buffer.begin_change_group
+      total.times { ctx.buffer.delete_line(y) }
+      ctx.buffer.end_change_group
+      store_delete_register(ctx, text: deleted, type: :linewise)
+      ctx.window.clamp_to_buffer(ctx.buffer)
+      :linewise
+    end
+
+    def delete_lines_to_start(ctx)
+      y = ctx.window.cursor_y
+      total = y + 1
+      deleted = ctx.buffer.line_block_text(0, total)
+      ctx.buffer.begin_change_group
+      total.times { ctx.buffer.delete_line(0) }
+      ctx.buffer.end_change_group
+      store_delete_register(ctx, text: deleted, type: :linewise)
+      ctx.window.cursor_y = 0
+      ctx.window.cursor_x = 0
+      ctx.window.clamp_to_buffer(ctx.buffer)
+      :linewise
+    end
+
+    def yank_lines_to_end(ctx)
+      y = ctx.window.cursor_y
+      total = ctx.buffer.lines.length - y
+      text = ctx.buffer.line_block_text(y, total)
+      store_yank_register(ctx, text: text, type: :linewise)
+      ctx.editor.echo("#{total} line(s) yanked")
+    end
+
+    def yank_lines_to_start(ctx)
+      y = ctx.window.cursor_y
+      total = y + 1
+      text = ctx.buffer.line_block_text(0, total)
+      store_yank_register(ctx, text: text, type: :linewise)
+      ctx.editor.echo("#{total} line(s) yanked")
     end
 
     def delete_to_end_of_line(ctx)
