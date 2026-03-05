@@ -53,6 +53,32 @@ class FollowTest < Minitest::Test
     cleanup_follow_app
   end
 
+  def test_follow_sets_readonly_and_restores
+    create_follow_app
+    buf = @editor.current_buffer
+    refute buf.readonly?
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    assert buf.readonly?
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    refute buf.readonly?
+  ensure
+    cleanup_follow_app
+  end
+
+  def test_follow_error_on_modified_buffer
+    create_follow_app
+    buf = @editor.current_buffer
+    buf.modified = true
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    assert_includes @editor.message.to_s, "unsaved changes"
+    assert_nil buf.stream_state
+  ensure
+    cleanup_follow_app
+  end
+
   def test_follow_error_on_no_path_buffer
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)

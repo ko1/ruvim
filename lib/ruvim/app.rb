@@ -2916,6 +2916,7 @@ module RuVim
       if @follow_watchers[buf.id]
         stop_follow!(buf)
       else
+        raise RuVim::CommandError, "Buffer has unsaved changes" if buf.modified?
         start_follow!(buf)
       end
     end
@@ -2930,6 +2931,7 @@ module RuVim
       watcher.start
       @follow_watchers[buf.id] = watcher
       buf.stream_state = :live
+      buf.readonly = true
       @editor.echo("[follow] #{buf.display_name}")
     end
 
@@ -2937,6 +2939,7 @@ module RuVim
       watcher = @follow_watchers.delete(buf.id)
       watcher&.stop
       buf.stream_state = nil
+      buf.readonly = false
       @editor.echo("[follow] stopped")
     end
 
