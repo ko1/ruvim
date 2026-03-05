@@ -2988,6 +2988,15 @@ module RuVim
     def stop_follow!(buf)
       watcher = @follow_watchers.delete(buf.id)
       watcher&.stop
+      # Remove trailing empty line added as sentinel by start_follow!
+      if buf.line_count > 1 && buf.lines.last.to_s == ""
+        buf.lines.pop
+        last = buf.line_count - 1
+        @editor.windows.each_value do |win|
+          next unless win.buffer_id == buf.id
+          win.cursor_y = last if win.cursor_y > last
+        end
+      end
       buf.stream_state = nil
       buf.follow_backend = nil
       @editor.echo("[follow] stopped")

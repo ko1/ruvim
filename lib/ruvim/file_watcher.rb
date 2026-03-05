@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "fiddle/import"
-
 module RuVim
   module FileWatcher
     def self.create(path, &on_event)
@@ -97,10 +95,11 @@ module RuVim
       def self.available?
         return @available unless @available.nil?
         @available = begin
+          gem "fiddle" if defined?(Gem)
           require "fiddle/import"
           _mod = inotify_module
           true
-        rescue LoadError, Fiddle::DLError, StandardError
+        rescue LoadError, StandardError
           false
         end
       end

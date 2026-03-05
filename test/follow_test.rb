@@ -66,6 +66,20 @@ class FollowTest < Minitest::Test
     cleanup_follow_app
   end
 
+  def test_follow_stop_removes_sentinel_empty_line
+    create_follow_app
+    buf = @editor.current_buffer
+    lines_before = buf.line_count
+
+    @dispatcher.dispatch_ex(@editor, "follow")
+    @dispatcher.dispatch_ex(@editor, "follow")
+
+    assert_equal lines_before, buf.line_count, "Sentinel empty line should be removed on stop"
+    refute_equal "", buf.lines.last, "Last line should not be empty sentinel"
+  ensure
+    cleanup_follow_app
+  end
+
   def test_follow_makes_buffer_not_modifiable
     create_follow_app
     buf = @editor.current_buffer
