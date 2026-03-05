@@ -28,6 +28,7 @@ ruvim path/to/file.txt
 - `-R`（readonly で開く。現在バッファの `:w` を拒否）
 - `-M`（modifiable off 相当。編集操作を拒否し、あわせて readonly）
 - `-Z`（restricted mode。config/ftplugin を読まず、`:ruby` と `:!` を無効化）
+- `-f`（follow mode: `tail -f` 相当。ファイルの追記をリアルタイムに追従）
 - `-n`（現状 no-op。将来の swap/永続機能向け互換フラグ）
 - `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
 - `-V[N]` / `--verbose[=N]`（起動/設定/Ex のログを stderr に出す）
@@ -140,10 +141,32 @@ ruvim -p a.rb b.rb
 - `:tabnew [path]`
 - `:tabnext` / `:tabn`
 - `:tabprev` / `:tabp`
+- `:follow`（`tail -f` 相当の追従モードをトグル）
 - `:vimgrep /foo/`
 - `:copen`, `:cnext`, `:cprev`, `:cclose`
 - `:lvimgrep /foo/`
 - `:lopen`, `:lnext`, `:lprev`, `:lclose`
+
+## Follow mode（`tail -f` 相当）
+
+ファイルへの追記をリアルタイムにバッファへ反映する追従モードです。
+
+```bash
+ruvim -f /var/log/syslog        # 起動時から follow mode
+ruvim -f log1.txt log2.txt      # 複数ファイルすべて follow
+```
+
+起動後に切り替えることもできます:
+
+```vim
+:follow          " follow 開始（トグル）
+:follow          " もう一度で停止
+```
+
+- `Ctrl-C`（ノーマルモード）でも停止できます
+- カーソルが最終行（`G`）にいると末尾を自動追従、途中にいればスクロール位置を維持
+- follow 中はバッファ変更不可（停止後に編集可能）
+- ファイルが truncate/削除された場合はメッセージを表示し、監視を継続（削除時は再作成を待機）
 
 ## Undo / Redo
 

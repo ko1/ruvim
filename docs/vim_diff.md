@@ -26,6 +26,13 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - TSV / CSV / Markdown をフォーマットして閲覧できる構造化データ表示モード
 - CJK 文字幅を考慮したカラム整列
 
+### Follow mode（`tail -f` 相当）
+
+- `:follow` コマンドまたは `-f` CLI フラグでファイル追従モード
+- Linux では inotify（fiddle 経由）を優先、使えない場合は polling（exponential backoff）にフォールバック
+- ファイルの truncation/deletion を検知してメッセージ表示・自動復帰
+- Vim にはない RuVim 独自機能
+
 ### 検索は Ruby 正規表現
 
 - `/`, `?`, `:s` はすべて Ruby の `Regexp` を使用
@@ -75,7 +82,7 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - filetype 検出（拡張子 + shebang）/ ftplugin
 - syntax highlight: Ruby（Prism lexer）, JSON, Markdown, Scheme, TSV/CSV
 - 補完: Ex コマンド名 + 引数補完, Insert mode buffer words（`Ctrl-n` / `Ctrl-p`）
-- CLI: `--help`, `--version`, `--clean`, `-u`, `-R`, `-M`, `-Z`, `-o/-O/-p`, `-c`, `+{cmd}`, `-V`, `--startuptime`, `--cmd`
+- CLI: `--help`, `--version`, `--clean`, `-u`, `-R`, `-M`, `-Z`, `-f`, `-o/-O/-p`, `-c`, `+{cmd}`, `-V`, `--startuptime`, `--cmd`
 
 ## 動作の微細な差分
 
