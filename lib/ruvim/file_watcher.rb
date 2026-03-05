@@ -19,6 +19,8 @@ module RuVim
 
       attr_reader :current_interval
 
+      def backend = :polling
+
       def initialize(path, &on_change)
         @path = path
         @on_change = on_change
@@ -78,6 +80,8 @@ module RuVim
 
     class InotifyWatcher
       IN_MODIFY = 0x00000002
+
+      def backend = :inotify
 
       def self.available?
         return @available unless @available.nil?

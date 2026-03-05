@@ -937,11 +937,10 @@ module RuVim
     def follow_status_token(buffer)
       return "" unless buffer.respond_to?(:stream_state)
       return "" if buffer.kind == :stream
+      return "" unless buffer.stream_state
 
-      state = buffer.stream_state
-      return "" unless state
-
-      " [follow]"
+      suffix = buffer.respond_to?(:follow_backend) && buffer.follow_backend == :inotify ? "/i" : ""
+      " [follow#{suffix}]"
     end
 
     def file_loading_status_token(buffer)

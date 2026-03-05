@@ -2931,6 +2931,7 @@ module RuVim
       watcher.start
       @follow_watchers[buf.id] = watcher
       buf.stream_state = :live
+      buf.follow_backend = watcher.backend
       @editor.echo("[follow] #{buf.display_name}")
     end
 
@@ -2938,6 +2939,7 @@ module RuVim
       watcher = @follow_watchers.delete(buf.id)
       watcher&.stop
       buf.stream_state = nil
+      buf.follow_backend = nil
       @editor.echo("[follow] stopped")
     end
 
