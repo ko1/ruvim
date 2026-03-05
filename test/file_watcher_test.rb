@@ -41,10 +41,29 @@ class FileWatcherTest < Minitest::Test
     refute @watcher.alive?
   end
 
-  def test_polling_watcher_error_on_missing_file
-    assert_raises(ArgumentError) do
-      RuVim::FileWatcher::PollingWatcher.new("/nonexistent/path") { |_| }
+  def test_polling_watcher_waits_for_missing_file
+    missing_path = File.join(Dir.pwd, "follow_missing_test_#{$$}.log")
+    File.delete(missing_path) if File.exist?(missing_path)
+
+    received = Queue.new
+    watcher = RuVim::FileWatcher::PollingWatcher.new(missing_path) do |data|
+      received << data
     end
+    watcher.start
+
+    # File doesn't exist yet — watcher should be waiting
+    sleep 0.2
+    assert watcher.alive?
+
+    # Create the file with content
+    File.write(missing_path, "hello\n")
+
+    data = nil
+    assert_eventually(timeout: 3) { data = received.pop(true) rescue nil; !data.nil? }
+    assert_includes data, "hello"
+  ensure
+    watcher&.stop
+    File.delete(missing_path) if File.exist?(missing_path)
   end
 
   def test_inotify_watcher_detects_append
@@ -84,6 +103,17 @@ class FileWatcherTest < Minitest::Test
     end
   ensure
     watcher&.stop
+  end
+
+  def test_create_falls_back_to_polling_for_missing_file
+    missing_path = File.join(Dir.pwd, "follow_create_test_#{$$}.log")
+    File.delete(missing_path) if File.exist?(missing_path)
+
+    watcher = RuVim::FileWatcher.create(missing_path) { |_| }
+    assert_kind_of RuVim::FileWatcher::PollingWatcher, watcher
+  ensure
+    watcher&.stop
+    File.delete(missing_path) if File.exist?(missing_path)
   end
 
   def test_polling_backoff_resets_on_change

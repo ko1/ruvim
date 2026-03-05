@@ -5,7 +5,7 @@ require "fiddle/import"
 module RuVim
   module FileWatcher
     def self.create(path, &on_change)
-      if InotifyWatcher.available?
+      if InotifyWatcher.available? && File.exist?(path)
         InotifyWatcher.new(path, &on_change)
       else
         PollingWatcher.new(path, &on_change)
@@ -20,11 +20,9 @@ module RuVim
       attr_reader :current_interval
 
       def initialize(path, &on_change)
-        raise ArgumentError, "File does not exist: #{path}" unless File.exist?(path)
-
         @path = path
         @on_change = on_change
-        @offset = File.size(path)
+        @offset = File.exist?(path) ? File.size(path) : 0
         @current_interval = MIN_INTERVAL
         @thread = nil
         @stop = false
@@ -58,7 +56,10 @@ module RuVim
       end
 
       def check_file
-        return unless File.exist?(@path)
+        unless File.exist?(@path)
+          @current_interval = [@current_interval * BACKOFF_FACTOR, MAX_INTERVAL].min
+          return
+        end
 
         current_size = File.size(@path)
         if current_size > @offset
