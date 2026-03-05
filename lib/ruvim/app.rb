@@ -356,6 +356,7 @@ module RuVim
       register_ex_unless(ex, "y", call: :ex_yank_lines, aliases: %w[yank], desc: "Yank lines", nargs: :any)
       register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
       register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.invoke_app_action(:follow_toggle) }, desc: "Toggle file follow mode", nargs: 0)
+      register_ex_unless(ex, "nohlsearch", call: ->(ctx, **) { ctx.editor.suppress_hlsearch! }, aliases: %w[noh nohl nohlsearc nohlsear nohlsea nohlse nohls], desc: "Temporarily clear search highlight", nargs: 0)
       register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")

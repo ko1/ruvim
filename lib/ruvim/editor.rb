@@ -100,6 +100,7 @@ module RuVim
       @global_options = default_global_options
       @command_line = CommandLine.new
       @last_search = nil
+      @hlsearch_suppressed = false
       @last_find = nil
       @registers = {}
       @active_register_name = nil
@@ -152,6 +153,15 @@ module RuVim
 
     def set_last_search(pattern:, direction:)
       @last_search = { pattern: pattern.to_s, direction: direction.to_sym }
+      @hlsearch_suppressed = false
+    end
+
+    def suppress_hlsearch!
+      @hlsearch_suppressed = true
+    end
+
+    def hlsearch_suppressed?
+      @hlsearch_suppressed
     end
 
     def set_last_find(char:, direction:, till:)

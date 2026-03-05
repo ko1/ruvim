@@ -261,6 +261,7 @@ register prefix を付けると register を指定できます。
 - `:set ignorecase` / `:set noignorecase` : 検索の大文字小文字を無視（global）
 - `:set smartcase` / `:set nosmartcase` : `ignorecase` 有効時に大文字を含む検索を大文字小文字区別にする（global）
 - `:set hlsearch` / `:set nohlsearch` : 検索ハイライトの ON/OFF（global）
+- `:nohlsearch` (`:noh`) : 検索ハイライトを一時的にクリア（次の検索で自動復帰）
 - `:set tabstop=4` : tab 幅設定（既定スコープは buffer-local）
 - `:setlocal number` : 現在 window のみ変更
 - `:setglobal tabstop=8` : global 値を変更

@@ -36,4 +36,23 @@ class SearchOptionTest < Minitest::Test
     cols = screen.send(:search_highlight_source_cols, @editor, "foo bar", source_col_offset: 0)
     assert_equal({}, cols)
   end
+
+  def test_nohlsearch_suppresses_highlight_until_next_search
+    screen = RuVim::Screen.new(terminal: TerminalStub.new([10, 40]))
+    @editor.set_last_search(pattern: "foo", direction: :forward)
+
+    # highlight is active
+    cols = screen.send(:search_highlight_source_cols, @editor, "foo bar", source_col_offset: 0)
+    assert_equal true, cols[0]
+
+    # suppress via nohlsearch
+    @editor.suppress_hlsearch!
+    cols = screen.send(:search_highlight_source_cols, @editor, "foo bar", source_col_offset: 0)
+    assert_equal({}, cols)
+
+    # next search restores highlight
+    @editor.set_last_search(pattern: "bar", direction: :forward)
+    cols = screen.send(:search_highlight_source_cols, @editor, "foo bar", source_col_offset: 0)
+    assert_equal true, cols[4]
+  end
 end

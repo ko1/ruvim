@@ -1126,6 +1126,7 @@ module RuVim
       search = editor.last_search
       return {} unless search && search[:pattern]
       return {} unless editor.effective_option("hlsearch")
+      return {} if editor.hlsearch_suppressed?
 
       regex = build_screen_search_regex(editor, search[:pattern])
       cols = {}
