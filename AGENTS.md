@@ -76,6 +76,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 lumitrace is a tool that records runtime values of each Ruby expression.
 When a test fails, read `lumitrace help` first, then use it.
 Basic: `lumitrace -t exec rake test`
+This also provides coverage information for the test run.
 
 When fixing bugs, do NOT assume the first fix attempt is correct. After applying a fix, re-read the relevant code paths to verify the fix addresses the actual root cause, not a symptom. If the user says 'it hasn't changed' or equivalent, start fresh analysis from the failing behavior.
 
