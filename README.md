@@ -2,6 +2,19 @@
 
 Ruby で実装した Vim ライクなターミナルエディタです。
 
+Vim の操作感をベースに、Ruby ならではの拡張性と独自機能を加えています。
+
+## Vim にない独自機能
+
+- **`g/` 検索フィルタ** — 検索にマッチする行だけを集めたバッファを作成。再帰的に絞り込み可能。ログ解析に便利
+- **Rich View (`gr`)** — TSV / CSV / Markdown をテーブル整形して閲覧。CJK 幅を考慮したカラム揃え
+- **Follow mode (`-f` / `:follow`)** — `tail -f` 相当のファイル追従。inotify 対応
+- **Ruby DSL 設定** — `~/.config/ruvim/init.rb` に Ruby で `nmap`, `set`, `command` を記述。Vim script 不要
+- **`:ruby` eval** — 実行中に任意の Ruby コードを評価。`ctx.editor` / `ctx.buffer` API でエディタを操作
+- **Ruby 正規表現** — 検索・置換は Ruby `Regexp`。Ruby ユーザーにそのまま馴染む
+
+## 概要
+
 - raw mode + ANSI 描画
 - Normal / Insert / Command-line / Visual
 - Ex コマンド（`:w`, `:q`, `:e`, `:help`, `:set` など）
