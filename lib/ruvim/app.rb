@@ -2923,6 +2923,16 @@ module RuVim
 
     def start_follow!(buf)
       ensure_stream_event_queue!
+      if buf.path && File.exist?(buf.path)
+        data = File.binread(buf.path)
+        if data.end_with?("\n") && buf.lines.last.to_s != ""
+          following_wins = @editor.windows.values.select do |w|
+            w.buffer_id == buf.id && stream_window_following_end?(w, buf)
+          end
+          buf.append_stream_text!("\n")
+          following_wins.each { |w| move_window_to_stream_end!(w, buf) }
+        end
+      end
       buffer_id = buf.id
       watcher = FileWatcher.create(buf.path) do |data|
         @stream_event_queue << { type: :follow_data, buffer_id: buffer_id, data: data }

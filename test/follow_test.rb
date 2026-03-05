@@ -103,12 +103,13 @@ class FollowTest < Minitest::Test
 
     assert_eventually(timeout: 3) do
       @app.send(:drain_stream_events!)
-      buf.line_count > 2
+      buf.line_count > 3
     end
 
-    all_text = buf.lines.join("\n")
-    assert_includes all_text, "line3"
-    assert_includes all_text, "line4"
+    # line2 should NOT be joined with line3
+    assert_includes buf.lines, "line2"
+    assert_includes buf.lines, "line3"
+    assert_includes buf.lines, "line4"
     assert_equal buf.line_count - 1, win.cursor_y
   ensure
     cleanup_follow_app
