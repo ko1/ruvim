@@ -63,7 +63,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 ### Tests (test/)
 
-- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`
+- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `command_line_test`
 - Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 
@@ -75,7 +75,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 lumitrace is a tool that records runtime values of each Ruby expression.
 When a test fails, read `lumitrace help` first, then use it.
-Basic: `lumitrace -t exec rake test`
+Basic: `lumitrace -j exec rake test`
 This also provides coverage information for the test run.
 
 When fixing bugs, do NOT assume the first fix attempt is correct. After applying a fix, re-read the relevant code paths to verify the fix addresses the actual root cause, not a symptom. If the user says 'it hasn't changed' or equivalent, start fresh analysis from the failing behavior.
@@ -83,4 +83,3 @@ When fixing bugs, do NOT assume the first fix attempt is correct. After applying
 ## misc
 
 The user communicates in both English and Japanese. Respond in the same language the user uses. When the user gives feedback like 変わってないですよ ('it hasn't changed'), treat it as a bug report requiring re-analysis.
-
