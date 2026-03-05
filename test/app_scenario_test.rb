@@ -1072,4 +1072,87 @@ class AppScenarioTest < Minitest::Test
     assert_equal :hsplit, tree[:type]
     assert_equal 3, tree[:children].length
   end
+
+  # --- search filter (g/) ---
+
+  def test_filter_creates_buffer_with_matching_lines
+    @editor.current_buffer.replace_all_lines!(["apple", "banana", "apricot", "cherry"])
+    feed("/", "a", "p", :enter)  # search for "ap"
+    feed("g", "/")
+
+    buf = @editor.current_buffer
+    assert_equal :filter, buf.kind
+    assert_equal ["apple", "apricot"], buf.lines
+  end
+
+  def test_filter_enter_jumps_to_original_line_and_closes_filter
+    @editor.current_buffer.replace_all_lines!(["apple", "banana", "apricot", "cherry"])
+    original_buf_id = @editor.current_buffer.id
+    feed("/", "a", "p", :enter)
+    feed("g", "/")
+
+    # Move to second match line ("apricot", originally line 2)
+    feed("j")
+    feed(:enter)
+
+    assert_equal original_buf_id, @editor.current_buffer.id
+    assert_equal 2, @editor.current_window.cursor_y
+  end
+
+  def test_filter_quit_returns_to_previous_buffer
+    @editor.current_buffer.replace_all_lines!(["apple", "banana", "apricot"])
+    original_buf_id = @editor.current_buffer.id
+    feed("/", "a", "p", :enter)
+    feed("g", "/")
+
+    assert_equal :filter, @editor.current_buffer.kind
+    feed(":", "q", :enter)
+
+    assert_equal original_buf_id, @editor.current_buffer.id
+  end
+
+  def test_filter_recursive_filtering
+    @editor.current_buffer.replace_all_lines!(["apple pie", "apricot jam", "apple sauce", "cherry"])
+    feed("/", "a", "p", :enter)
+    feed("g", "/")
+
+    assert_equal ["apple pie", "apricot jam", "apple sauce"], @editor.current_buffer.lines
+
+    # Search within filter and filter again
+    feed("/", "p", "l", "e", :enter)
+    feed("g", "/")
+
+    assert_equal ["apple pie", "apple sauce"], @editor.current_buffer.lines
+
+    # Enter jumps to original buffer
+    feed("j")  # "apple sauce" - originally line 2 of buffer
+    feed(:enter)
+
+    assert_equal 2, @editor.current_window.cursor_y
+  end
+
+  def test_filter_inherits_filetype
+    @editor.current_buffer.replace_all_lines!(["a\tb", "c\td", "a\te"])
+    @editor.current_buffer.options["filetype"] = "tsv"
+    feed("/", "a", :enter)
+    feed("g", "/")
+
+    assert_equal "tsv", @editor.current_buffer.options["filetype"]
+  end
+
+  def test_filter_without_search_pattern_shows_error
+    @editor.current_buffer.replace_all_lines!(["apple", "banana"])
+    feed("g", "/")
+
+    assert @editor.message_error?
+  end
+
+  def test_filter_ex_command
+    @editor.current_buffer.replace_all_lines!(["apple", "banana", "apricot"])
+    feed("/", "a", "p", :enter)
+    feed(":", "f", "i", "l", "t", "e", "r", :enter)
+
+    assert_equal :filter, @editor.current_buffer.kind
+    assert_equal ["apple", "apricot"], @editor.current_buffer.lines
+  end
 end

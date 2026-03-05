@@ -767,6 +767,11 @@ module RuVim
     end
 
     def app_quit(ctx, bang:, **)
+      if ctx.buffer.kind == :filter
+        ctx.editor.delete_buffer(ctx.buffer.id)
+        return
+      end
+
       if ctx.editor.window_count > 1
         ctx.editor.close_current_window
         ctx.editor.echo("closed window")
@@ -1334,6 +1339,61 @@ module RuVim
 
     def rich_toggle(ctx, **)
       RuVim::RichView.toggle!(ctx.editor)
+    end
+
+    def search_filter(ctx, **)
+      editor = ctx.editor
+      search = editor.last_search
+      unless search
+        editor.echo_error("No search pattern")
+        return
+      end
+
+      regex = compile_search_regex(search[:pattern], editor: editor, window: ctx.window, buffer: ctx.buffer)
+      source_buffer = ctx.buffer
+
+      # Collect matching lines with origin mapping
+      origins = []
+      matching_lines = []
+      source_buffer.lines.each_with_index do |line, row|
+        if regex.match?(line)
+          # If source is a filter buffer, chain back to the original
+          if source_buffer.kind == :filter && source_buffer.options["filter_origins"]
+            origins << source_buffer.options["filter_origins"][row]
+          else
+            origins << { buffer_id: source_buffer.id, row: row }
+          end
+          matching_lines << line
+        end
+      end
+
+      if matching_lines.empty?
+        editor.echo_error("Pattern not found: #{search[:pattern]}")
+        return
+      end
+
+      filetype = source_buffer.options["filetype"]
+      filter_buf = editor.add_virtual_buffer(
+        kind: :filter,
+        name: "[Filter: /#{search[:pattern]}/]",
+        lines: matching_lines,
+        filetype: filetype,
+        readonly: false,
+        modifiable: false
+      )
+      filter_buf.options["filter_origins"] = origins
+      filter_buf.options["filter_source_buffer_id"] = source_buffer.id
+      editor.switch_to_buffer(filter_buf.id)
+      editor.echo("filter: #{matching_lines.length} line(s)")
+    end
+
+    def ex_filter(ctx, argv:, **)
+      if argv.any?
+        pattern = parse_vimgrep_pattern(argv.join(" "))
+        editor = ctx.editor
+        editor.set_last_search(pattern: pattern, direction: :forward)
+      end
+      search_filter(ctx)
     end
 
     def submit_search(ctx, pattern:, direction:)

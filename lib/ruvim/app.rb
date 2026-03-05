@@ -357,6 +357,8 @@ module RuVim
       register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
       register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.invoke_app_action(:follow_toggle) }, desc: "Toggle file follow mode", nargs: 0)
       register_ex_unless(ex, "nohlsearch", call: ->(ctx, **) { ctx.editor.suppress_hlsearch! }, aliases: %w[noh nohl nohlsearc nohlsear nohlsea nohlse nohls], desc: "Temporarily clear search highlight", nargs: 0)
+      register_ex_unless(ex, "filter", call: :ex_filter, desc: "Filter lines matching search pattern", nargs: :any)
+      register_internal_unless(cmd, "search.filter", call: :search_filter, desc: "Filter lines matching search pattern")
       register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
@@ -453,6 +455,7 @@ module RuVim
       @keymaps.bind(:normal, "g#", "search.word_backward_partial")
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
       @keymaps.bind(:normal, "gr", "rich.toggle")
+      @keymaps.bind(:normal, "g/", "search.filter")
       @keymaps.bind(:normal, "Q", "quickfix.open")
       @keymaps.bind(:normal, ["]", "q"], "quickfix.next")
       @keymaps.bind(:normal, ["[", "q"], "quickfix.prev")
@@ -851,6 +854,7 @@ module RuVim
 
     def handle_list_window_enter
       buffer = @editor.current_buffer
+      return handle_filter_buffer_enter if buffer.kind == :filter
       return false unless buffer.kind == :quickfix || buffer.kind == :location_list
 
       item_index = @editor.current_window.cursor_y - 2
@@ -889,6 +893,32 @@ module RuVim
           "ll #{list[:index].to_i + 1}/#{list[:items].length}"
         end
       )
+      true
+    end
+
+    def handle_filter_buffer_enter
+      buffer = @editor.current_buffer
+      origins = buffer.options["filter_origins"]
+      return false unless origins
+
+      row = @editor.current_window.cursor_y
+      origin = origins[row]
+      unless origin
+        @editor.echo_error("No filter item on this line")
+        return true
+      end
+
+      target_buffer_id = origin[:buffer_id]
+      target_row = origin[:row]
+      filter_buf_id = buffer.id
+
+      @editor.delete_buffer(filter_buf_id)
+      target_buf = @editor.buffers[target_buffer_id]
+      if target_buf
+        @editor.switch_to_buffer(target_buffer_id) unless @editor.current_buffer.id == target_buffer_id
+        @editor.current_window.cursor_y = [target_row, target_buf.lines.length - 1].min
+        @editor.current_window.cursor_x = 0
+      end
       true
     end
 

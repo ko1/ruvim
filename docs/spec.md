@@ -371,6 +371,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `:copen`, `:cclose`, `:cnext` / `:cn`, `:cprev` / `:cp`
 - `:lopen`, `:lclose`, `:lnext` / `:ln`, `:lprev` / `:lp`
 - `:grep /pattern/ [path...]`, `:lgrep /pattern/ [path...]`
+- `:filter [/pattern/]` : 検索マッチ行のみのフィルタバッファを作成（`g/` キーバインド）
 - `:rich [format]`
 - `:d [count]` / `:delete`
 - `:y [count]` / `:yank`

@@ -88,6 +88,7 @@
 - `gf` : カーソル下のファイル名を開く（最小。`path` / `suffixesadd` を参照）
   - `file:line` 形式なら開いた後に `line` 行目へ移動
 - `gr` : Rich mode をトグル（TSV/CSV をテーブル整形表示、同一バッファ上で動作）
+- `g/` : 検索パターンにマッチする行だけを集めたフィルタバッファを作成（再帰フィルタ可、Enter で元行へジャンプ、`:q` で戻る）
 - `Ctrl-c` : stdin stream 停止（stdin バッファ表示時）
 - `Esc` : メッセージ/保留入力のクリア
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）
