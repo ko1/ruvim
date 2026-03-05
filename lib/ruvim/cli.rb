@@ -159,6 +159,9 @@ module RuVim
           end
         when "-n"
           opts.no_swap = true
+        when "-f"
+          opts.startup_actions << { type: :line_end }
+          opts.startup_actions << { type: :ex, value: "follow" }
         when "-M"
           opts.nomodifiable = true
         when "-Z"
@@ -240,6 +243,7 @@ module RuVim
           -h, --help        Show this help
           -v, --version     Show version
           --clean           Start without user config and ftplugin
+          -f                Open file in follow mode (tail -f style)
           -R                Open file readonly (disallow :w on current buffer)
           -d                Diff mode requested (compat placeholder; not implemented yet)
           -q {errorfile}    Quickfix startup placeholder (not implemented yet)

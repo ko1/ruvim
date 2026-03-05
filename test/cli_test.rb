@@ -153,6 +153,23 @@ class CLITest < Minitest::Test
     assert_equal "", err.string
   end
 
+  def test_parse_follow_option
+    opts = RuVim::CLI.parse(["-f", "log.txt"])
+
+    assert_equal ["log.txt"], opts.files
+    assert_equal [
+      { type: :line_end },
+      { type: :ex, value: "follow" }
+    ], opts.startup_actions
+  end
+
+  def test_help_mentions_follow_option
+    out = StringIO.new
+    err = StringIO.new
+    RuVim::CLI.run(["--help"], stdout: out, stderr: err, stdin: StringIO.new)
+    assert_match(/-f\s+Open file in follow mode/, out.string)
+  end
+
   def test_run_returns_error_for_missing_config_file
     out = StringIO.new
     err = StringIO.new

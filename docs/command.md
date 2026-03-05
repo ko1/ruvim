@@ -3,6 +3,7 @@
 ## 起動オプション（CLI, 現状）
 
 - `--help`, `--version`
+- `-f`（follow mode: ファイルを開いて末尾から `tail -f` 相当の追従モードで起動）
 - `--clean`
 - `-d`（diff mode placeholder, 未実装メッセージ表示）
 - `-q {errorfile}`（quickfix startup placeholder。現状は未実装メッセージ表示）
