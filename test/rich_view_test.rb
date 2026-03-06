@@ -530,6 +530,71 @@ class RichViewTest < Minitest::Test
     assert_nil editor.rich_state
   end
 
+  def test_json_cursor_maps_to_formatted_line
+    editor = fresh_editor
+    buf = editor.current_buffer
+    # {"a":1,"b":{"c":2}}
+    buf.replace_all_lines!(['{"a":1,"b":{"c":2}}'])
+    buf.options["filetype"] = "json"
+
+    # Place cursor at "c" key — find its offset
+    line = buf.line_at(0)
+    idx = line.index('"c"')
+    editor.current_window.cursor_x = idx
+
+    RuVim::RichView.open!(editor, format: "json")
+    new_buf = editor.current_buffer
+    # Cursor should be on the line containing "c"
+    cursor_line = new_buf.line_at(editor.current_window.cursor_y)
+    assert_match(/"c"/, cursor_line, "Cursor should be on the line with \"c\" key")
+  end
+
+  def test_json_cursor_maps_multiline_source
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{', '  "x": [1, 2, 3]', '}'])
+    buf.options["filetype"] = "json"
+
+    # Place cursor on line 1 at the "x" key (col 2 = opening quote)
+    editor.current_window.cursor_y = 1
+    editor.current_window.cursor_x = 2
+
+    RuVim::RichView.open!(editor, format: "json")
+    new_buf = editor.current_buffer
+    cursor_line = new_buf.line_at(editor.current_window.cursor_y)
+    assert_match(/"x"/, cursor_line, "Cursor should be on the line with \"x\" key")
+  end
+
+  def test_json_cursor_at_start_stays_at_start
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}'])
+    buf.options["filetype"] = "json"
+    editor.current_window.cursor_x = 0
+
+    RuVim::RichView.open!(editor, format: "json")
+    assert_equal 0, editor.current_window.cursor_y
+  end
+
+  def test_json_significant_offset
+    r = RuVim::RichView::JsonRenderer
+    # {"a" — 4 significant chars: { " a "
+    assert_equal 4, r.significant_char_count('{"a"', 4)
+    # { "a" — space outside string skipped, still 4 significant
+    assert_equal 4, r.significant_char_count('{ "a"', 5)
+  end
+
+  def test_json_line_for_significant_offset
+    formatted = "{\n  \"a\": 1\n}"
+    r = RuVim::RichView::JsonRenderer
+    # count 0 → line 0 (before any char)
+    assert_equal 0, r.line_for_significant_count(formatted, 0)
+    # count 1 → line 0 ({ is the 1st significant char, on line 0)
+    assert_equal 0, r.line_for_significant_count(formatted, 1)
+    # count 2 → line 1 (" opening quote of "a" is on line 1)
+    assert_equal 1, r.line_for_significant_count(formatted, 2)
+  end
+
   def test_json_filetype_detected
     editor = fresh_editor
     buf = editor.current_buffer
