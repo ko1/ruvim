@@ -4,7 +4,7 @@ module RuVim
   module TextMetrics
     module_function
 
-    Cell = Struct.new(:glyph, :source_col, :display_width, keyword_init: true)
+    Cell = Struct.new(:glyph, :source_col, :display_width)
 
     # Cursor positions in RuVim are currently "character index" (Ruby String#[] index on UTF-8),
     # not byte offsets. Grapheme-aware movement is layered on top of that.
@@ -65,31 +65,42 @@ module RuVim
       source_col = source_col_start.to_i
 
       text.to_s.each_char do |ch|
+        code = ch.ord
+        # Fast path: printable ASCII (0x20..0x7E) — width 1, no special handling
+        if code >= 0x20 && code <= 0x7E
+          break if display_col >= max_width
+          cells << Cell.new(ch, source_col, 1)
+          display_col += 1
+          source_col += 1
+          next
+        end
+
         if ch == "\t"
-          w = RuVim::DisplayWidth.cell_width(ch, col: display_col, tabstop:)
+          w = tabstop - (display_col % tabstop)
+          w = tabstop if w.zero?
           break if display_col + w > max_width
 
           w.times do
-            cells << Cell.new(glyph: " ", source_col:, display_width: 1)
+            cells << Cell.new(" ", source_col, 1)
           end
           display_col += w
           source_col += 1
           next
         end
 
-        w = RuVim::DisplayWidth.cell_width(ch, col: display_col, tabstop:)
-        if terminal_unsafe_control_char?(ch)
-          w = [w, 1].max
-          break if display_col + w > max_width
-
-          cells << Cell.new(glyph: terminal_safe_placeholder(ch), source_col:, display_width: w)
-          display_col += w
+        # Control chars (0x00..0x1F, 0x7F, 0x80..0x9F)
+        if code < 0x20 || code == 0x7F || (code >= 0x80 && code <= 0x9F)
+          break if display_col >= max_width
+          cells << Cell.new("?", source_col, 1)
+          display_col += 1
           source_col += 1
           next
         end
+
+        w = RuVim::DisplayWidth.cell_width(ch, col: display_col, tabstop:)
         break if display_col + w > max_width
 
-        cells << Cell.new(glyph: ch, source_col:, display_width: w)
+        cells << Cell.new(ch, source_col, w)
         display_col += w
         source_col += 1
       end

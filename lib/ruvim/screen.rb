@@ -652,7 +652,10 @@ module RuVim
       indent_prefix = breakindent ? wrapped_indent_prefix(line, tabstop:, max_width: [width - RuVim::DisplayWidth.display_width(showbreak, tabstop:), 0].max) : ""
       segs = compute_wrapped_segments(line, width:, tabstop:, linebreak:, showbreak:, indent_prefix:)
       @wrapped_segments_cache[cache_key] = segs
-      @wrapped_segments_cache.shift while @wrapped_segments_cache.length > WRAP_SEGMENTS_CACHE_LIMIT
+      if @wrapped_segments_cache.length > WRAP_SEGMENTS_CACHE_LIMIT
+        trim = @wrapped_segments_cache.length - WRAP_SEGMENTS_CACHE_LIMIT / 2
+        trim.times { @wrapped_segments_cache.shift }
+      end
       segs
     end
 
@@ -1189,7 +1192,10 @@ module RuVim
 
       cols = RuVim::Highlighter.color_columns(filetype, source_line_text)
       @syntax_color_cache[key] = cols
-      @syntax_color_cache.shift while @syntax_color_cache.length > SYNTAX_CACHE_LIMIT
+      if @syntax_color_cache.length > SYNTAX_CACHE_LIMIT
+        trim = @syntax_color_cache.length - SYNTAX_CACHE_LIMIT / 2
+        trim.times { @syntax_color_cache.shift }
+      end
       cols
     end
   end

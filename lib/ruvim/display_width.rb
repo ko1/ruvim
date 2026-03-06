@@ -12,8 +12,10 @@ module RuVim
         return width.zero? ? tabstop : width
       end
 
+      # Fast path: byte length 1 means ASCII — always width 1
+      return 1 if ch.bytesize == 1
+
       code = ch.ord
-      return 1 if code <= 0xA0 && !code.zero?
       return cached_codepoint_width(code) if codepoint_cacheable?(code)
 
       uncached_codepoint_width(code)
