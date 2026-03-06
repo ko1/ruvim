@@ -309,8 +309,14 @@ module RuVim
     end
 
     def render_text_segment(source_line, editor, buffer_row:, window:, buffer:, width:, source_col_start:, display_prefix: "")
-      tabstop = tabstop_for(editor, window, buffer)
       prefix = display_prefix.to_s
+
+      # Bulk path: no prefix, printable ASCII, no highlighting
+      if prefix.empty? && can_bulk_render_line?(source_line, editor, buffer_row:, window:, buffer:)
+        return bulk_render_line(source_line, width, col_offset: source_col_start)
+      end
+
+      tabstop = tabstop_for(editor, window, buffer)
       prefix_w = RuVim::DisplayWidth.display_width(prefix, tabstop:)
       avail = [width - prefix_w, 0].max
       cells, display_col = RuVim::TextMetrics.clip_cells_for_width(source_line[source_col_start..].to_s, avail, source_col_start:, tabstop:)
@@ -322,7 +328,6 @@ module RuVim
         body
       else
         prefix_render = RuVim::TextMetrics.pad_plain_to_screen_width(prefix, [width, 0].max, tabstop:)[0...prefix.length].to_s
-        # body already includes padding for avail; prepend the visible prefix and trim to width.
         out = prefix_render + body
         out
       end
