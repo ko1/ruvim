@@ -59,6 +59,8 @@ module RuVim
       @editor.open_path_handler = method(:open_path_with_large_file_support)
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = method(:handle_editor_app_action)
+      @editor.git_stream_handler = method(:start_git_stream_command)
+      @editor.git_stream_stop_handler = method(:stop_git_stream!)
       load_command_line_history!
 
       startup_mark("init.start")
@@ -2929,6 +2931,12 @@ module RuVim
           changed = finish_async_file_load!(event[:buffer_id], ended_with_newline: event[:ended_with_newline]) || changed
         when :file_error
           changed = fail_async_file_load!(event[:buffer_id], event[:error]) || changed
+        when :git_cmd_data
+          changed = apply_git_stream_chunk!(event[:buffer_id], event[:data]) || changed
+        when :git_cmd_eof
+          changed = finish_git_stream!(event[:buffer_id]) || changed
+        when :git_cmd_error
+          changed = fail_git_stream!(event[:buffer_id], event[:error]) || changed
         end
       end
     rescue ThreadError
@@ -3147,6 +3155,70 @@ module RuVim
 
     def ensure_stream_event_queue!
       @stream_event_queue ||= Queue.new
+    end
+
+    def apply_git_stream_chunk!(buffer_id, text)
+      return false if text.to_s.empty?
+
+      buf = @editor.buffers[buffer_id]
+      return false unless buf
+
+      buf.append_stream_text!(text)
+      true
+    end
+
+    def finish_git_stream!(buffer_id)
+      @git_stream_ios&.delete(buffer_id)
+      @git_stream_threads&.delete(buffer_id)
+      buf = @editor.buffers[buffer_id]
+      return false unless buf
+
+      # Remove trailing empty line if present
+      if buf.lines.length > 1 && buf.lines[-1] == ""
+        buf.lines.pop
+      end
+      line_count = buf.line_count
+      @editor.echo("#{buf.name} #{line_count} lines")
+      true
+    end
+
+    def fail_git_stream!(buffer_id, error)
+      @git_stream_ios&.delete(buffer_id)
+      @git_stream_threads&.delete(buffer_id)
+      buf = @editor.buffers[buffer_id]
+      @editor.echo_error("git stream error: #{error}") if buf
+      true
+    end
+
+    def start_git_stream_command(buffer_id, cmd, root)
+      ensure_stream_event_queue!
+      @git_stream_ios ||= {}
+      @git_stream_threads ||= {}
+      queue = @stream_event_queue
+      ios = @git_stream_ios
+      @git_stream_threads[buffer_id] = Thread.new do
+        IO.popen(cmd, chdir: root, err: [:child, :out]) do |io|
+          ios[buffer_id] = io
+          while (chunk = io.read(4096))
+            queue << { type: :git_cmd_data, buffer_id: buffer_id, data: Buffer.decode_text(chunk) }
+            notify_signal_wakeup
+          end
+        end
+        ios.delete(buffer_id)
+        queue << { type: :git_cmd_eof, buffer_id: buffer_id }
+        notify_signal_wakeup
+      rescue StandardError => e
+        ios.delete(buffer_id)
+        queue << { type: :git_cmd_error, buffer_id: buffer_id, error: e.message.to_s }
+        notify_signal_wakeup
+      end
+    end
+
+    def stop_git_stream!(buffer_id)
+      io = @git_stream_ios&.delete(buffer_id)
+      io&.close
+    rescue IOError
+      # already closed
     end
 
     def move_cursor_to_line(line_number)

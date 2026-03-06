@@ -16,6 +16,12 @@ class GitBlameTest < Minitest::Test
     keys.each { |k| @app.send(:handle_key, k) }
   end
 
+  def drain_git_stream!
+    threads = @app.instance_variable_get(:@git_stream_threads)
+    threads&.each_value(&:join)
+    @app.send(:drain_stream_events!)
+  end
+
   # --- Parsing ---
 
   def test_parse_porcelain_basic
@@ -425,6 +431,7 @@ class GitBlameTest < Minitest::Test
       @editor.switch_to_buffer(buf.id)
 
       @dispatcher.dispatch_ex(@editor, "git log")
+      drain_git_stream!
 
       log_buf = @editor.current_buffer
       assert_equal :git_log, log_buf.kind
@@ -443,6 +450,7 @@ class GitBlameTest < Minitest::Test
       @editor.switch_to_buffer(buf.id)
 
       @dispatcher.dispatch_ex(@editor, "git log -p")
+      drain_git_stream!
 
       log_buf = @editor.current_buffer
       assert_equal :git_log, log_buf.kind
