@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-# Additional scenario tests to improve coverage of global_commands.rb, key_handler.rb, and screen.rb
-
 require_relative "test_helper"
 
-class AppCoverageTest < Minitest::Test
+class AppCommandTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
