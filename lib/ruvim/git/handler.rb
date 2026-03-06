@@ -14,7 +14,9 @@ module RuVim
       }.freeze
 
       include Blame::HandlerMethods
-      include Commands::HandlerMethods
+      include Status::HandlerMethods
+      include Diff::HandlerMethods
+      include Log::HandlerMethods
 
       def enter_git_command_mode(ctx, **)
         ctx.editor.enter_command_line_mode(":")

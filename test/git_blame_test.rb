@@ -83,6 +83,27 @@ class GitBlameTest < Minitest::Test
     assert_includes lines[1], "Bob"
   end
 
+  # --- Status filename parsing ---
+
+  def test_parse_status_modified_line
+    assert_equal "lib/ruvim/app.rb", RuVim::Git::Status.parse_filename("\tmodified:   lib/ruvim/app.rb")
+  end
+
+  def test_parse_status_new_file_line
+    assert_equal "foo.rb", RuVim::Git::Status.parse_filename("\tnew file:   foo.rb")
+  end
+
+  def test_parse_status_untracked_line
+    assert_equal "bar.txt", RuVim::Git::Status.parse_filename("\tbar.txt")
+  end
+
+  def test_parse_status_header_returns_nil
+    assert_nil RuVim::Git::Status.parse_filename("Changes not staged for commit:")
+    assert_nil RuVim::Git::Status.parse_filename("  (use \"git add <file>...\")")
+    assert_nil RuVim::Git::Status.parse_filename("On branch master")
+    assert_nil RuVim::Git::Status.parse_filename("")
+  end
+
   # --- Integration with App (using git repo) ---
 
   def test_ctrl_g_enters_git_command_mode
@@ -220,6 +241,32 @@ class GitBlameTest < Minitest::Test
       assert_equal :git_status, status_buf.kind
       assert status_buf.readonly?
       assert_match(/\[Git Status\]/, status_buf.name)
+    end
+  end
+
+  def test_git_status_enter_opens_file
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+      # Create an uncommitted change so it shows in status
+      File.write(File.join(dir, "test_file.txt"), "modified\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git status")
+      assert_equal :git_status, @editor.current_buffer.kind
+
+      # Move to a line containing the modified file
+      status_buf = @editor.current_buffer
+      target_line = status_buf.lines.index { |l| l.include?("test_file.txt") }
+      assert target_line, "Expected test_file.txt in status output"
+      @editor.current_window.cursor_y = target_line
+
+      feed(:enter)
+
+      # Should have opened test_file.txt
+      assert_equal File.join(dir, "test_file.txt"), @editor.current_buffer.path
     end
   end
 
