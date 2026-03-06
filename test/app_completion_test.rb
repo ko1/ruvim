@@ -210,4 +210,29 @@ class AppCompletionTest < Minitest::Test
     @app.send(:handle_insert_key, :ctrl_n)
     assert_equal "foobar", b.line_at(0)
   end
+
+  def test_git_subcommand_completion
+    @editor.materialize_intro_buffer!
+    @editor.enter_command_line_mode(":")
+    cmd = @editor.command_line
+    cmd.replace_text("git bl")
+
+    @app.send(:command_line_complete)
+
+    # "bl" matches "blame", "blameback", "blamecommit", "blameprev", "branch"
+    # With multiple matches, wildmode applies (longest common prefix or cycle)
+    text = cmd.text
+    assert text.start_with?("git bl"), "Expected completion to keep 'git bl' prefix, got: #{text}"
+  end
+
+  def test_git_subcommand_completion_unique
+    @editor.materialize_intro_buffer!
+    @editor.enter_command_line_mode(":")
+    cmd = @editor.command_line
+    cmd.replace_text("git co")
+
+    @app.send(:command_line_complete)
+
+    assert_equal "git commit", cmd.text
+  end
 end

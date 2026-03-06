@@ -2389,6 +2389,10 @@ module RuVim
         return option_completion_candidates(prefix)
       end
 
+      if cmd == "git"
+        return Git::Handler::GIT_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
+      end
+
       []
     end
 
