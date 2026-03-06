@@ -31,6 +31,65 @@ class WindowTest < Minitest::Test
     assert_operator win.col_offset, :>, 0
   end
 
+  def test_move_left
+    buffer = RuVim::Buffer.new(id: 1, lines: ["abcde"])
+    win = RuVim::Window.new(id: 1, buffer_id: 1)
+    win.cursor_x = 3
+
+    win.move_left(buffer)
+    assert_equal 2, win.cursor_x
+
+    win.move_left(buffer, 2)
+    assert_equal 0, win.cursor_x
+
+    # Should not go below 0
+    win.move_left(buffer)
+    assert_equal 0, win.cursor_x
+  end
+
+  def test_move_right
+    buffer = RuVim::Buffer.new(id: 1, lines: ["abcde"])
+    win = RuVim::Window.new(id: 1, buffer_id: 1)
+    win.cursor_x = 0
+
+    win.move_right(buffer)
+    assert_equal 1, win.cursor_x
+
+    win.move_right(buffer, 2)
+    assert_equal 3, win.cursor_x
+
+    # Should not go beyond line length
+    win.move_right(buffer, 10)
+    assert_equal 5, win.cursor_x
+  end
+
+  def test_move_left_with_multibyte
+    buffer = RuVim::Buffer.new(id: 1, lines: ["ab日本c"])
+    win = RuVim::Window.new(id: 1, buffer_id: 1)
+    win.cursor_x = 4 # on "c"
+
+    win.move_left(buffer)
+    assert_equal 3, win.cursor_x # on "本"
+
+    win.move_left(buffer)
+    assert_equal 2, win.cursor_x # on "日"
+  end
+
+  def test_move_up
+    buffer = RuVim::Buffer.new(id: 1, lines: ["abc", "def", "ghi"])
+    win = RuVim::Window.new(id: 1, buffer_id: 1)
+    win.cursor_y = 2
+    win.cursor_x = 1
+
+    win.move_up(buffer)
+    assert_equal 1, win.cursor_y
+    assert_equal 1, win.cursor_x
+
+    # Should not go below 0
+    win.move_up(buffer, 5)
+    assert_equal 0, win.cursor_y
+  end
+
   def test_move_down_preserves_preferred_column_across_empty_line
     long = "x" * 80
     buffer = RuVim::Buffer.new(id: 1, lines: [long, "", long])
