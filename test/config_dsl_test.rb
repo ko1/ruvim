@@ -162,4 +162,51 @@ class ConfigDSLTest < Minitest::Test
     dsl.set("tabstop=4")
     assert_equal 4, editor.get_option("tabstop")
   end
+
+  def test_ex_command_registers_and_allows_re_register
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: RuVim::ExCommandRegistry.instance,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance
+    )
+    saved_specs = RuVim::ExCommandRegistry.instance.instance_variable_get(:@specs).dup
+    saved_lookup = RuVim::ExCommandRegistry.instance.instance_variable_get(:@lookup).dup
+
+    dsl.ex_command("testusercmd", desc: "test") { |_ctx, **| }
+    assert RuVim::ExCommandRegistry.instance.registered?("testusercmd")
+
+    # Re-registering should not raise (unregisters first)
+    dsl.ex_command("testusercmd", desc: "test v2") { |_ctx, **| }
+    assert RuVim::ExCommandRegistry.instance.registered?("testusercmd")
+  ensure
+    RuVim::ExCommandRegistry.instance.instance_variable_set(:@specs, saved_specs)
+    RuVim::ExCommandRegistry.instance.instance_variable_set(:@lookup, saved_lookup)
+  end
+
+  def test_setlocal_sets_local_scope
+    editor = fresh_editor
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      editor: editor
+    )
+    dsl.setlocal("number")
+    assert editor.get_option("number")
+  end
+
+  def test_setglobal_sets_global_scope
+    editor = fresh_editor
+    dsl = RuVim::ConfigDSL.new(
+      command_registry: @command_registry,
+      ex_registry: @ex_registry,
+      keymaps: @keymaps,
+      command_host: RuVim::GlobalCommands.instance,
+      editor: editor
+    )
+    dsl.setglobal("ignorecase")
+    assert editor.get_option("ignorecase")
+  end
 end

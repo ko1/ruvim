@@ -367,4 +367,178 @@ class AppCoverageTest < Minitest::Test
     # No filename, should show error
     assert_equal :normal, @editor.mode
   end
+
+  # --- window focus (Ctrl-W + direction) ---
+
+  def test_window_focus_after_split
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    original_win_id = @editor.current_window.id
+
+    feed(:ctrl_w, "w")
+    refute_equal original_win_id, @editor.current_window.id
+
+    feed(:ctrl_w, "j")
+    feed(:ctrl_w, "k")
+    # Should still be in normal mode after focus changes
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_window_focus_left_right
+    feed(":", "v", "s", "p", "l", "i", "t", :enter)
+    feed(:ctrl_w, "h")
+    feed(:ctrl_w, "l")
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- rich view toggle (gr) ---
+
+  def test_rich_toggle
+    buf.replace_all_lines!(["hello world"])
+    feed("g", "r")
+    # rich view may or may not activate depending on filetype, just check no crash
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- quickfix / location list ---
+
+  def test_copen_and_cclose
+    feed(":", "c", "o", "p", "e", "n", :enter)
+    feed(":", "c", "c", "l", "o", "s", "e", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_cprev_with_empty_list
+    feed(":", "c", "p", "r", "e", "v", :enter)
+    # Should show error for empty quickfix
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_lclose_without_open
+    feed(":", "l", "c", "l", "o", "s", "e", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_lprev_with_empty_list
+    feed(":", "l", "p", "r", "e", "v", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- :set command (parse_bool, option_help_line) ---
+
+  def test_set_number_on_off
+    feed(":", "s", "e", "t", " ", "n", "u", "m", "b", "e", "r", :enter)
+    assert @editor.get_option("number")
+
+    feed(":", "s", "e", "t", " ", "n", "o", "n", "u", "m", "b", "e", "r", :enter)
+    refute @editor.get_option("number")
+  end
+
+  def test_set_tabstop_value
+    feed(":", "s", "e", "t", " ", "t", "a", "b", "s", "t", "o", "p", "=", "8", :enter)
+    assert_equal 8, @editor.get_option("tabstop")
+  end
+
+  def test_set_option_query
+    # :set number? should show current value
+    feed(":", "s", "e", "t", " ", "n", "u", "m", "b", "e", "r", "?", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- :bindings command ---
+
+  def test_bindings_command
+    feed(":", "b", "i", "n", "d", "i", "n", "g", "s", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_bindings_with_mode_filter
+    feed(":", "b", "i", "n", "d", "i", "n", "g", "s", " ", "n", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- arglist (next/prev/first/last) ---
+
+  def test_arglist_operations
+    # :args should work without error
+    feed(":", "a", "r", "g", "s", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- key_handler: arrow and page keys in rich mode ---
+
+  def test_arrow_keys_in_normal_mode
+    buf.replace_all_lines!(["abc", "def"])
+    win.cursor_y = 0
+    win.cursor_x = 0
+    feed(:right)
+    assert_equal 1, win.cursor_x
+    feed(:down)
+    assert_equal 1, win.cursor_y
+    feed(:left)
+    assert_equal 0, win.cursor_x
+    feed(:up)
+    assert_equal 0, win.cursor_y
+  end
+
+  def test_page_keys_in_normal_mode
+    buf.replace_all_lines!((1..30).map { |i| "line#{i}" })
+    @editor.current_window_view_height_hint = 10
+    win.cursor_y = 0
+    feed(:pagedown)
+    assert_operator win.cursor_y, :>, 0
+    feed(:pageup)
+    assert_equal 0, win.cursor_y
+  end
+
+  # --- mark pending: escape cancels, invalid mark ---
+
+  def test_mark_pending_escape_cancels
+    buf.replace_all_lines!(["hello"])
+    feed("m", "\e")
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_mark_pending_invalid_char
+    buf.replace_all_lines!(["hello"])
+    feed("m", " ")
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- jump pending: backtick-backtick jumps older ---
+
+  def test_backtick_backtick_jumps_older
+    buf.replace_all_lines!((1..10).map { |i| "line#{i}" })
+    win.cursor_y = 0
+    feed("G")  # jump to end
+    feed("`", "`")  # `` jumps to previous position
+    assert_equal 0, win.cursor_y
+  end
+
+  def test_jump_pending_escape_cancels
+    buf.replace_all_lines!(["hello"])
+    feed("'", "\e")
+    assert_equal :normal, @editor.mode
+  end
+
+  def test_jump_pending_invalid_mark
+    buf.replace_all_lines!(["hello"])
+    feed("'", " ")
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- :edit and :e! commands ---
+
+  def test_edit_no_file_reloads_or_errors
+    # :edit with no file and no current path
+    feed(":", "e", "d", "i", "t", :enter)
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- buffer switch ---
+
+  def test_buffer_alternate_hash
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    feed(":", "b", "#", :enter)
+    assert_equal :normal, @editor.mode
+  end
 end
