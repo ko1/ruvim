@@ -347,6 +347,12 @@ module RuVim
       ctx.editor.clear_message
     end
 
+    def enter_git_command_mode(ctx, **)
+      ctx.editor.enter_command_line_mode(":")
+      ctx.editor.command_line.replace_text("Git ")
+      ctx.editor.clear_message
+    end
+
     def enter_search_forward_mode(ctx, **)
       ctx.editor.enter_command_line_mode("/")
       ctx.editor.clear_message
@@ -1443,7 +1449,30 @@ module RuVim
       move_to_search(ctx, pattern: text, direction:, count: 1)
     end
 
-    # ---- Git Blame ----
+    # ---- Git ----
+
+    GIT_SUBCOMMANDS = {
+      "blame"       => :git_blame,
+      "blameprev"   => :git_blame_prev,
+      "blameback"   => :git_blame_back,
+      "blamecommit" => :git_blame_commit,
+    }.freeze
+
+    def ex_git(ctx, argv: [], **)
+      sub = argv.first.to_s.downcase
+      if sub.empty?
+        ctx.editor.echo("Git subcommands: #{GIT_SUBCOMMANDS.keys.join(', ')}")
+        return
+      end
+
+      method = GIT_SUBCOMMANDS[sub]
+      unless method
+        ctx.editor.echo_error("Unknown Git subcommand: #{sub}")
+        return
+      end
+
+      public_send(method, ctx, argv: argv[1..], kwargs: {}, bang: false, count: 1)
+    end
 
     def git_blame(ctx, **)
       source_buf = ctx.buffer

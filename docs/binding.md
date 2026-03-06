@@ -89,7 +89,8 @@
   - `file:line` 形式なら開いた後に `line` 行目へ移動
 - `gr` : Rich mode をトグル（TSV/CSV をテーブル整形表示、同一バッファ上で動作）
 - `g/` : 検索パターンにマッチする行だけを集めたフィルタバッファを作成（再帰フィルタ可、Enter で元行へジャンプ、`:q` で戻る）
-- `gb` : Git blame を開く（読み取り専用の Blame バッファ）
+- `Ctrl-g` : Git コマンドモード（`:Git ` がプリセットされたコマンドラインに入る）
+  - `blame` → Git blame を開く（読み取り専用の Blame バッファ）
   - Blame バッファ内: `p` 親コミットの blame へ遷移 / `P` 前の blame へ戻る / `c` コミット詳細を表示
 - `Ctrl-c` : stdin stream 停止（stdin バッファ表示時）
 - `Esc` : メッセージ/保留入力のクリア

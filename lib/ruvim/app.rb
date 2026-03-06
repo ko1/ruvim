@@ -375,6 +375,8 @@ module RuVim
       register_internal_unless(cmd, "git.blame.prev", call: :git_blame_prev, desc: "Blame at parent commit")
       register_internal_unless(cmd, "git.blame.back", call: :git_blame_back, desc: "Restore previous blame")
       register_internal_unless(cmd, "git.blame.commit", call: :git_blame_commit, desc: "Show commit details")
+      register_internal_unless(cmd, "git.command_mode", call: :enter_git_command_mode, desc: "Enter Git command-line mode")
+      register_ex_unless(ex, "Git", call: :ex_git, desc: "Git subcommand dispatcher", nargs: :any)
       register_ex_unless(ex, "GitBlame", call: :git_blame, desc: "Open git blame buffer", nargs: 0)
       register_ex_unless(ex, "GitBlamePrev", call: :git_blame_prev, desc: "Blame at parent commit", nargs: 0)
       register_ex_unless(ex, "GitBlameBack", call: :git_blame_back, desc: "Restore previous blame", nargs: 0)
@@ -472,7 +474,7 @@ module RuVim
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
       @keymaps.bind(:normal, "gr", "rich.toggle")
       @keymaps.bind(:normal, "g/", "search.filter")
-      @keymaps.bind(:normal, "gb", "git.blame")
+      @keymaps.bind(:normal, ["<C-g>"], "git.command_mode")
       @keymaps.bind(:normal, "Q", "quickfix.open")
       @keymaps.bind(:normal, ["]", "q"], "quickfix.next")
       @keymaps.bind(:normal, ["[", "q"], "quickfix.prev")
@@ -1000,6 +1002,7 @@ module RuVim
       when :ctrl_w then "<C-w>"
       when :ctrl_l then "<C-l>"
       when :ctrl_c then "<C-c>"
+      when :ctrl_g then "<C-g>"
       when :left then "<Left>"
       when :right then "<Right>"
       when :up then "<Up>"

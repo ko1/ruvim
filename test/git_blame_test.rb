@@ -85,6 +85,44 @@ class GitBlameTest < Minitest::Test
 
   # --- Integration with App (using git repo) ---
 
+  def test_ctrl_g_enters_git_command_mode
+    feed(:ctrl_g)
+    assert_equal :command_line, @editor.mode
+    assert_equal ":Git ", @editor.command_line.content
+  end
+
+  def test_git_blame_via_ex_git_subcommand
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "Git blame")
+
+      blame_buf = @editor.current_buffer
+      assert_equal :blame, blame_buf.kind
+      assert_equal 2, blame_buf.line_count
+    end
+  end
+
+  def test_git_blame_via_ex_gitblame
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
+
+      blame_buf = @editor.current_buffer
+      assert_equal :blame, blame_buf.kind
+      assert_equal 2, blame_buf.line_count
+    end
+  end
+
   def test_git_blame_opens_blame_buffer
     Dir.mktmpdir do |dir|
       setup_git_repo(dir, "test_file.txt", "line1\nline2\nline3\n")
@@ -93,7 +131,7 @@ class GitBlameTest < Minitest::Test
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      feed("g", "b")
+      @dispatcher.dispatch_ex(@editor, "Git blame")
 
       blame_buf = @editor.current_buffer
       assert_equal :blame, blame_buf.kind
@@ -112,7 +150,7 @@ class GitBlameTest < Minitest::Test
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      feed("g", "b")
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
 
       blame_buf = @editor.current_buffer
       assert_equal :blame, blame_buf.kind
@@ -133,7 +171,7 @@ class GitBlameTest < Minitest::Test
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      feed("g", "b")
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
       assert_equal :blame, @editor.current_buffer.kind
 
       # Press 'c' to show commit
@@ -148,14 +186,13 @@ class GitBlameTest < Minitest::Test
 
   def test_git_blame_prev_and_back
     Dir.mktmpdir do |dir|
-      # Create repo with two commits
       setup_git_repo_multi_commits(dir, "test_file.txt")
 
       file_path = File.join(dir, "test_file.txt")
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      feed("g", "b")
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
       blame_buf = @editor.current_buffer
       assert_equal :blame, blame_buf.kind
 
@@ -173,20 +210,14 @@ class GitBlameTest < Minitest::Test
     end
   end
 
-  def test_ex_blame_command
-    Dir.mktmpdir do |dir|
-      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+  def test_git_unknown_subcommand_shows_error
+    @dispatcher.dispatch_ex(@editor, "Git unknown")
+    assert_match(/Unknown Git subcommand/, @editor.message)
+  end
 
-      file_path = File.join(dir, "test_file.txt")
-      buf = @editor.add_buffer_from_file(file_path)
-      @editor.switch_to_buffer(buf.id)
-
-      @dispatcher.dispatch_ex(@editor, "GitBlame")
-
-      blame_buf = @editor.current_buffer
-      assert_equal :blame, blame_buf.kind
-      assert_equal 2, blame_buf.line_count
-    end
+  def test_git_no_subcommand_shows_list
+    @dispatcher.dispatch_ex(@editor, "Git")
+    assert_match(/blame/, @editor.message)
   end
 
   def test_git_blame_on_non_git_file_shows_error
@@ -197,7 +228,7 @@ class GitBlameTest < Minitest::Test
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      feed("g", "b")
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
 
       # Should remain on original buffer (blame failed)
       assert_equal :file, @editor.current_buffer.kind
