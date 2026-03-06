@@ -319,28 +319,38 @@ module RuVim
       leading_prefix_width = RuVim::DisplayWidth.display_width(leading_display_prefix.to_s, tabstop:)
       display_pos = leading_prefix_width
 
-      cells.each do |cell|
-        ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
-        buffer_col = cell.source_col
-        selected = selected_in_visual?(visual, buffer_row, buffer_col)
-        cursor_here = (editor.current_window_id == window.id && window.cursor_y == buffer_row && window.cursor_x == buffer_col)
-        colorcolumn_here = colorcolumns[display_pos]
-        if cursor_here
-          highlighted << cursor_cell_render(editor, ch)
-        elsif selected
-          highlighted << "\e[7m#{ch}\e[m"
-        elsif search_cols[buffer_col]
-          highlighted << "#{search_bg_seq(editor)}#{ch}\e[m"
-        elsif colorcolumn_here
-          highlighted << "#{colorcolumn_bg_seq(editor)}#{ch}\e[m"
-        elsif cursorline_enabled
-          highlighted << "#{cursorline_bg_seq(editor)}#{ch}\e[m"
-        elsif (syntax_color = syntax_cols[buffer_col])
-          highlighted << "#{syntax_color}#{ch}\e[m"
-        else
-          highlighted << ch
+      # Fast path: no highlighting needed — bulk output glyphs
+      if !current_line && !visual && !cursorline_enabled &&
+         !list_enabled && search_cols.empty? &&
+         syntax_cols.empty? && colorcolumns.empty?
+        cells.each do |cell|
+          highlighted << cell.glyph
+          display_pos += [cell.display_width.to_i, 1].max
         end
-        display_pos += [cell.display_width.to_i, 1].max
+      else
+        cells.each do |cell|
+          ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
+          buffer_col = cell.source_col
+          selected = selected_in_visual?(visual, buffer_row, buffer_col)
+          cursor_here = (current_line && window.cursor_x == buffer_col)
+          colorcolumn_here = colorcolumns[display_pos]
+          if cursor_here
+            highlighted << cursor_cell_render(editor, ch)
+          elsif selected
+            highlighted << "\e[7m#{ch}\e[m"
+          elsif search_cols[buffer_col]
+            highlighted << "#{search_bg_seq(editor)}#{ch}\e[m"
+          elsif colorcolumn_here
+            highlighted << "#{colorcolumn_bg_seq(editor)}#{ch}\e[m"
+          elsif cursorline_enabled
+            highlighted << "#{cursorline_bg_seq(editor)}#{ch}\e[m"
+          elsif (syntax_color = syntax_cols[buffer_col])
+            highlighted << "#{syntax_color}#{ch}\e[m"
+          else
+            highlighted << ch
+          end
+          display_pos += [cell.display_width.to_i, 1].max
+        end
       end
 
       if editor.current_window_id == window.id && window.cursor_y == buffer_row
