@@ -105,5 +105,9 @@ module RuVim
       km.bind_buffer(buffer_id, "\e", "rich.close_buffer")
       km.bind_buffer(buffer_id, "<C-c>", "rich.close_buffer")
     end
+
+    register("markdown", MarkdownRenderer)
+    register("json", JsonRenderer)
+    register("jsonl", JsonlRenderer)
   end
 end

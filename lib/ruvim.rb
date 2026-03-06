@@ -40,12 +40,6 @@ require_relative "ruvim/command_line"
 require_relative "ruvim/input"
 require_relative "ruvim/terminal"
 require_relative "ruvim/rich_view"
-
-# Register renderers after RichView is defined
-RuVim::RichView.register("markdown", RuVim::RichView::MarkdownRenderer)
-RuVim::RichView.register("json", RuVim::RichView::JsonRenderer)
-RuVim::RichView.register("jsonl", RuVim::RichView::JsonlRenderer)
-
 require_relative "ruvim/lang/tsv"
 require_relative "ruvim/lang/csv"
 require_relative "ruvim/screen"
