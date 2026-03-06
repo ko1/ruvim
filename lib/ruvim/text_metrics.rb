@@ -4,7 +4,15 @@ module RuVim
   module TextMetrics
     module_function
 
-    Cell = Struct.new(:glyph, :source_col, :display_width)
+    class Cell
+      attr_reader :glyph, :source_col, :display_width
+
+      def initialize(glyph, source_col, display_width)
+        @glyph = glyph
+        @source_col = source_col
+        @display_width = display_width
+      end
+    end
 
     # Cursor positions in RuVim are currently "character index" (Ruby String#[] index on UTF-8),
     # not byte offsets. Grapheme-aware movement is layered on top of that.
