@@ -25,6 +25,8 @@ module RuVim
         Lang::Markdown.color_columns(text)
       when "scheme"
         Lang::Scheme.color_columns(text)
+      when "diff"
+        Lang::Diff.color_columns(text)
       else
         {}
       end

@@ -134,4 +134,42 @@ class HighlighterTest < Minitest::Test
     cols = RuVim::Highlighter.color_columns("scheme", "")
     assert_empty cols
   end
+
+  # --- Diff ---
+
+  def test_diff_add_line_green
+    cols = RuVim::Highlighter.color_columns("diff", "+added line")
+    refute_empty cols
+    assert_equal "\e[32m", cols[0]
+    assert_equal "\e[32m", cols[5]
+  end
+
+  def test_diff_delete_line_red
+    cols = RuVim::Highlighter.color_columns("diff", "-removed line")
+    refute_empty cols
+    assert_equal "\e[31m", cols[0]
+  end
+
+  def test_diff_hunk_header_cyan
+    cols = RuVim::Highlighter.color_columns("diff", "@@ -1,3 +1,4 @@ def foo")
+    refute_empty cols
+    assert_equal "\e[36m", cols[0]
+  end
+
+  def test_diff_header_bold
+    cols = RuVim::Highlighter.color_columns("diff", "diff --git a/foo.rb b/foo.rb")
+    refute_empty cols
+    assert_equal "\e[1m", cols[0]
+  end
+
+  def test_diff_context_line_no_color
+    cols = RuVim::Highlighter.color_columns("diff", " context line")
+    assert_empty cols
+  end
+
+  def test_diff_meta_line_yellow
+    cols = RuVim::Highlighter.color_columns("diff", "index abc..def 100644")
+    refute_empty cols
+    assert_equal "\e[33m", cols[0]
+  end
 end
