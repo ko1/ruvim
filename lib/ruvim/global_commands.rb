@@ -349,7 +349,7 @@ module RuVim
 
     def enter_git_command_mode(ctx, **)
       ctx.editor.enter_command_line_mode(":")
-      ctx.editor.command_line.replace_text("Git ")
+      ctx.editor.command_line.replace_text("git ")
       ctx.editor.clear_message
     end
 
@@ -1456,6 +1456,9 @@ module RuVim
       "blameprev"   => :git_blame_prev,
       "blameback"   => :git_blame_back,
       "blamecommit" => :git_blame_commit,
+      "status"      => :git_status,
+      "diff"        => :git_diff,
+      "log"         => :git_log,
     }.freeze
 
     def ex_git(ctx, argv: [], **)
@@ -1610,7 +1613,94 @@ module RuVim
       ctx.editor.echo("[Commit] #{commit_hash[0, 8]}")
     end
 
+    def git_status(ctx, **)
+      file_path = git_resolve_path(ctx)
+      unless file_path
+        ctx.editor.echo_error("No file or directory to resolve git repo")
+        return
+      end
+
+      lines, err = RuVim::Git::Commands.status(file_path)
+      unless lines
+        ctx.editor.echo_error("git status: #{err}")
+        return
+      end
+
+      buf = ctx.editor.add_virtual_buffer(
+        kind: :git_status,
+        name: "[Git Status]",
+        lines: lines,
+        readonly: true,
+        modifiable: false
+      )
+      ctx.editor.switch_to_buffer(buf.id)
+      ctx.editor.echo("[Git Status]")
+    end
+
+    def git_diff(ctx, argv: [], **)
+      file_path = git_resolve_path(ctx)
+      unless file_path
+        ctx.editor.echo_error("No file or directory to resolve git repo")
+        return
+      end
+
+      lines, err = RuVim::Git::Commands.diff(file_path, args: argv)
+      unless lines
+        ctx.editor.echo_error("git diff: #{err}")
+        return
+      end
+
+      if lines.empty?
+        ctx.editor.echo("No diff output (working tree clean)")
+        return
+      end
+
+      buf = ctx.editor.add_virtual_buffer(
+        kind: :git_diff,
+        name: "[Git Diff]",
+        lines: lines,
+        filetype: "diff",
+        readonly: true,
+        modifiable: false
+      )
+      ctx.editor.switch_to_buffer(buf.id)
+      ctx.editor.echo("[Git Diff]")
+    end
+
+    def git_log(ctx, argv: [], **)
+      file_path = git_resolve_path(ctx)
+      unless file_path
+        ctx.editor.echo_error("No file or directory to resolve git repo")
+        return
+      end
+
+      lines, err = RuVim::Git::Commands.log(file_path, args: argv)
+      unless lines
+        ctx.editor.echo_error("git log: #{err}")
+        return
+      end
+
+      filetype = argv.include?("-p") ? "diff" : nil
+      buf = ctx.editor.add_virtual_buffer(
+        kind: :git_log,
+        name: "[Git Log]",
+        lines: lines,
+        filetype: filetype,
+        readonly: true,
+        modifiable: false
+      )
+      ctx.editor.switch_to_buffer(buf.id)
+      ctx.editor.echo("[Git Log]")
+    end
+
     private
+
+    def git_resolve_path(ctx)
+      path = ctx.buffer.path
+      return path if path && File.exist?(path)
+      dir = Dir.pwd
+      File.directory?(dir) ? dir : nil
+    end
 
     def bind_blame_keys(editor, buffer_id)
       km = editor.keymap_manager
