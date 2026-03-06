@@ -260,9 +260,10 @@ class AppStartupTest < Minitest::Test
     )
     editor = app.instance_variable_get(:@editor)
 
+    sh = app.instance_variable_get(:@stream_handler)
     20.times do
-      app.send(:drain_stream_events!)
-      thread = app.instance_variable_get(:@stream_handler).instance_variable_get(:@stream_reader_thread)
+      sh.drain_events!
+      thread = sh.instance_variable_get(:@stream_reader_thread)
       break unless thread&.alive?
       sleep 0.005
     end
@@ -276,7 +277,7 @@ class AppStartupTest < Minitest::Test
     assert_equal ["line1", "line2", ""], buf.lines
     assert_match(/\[stdin\] (follow|EOF)/, editor.message)
   ensure
-    app&.send(:shutdown_stream_reader!)
+    app&.instance_variable_get(:@stream_handler)&.shutdown!
   end
 
   def test_large_file_threshold_uses_async_loader
@@ -290,6 +291,7 @@ class AppStartupTest < Minitest::Test
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = "1"
         app = RuVim::App.new(clean: true)
         editor = app.instance_variable_get(:@editor)
+        sh = app.instance_variable_get(:@stream_handler)
 
         buf = editor.open_path(f.path)
         assert_match(/loading/i, editor.message)
@@ -297,13 +299,13 @@ class AppStartupTest < Minitest::Test
         assert_equal false, buf.modifiable?
 
         100.times do
-          app.send(:drain_stream_events!)
+          sh.drain_events!
           break if buf.loading_state != :live
-          state = app.instance_variable_get(:@stream_handler).instance_variable_get(:@async_file_loads)[buf.id]
+          state = sh.instance_variable_get(:@async_file_loads)[buf.id]
           break unless state && state[:thread]&.alive?
           sleep 0.005
         end
-        app.send(:drain_stream_events!)
+        sh.drain_events!
 
         assert_equal :closed, buf.loading_state
         assert_equal true, buf.modifiable?
@@ -311,7 +313,7 @@ class AppStartupTest < Minitest::Test
         assert_match(/#{Regexp.escape(f.path)}/, editor.message)
       ensure
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev
-        app&.send(:shutdown_background_readers!)
+        app&.instance_variable_get(:@stream_handler)&.shutdown!
       end
     end
   end
@@ -329,6 +331,7 @@ class AppStartupTest < Minitest::Test
         ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = "4"
         app = RuVim::App.new(clean: true)
         editor = app.instance_variable_get(:@editor)
+        sh = app.instance_variable_get(:@stream_handler)
 
         buf = editor.open_path(f.path)
         assert_equal :live, buf.loading_state
@@ -336,18 +339,18 @@ class AppStartupTest < Minitest::Test
         assert_match(/showing first/i, editor.message)
 
         100.times do
-          app.send(:drain_stream_events!)
+          sh.drain_events!
           break if buf.loading_state != :live
           sleep 0.005
         end
-        app.send(:drain_stream_events!)
+        sh.drain_events!
 
         assert_equal :closed, buf.loading_state
         assert_equal %w[ab cd ef], buf.lines
       ensure
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev_async
         ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = prev_prefix
-        app&.send(:shutdown_background_readers!)
+        app&.instance_variable_get(:@stream_handler)&.shutdown!
       end
     end
   end
@@ -360,10 +363,11 @@ class AppStartupTest < Minitest::Test
       ENV["HOME"] = dir
 
       app1 = RuVim::App.new(clean: true)
-      app1.send(:push_command_line_history, ":", "set number")
-      app1.send(:push_command_line_history, "/", "foo")
-      app1.send(:push_command_line_history, "?", "bar")
-      app1.send(:save_command_line_history!)
+      completion1 = app1.instance_variable_get(:@completion)
+      completion1.push_history(":", "set number")
+      completion1.push_history("/", "foo")
+      completion1.push_history("?", "bar")
+      completion1.save_history!
 
       path = File.join(dir, "ruvim", "history.json")
       assert_equal true, File.file?(path)
@@ -387,7 +391,7 @@ class AppStartupTest < Minitest::Test
       ENV["HOME"] = dir
 
       app = RuVim::App.new(clean: true)
-      assert_equal File.join(dir, ".ruvim", "history.json"), app.send(:command_line_history_file_path)
+      assert_equal File.join(dir, ".ruvim", "history.json"), app.instance_variable_get(:@completion).send(:history_file_path)
     ensure
       ENV["XDG_STATE_HOME"] = prev_xdg
       ENV["HOME"] = prev_home

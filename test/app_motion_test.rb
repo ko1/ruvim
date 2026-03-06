@@ -4,11 +4,12 @@ class AppMotionTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
+    @key_handler = @app.instance_variable_get(:@key_handler)
     @editor.materialize_intro_buffer!
   end
 
   def press(*keys)
-    keys.each { |k| @app.send(:handle_normal_key, k) }
+    keys.each { |k| @key_handler.send(:handle_normal_key, k) }
   end
 
   def test_find_char_and_repeat
@@ -59,14 +60,14 @@ class AppMotionTest < Minitest::Test
 
     @editor.current_window_view_height_hint = 5
 
-    @app.send(:handle_normal_key, :pagedown)
+    @key_handler.send(:handle_normal_key, :pagedown)
     assert_equal 4, @editor.current_window.cursor_y
 
     @editor.pending_count = 2
-    @app.send(:handle_normal_key, :pagedown)
+    @key_handler.send(:handle_normal_key, :pagedown)
     assert_equal 12, @editor.current_window.cursor_y
 
-    @app.send(:handle_normal_key, :pageup)
+    @key_handler.send(:handle_normal_key, :pageup)
     assert_equal 8, @editor.current_window.cursor_y
   end
 
@@ -78,16 +79,16 @@ class AppMotionTest < Minitest::Test
 
     @editor.current_window_view_height_hint = 10
 
-    @app.send(:handle_normal_key, :ctrl_d)
+    @key_handler.send(:handle_normal_key, :ctrl_d)
     assert_equal 5, @editor.current_window.cursor_y
 
-    @app.send(:handle_normal_key, :ctrl_u)
+    @key_handler.send(:handle_normal_key, :ctrl_u)
     assert_equal 0, @editor.current_window.cursor_y
 
-    @app.send(:handle_normal_key, :ctrl_f)
+    @key_handler.send(:handle_normal_key, :ctrl_f)
     assert_equal 9, @editor.current_window.cursor_y
 
-    @app.send(:handle_normal_key, :ctrl_b)
+    @key_handler.send(:handle_normal_key, :ctrl_b)
     assert_equal 0, @editor.current_window.cursor_y
   end
 
@@ -100,11 +101,11 @@ class AppMotionTest < Minitest::Test
 
     @editor.current_window_view_height_hint = 10
 
-    @app.send(:handle_normal_key, :ctrl_e)
+    @key_handler.send(:handle_normal_key, :ctrl_e)
     assert_equal 6, @editor.current_window.row_offset
     assert_equal 6, @editor.current_window.cursor_y
 
-    @app.send(:handle_normal_key, :ctrl_y)
+    @key_handler.send(:handle_normal_key, :ctrl_y)
     assert_equal 5, @editor.current_window.row_offset
     assert_equal 6, @editor.current_window.cursor_y
   end
@@ -118,7 +119,7 @@ class AppMotionTest < Minitest::Test
     keymaps = @app.instance_variable_get(:@keymaps)
     keymaps.bind(:normal, ["<C-d>"], "cursor.down")
 
-    @app.send(:handle_normal_key, :ctrl_d)
+    @key_handler.send(:handle_normal_key, :ctrl_d)
     assert_equal 1, @editor.current_window.cursor_y
   end
 
@@ -131,7 +132,7 @@ class AppMotionTest < Minitest::Test
     keymaps = @app.instance_variable_get(:@keymaps)
     keymaps.bind(:normal, ["<PageDown>"], "cursor.down")
 
-    @app.send(:handle_normal_key, :pagedown)
+    @key_handler.send(:handle_normal_key, :pagedown)
     assert_equal 1, @editor.current_window.cursor_y
   end
 

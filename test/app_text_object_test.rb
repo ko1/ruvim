@@ -4,13 +4,14 @@ class AppTextObjectTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
+    @key_handler = @app.instance_variable_get(:@key_handler)
     @editor.materialize_intro_buffer!
     @buffer = @editor.current_buffer
     @win = @editor.current_window
   end
 
   def press(*keys)
-    keys.each { |k| @app.send(:handle_normal_key, k) }
+    keys.each { |k| @key_handler.send(:handle_normal_key, k) }
   end
 
   def test_delete_inside_square_brackets

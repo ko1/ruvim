@@ -4,12 +4,13 @@ class AppRegisterTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
+    @key_handler = @app.instance_variable_get(:@key_handler)
     @editor.materialize_intro_buffer!
     @buffer = @editor.current_buffer
   end
 
   def press(*keys)
-    keys.each { |k| @app.send(:handle_normal_key, k) }
+    keys.each { |k| @key_handler.send(:handle_normal_key, k) }
   end
 
   def test_yy_updates_register_zero

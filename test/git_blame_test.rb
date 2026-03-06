@@ -9,18 +9,19 @@ class GitBlameTest < Minitest::Test
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
     @dispatcher = @app.instance_variable_get(:@dispatcher)
+    @key_handler = @app.instance_variable_get(:@key_handler)
+    @stream_handler = @app.instance_variable_get(:@stream_handler)
     @editor.materialize_intro_buffer!
   end
 
   def feed(*keys)
-    keys.each { |k| @app.send(:handle_key, k) }
+    keys.each { |k| @key_handler.handle(k) }
   end
 
   def drain_git_stream!
-    sh = @app.instance_variable_get(:@stream_handler)
-    threads = sh.instance_variable_get(:@git_stream_threads)
+    threads = @stream_handler.instance_variable_get(:@git_stream_threads)
     threads&.each_value(&:join)
-    @app.send(:drain_stream_events!)
+    @stream_handler.drain_events!
   end
 
   # --- Parsing ---

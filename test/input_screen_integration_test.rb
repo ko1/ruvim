@@ -62,7 +62,7 @@ class InputScreenIntegrationTest < Minitest::Test
       key = input.read_key(timeout: 0.2)
       assert_equal :pagedown, key
 
-      app.send(:handle_normal_key, key)
+      app.instance_variable_get(:@key_handler).send(:handle_normal_key, key)
       screen.render(editor)
 
       assert_operator editor.current_window.cursor_y, :>, 0

@@ -66,8 +66,9 @@ class OnSaveHookTest < Minitest::Test
       editor.current_buffer.replace_all_lines!(["hello"])
 
       # Execute :w command
+      kh = app.instance_variable_get(:@key_handler)
       keys = ":w #{path}\n".chars
-      keys.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      keys.each { |k| kh.handle(k == "\n" ? :enter : k) }
 
       assert called, "on_save hook should have been called"
     end
@@ -84,15 +85,16 @@ class OnSaveHookTest < Minitest::Test
       File.write(path, "x = 1\ndef foo(\n")
 
       # Open and write the file
-      ":e #{path}\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
-      ":w\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      kh = app.instance_variable_get(:@key_handler)
+      ":e #{path}\n".chars.each { |k| kh.handle(k == "\n" ? :enter : k) }
+      ":w\n".chars.each { |k| kh.handle(k == "\n" ? :enter : k) }
 
       refute_empty editor.quickfix_items, "quickfix should be populated after :w with syntax error"
       assert_nil editor.quickfix_index, "quickfix index should be nil before navigation"
 
       # Press ]q — should jump to first item (index 0)
-      app.send(:handle_key, "]")
-      app.send(:handle_key, "q")
+      kh.handle("]")
+      kh.handle("q")
 
       assert_equal 0, editor.quickfix_index
       first_item = editor.quickfix_items.first
@@ -112,12 +114,13 @@ class OnSaveHookTest < Minitest::Test
       path = File.join(dir, "ok.rb")
       File.write(path, "puts 'hi'\n")
 
-      ":e #{path}\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      kh = app.instance_variable_get(:@key_handler)
+      ":e #{path}\n".chars.each { |k| kh.handle(k == "\n" ? :enter : k) }
       # Set some dummy quickfix items first
       editor.set_quickfix_list([{ buffer_id: editor.current_buffer.id, row: 0, col: 0, text: "dummy" }])
       refute_empty editor.quickfix_items
 
-      ":w\n".chars.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      ":w\n".chars.each { |k| kh.handle(k == "\n" ? :enter : k) }
       assert_empty editor.quickfix_items, "quickfix should be cleared after :w with valid file"
     end
   end
@@ -141,8 +144,9 @@ class OnSaveHookTest < Minitest::Test
       editor.current_buffer.replace_all_lines!(["hello"])
       editor.set_option("onsavehook", false)
 
+      kh = app.instance_variable_get(:@key_handler)
       keys = ":w #{path}\n".chars
-      keys.each { |k| app.send(:handle_key, k == "\n" ? :enter : k) }
+      keys.each { |k| kh.handle(k == "\n" ? :enter : k) }
 
       refute called, "on_save hook should NOT have been called when onsavehook is disabled"
     end

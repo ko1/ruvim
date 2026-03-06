@@ -6,6 +6,8 @@ class AppCompletionTest < Minitest::Test
   def setup
     @app = RuVim::App.new
     @editor = @app.instance_variable_get(:@editor)
+    @key_handler = @app.instance_variable_get(:@key_handler)
+    @completion = @app.instance_variable_get(:@completion)
   end
 
   def test_app_starts_with_intro_buffer_without_path
@@ -20,7 +22,7 @@ class AppCompletionTest < Minitest::Test
     cmd = @editor.command_line
     cmd.replace_text("set nu")
 
-    @app.send(:command_line_complete)
+    @completion.command_line_complete
 
     assert_equal "set number", cmd.text
   end
@@ -33,7 +35,7 @@ class AppCompletionTest < Minitest::Test
     @editor.current_window.cursor_x = 2
     @editor.enter_insert_mode
 
-    @app.send(:handle_insert_key, :ctrl_n)
+    @key_handler.send(:handle_insert_key, :ctrl_n)
 
     assert_equal "foobar", b.line_at(0)
     assert_equal 6, @editor.current_window.cursor_x
@@ -45,7 +47,7 @@ class AppCompletionTest < Minitest::Test
       File.write(File.join(dir, "a.o"), "")
       @editor.set_option("wildignore", "*.o", scope: :global)
 
-      matches = @app.send(:path_completion_candidates, File.join(dir, "a"))
+      matches = @completion.send(:path_completion_candidates, File.join(dir, "a"))
 
       assert_includes matches, File.join(dir, "a.rb")
       refute_includes matches, File.join(dir, "a.o")
@@ -57,7 +59,7 @@ class AppCompletionTest < Minitest::Test
       Dir.chdir(dir) do
         FileUtils.mkdir_p("lib")
 
-        matches = @app.send(:path_completion_candidates, "li")
+        matches = @completion.send(:path_completion_candidates, "li")
 
         assert_includes matches, "lib/"
       end
@@ -70,7 +72,7 @@ class AppCompletionTest < Minitest::Test
       File.write(File.join(dir, "aaa.txt"), "")
       File.write(File.join(dir, "bbb.txt"), "")
 
-      matches = @app.send(:path_completion_candidates, File.join(dir, ""))
+      matches = @completion.send(:path_completion_candidates, File.join(dir, ""))
 
       assert_includes matches, File.join(dir, ".git/")
       visible_idx = matches.index(File.join(dir, "aaa.txt"))
@@ -96,10 +98,10 @@ class AppCompletionTest < Minitest::Test
       cmd = @editor.command_line
       cmd.replace_text("e #{File.join(dir, "a")}")
 
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       first = cmd.text.dup
       first_msg = @editor.message.dup
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       second = cmd.text.dup
       second_msg = @editor.message.dup
 
@@ -125,10 +127,10 @@ class AppCompletionTest < Minitest::Test
       cmd = @editor.command_line
       cmd.replace_text("e #{File.join(dir, "a")}")
 
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       assert_equal "e #{File.join(dir, "a")}", cmd.text
 
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       assert([a, b].any? { |p| cmd.text.end_with?(p) })
     end
   end
@@ -148,9 +150,9 @@ class AppCompletionTest < Minitest::Test
       cmd = @editor.command_line
       cmd.replace_text("e #{File.join(dir, "a")}")
 
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       first = cmd.text.dup
-      @app.send(:command_line_complete)
+      @completion.command_line_complete
       second = cmd.text.dup
 
       refute_equal first, second
@@ -168,7 +170,7 @@ class AppCompletionTest < Minitest::Test
     cmd = @editor.command_line
     cmd.replace_text("se")
 
-    @app.send(:command_line_complete)
+    @completion.command_line_complete
 
     assert_equal "se", cmd.text
     assert_includes @editor.message, "set"
@@ -186,11 +188,11 @@ class AppCompletionTest < Minitest::Test
     @editor.current_window.cursor_x = 2
     @editor.enter_insert_mode
 
-    @app.send(:handle_insert_key, :ctrl_n)
+    @key_handler.send(:handle_insert_key, :ctrl_n)
     assert_equal "fo", b.line_at(0)
     assert_includes @editor.message, "..."
 
-    @app.send(:handle_insert_key, :ctrl_n)
+    @key_handler.send(:handle_insert_key, :ctrl_n)
     assert_equal "foobar", b.line_at(0)
   end
 
@@ -203,11 +205,11 @@ class AppCompletionTest < Minitest::Test
     @editor.current_window.cursor_x = 2
     @editor.enter_insert_mode
 
-    @app.send(:handle_insert_key, :ctrl_n)
+    @key_handler.send(:handle_insert_key, :ctrl_n)
     assert_equal "fo", b.line_at(0)
     assert_includes @editor.message, "["
 
-    @app.send(:handle_insert_key, :ctrl_n)
+    @key_handler.send(:handle_insert_key, :ctrl_n)
     assert_equal "foobar", b.line_at(0)
   end
 
@@ -217,7 +219,7 @@ class AppCompletionTest < Minitest::Test
     cmd = @editor.command_line
     cmd.replace_text("git bl")
 
-    @app.send(:command_line_complete)
+    @completion.command_line_complete
 
     # "bl" matches "blame", "blameback", "blamecommit", "blameprev", "branch"
     # With multiple matches, wildmode applies (longest common prefix or cycle)
@@ -231,7 +233,7 @@ class AppCompletionTest < Minitest::Test
     cmd = @editor.command_line
     cmd.replace_text("git co")
 
-    @app.send(:command_line_complete)
+    @completion.command_line_complete
 
     assert_equal "git commit", cmd.text
   end

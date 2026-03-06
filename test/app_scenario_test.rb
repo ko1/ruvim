@@ -8,11 +8,12 @@ class AppScenarioTest < Minitest::Test
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
     @dispatcher = @app.instance_variable_get(:@dispatcher)
+    @key_handler = @app.instance_variable_get(:@key_handler)
     @editor.materialize_intro_buffer!
   end
 
   def feed(*keys)
-    keys.each { |k| @app.send(:handle_key, k) }
+    keys.each { |k| @key_handler.handle(k) }
   end
 
   def test_insert_edit_search_and_delete_scenario
@@ -353,7 +354,7 @@ class AppScenarioTest < Minitest::Test
     @editor.current_buffer.modifiable = false
     @editor.current_buffer.readonly = true
 
-    @app.send(:handle_key, "x")
+    @key_handler.handle("x")
 
     assert_equal ["hello"], @editor.current_buffer.lines
     assert_match(/not modifiable/i, @editor.message)
@@ -364,7 +365,7 @@ class AppScenarioTest < Minitest::Test
     @editor.current_buffer.modifiable = false
     @editor.current_buffer.readonly = true
 
-    @app.send(:handle_key, "i")
+    @key_handler.handle("i")
 
     assert_equal :normal, @editor.mode
     assert_equal ["hello"], @editor.current_buffer.lines
@@ -375,9 +376,9 @@ class AppScenarioTest < Minitest::Test
     stream = StringIO.new("hello\n")
     sh = @app.instance_variable_get(:@stream_handler)
     sh.stdin_stream_source = stream
-    @app.send(:prepare_stdin_stream_buffer!)
+    @app.instance_variable_get(:@stream_handler).prepare_stdin_stream_buffer!
 
-    @app.send(:handle_key, :ctrl_c)
+    @key_handler.handle(:ctrl_c)
 
     assert_equal :closed, @editor.current_buffer.stream_state
     assert_equal :normal, @editor.mode

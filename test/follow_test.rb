@@ -13,6 +13,8 @@ class FollowTest < Minitest::Test
     @app = RuVim::App.new(path: @path, clean: true)
     @editor = @app.instance_variable_get(:@editor)
     @dispatcher = @app.instance_variable_get(:@dispatcher)
+    @key_handler = @app.instance_variable_get(:@key_handler)
+    @stream_handler = @app.instance_variable_get(:@stream_handler)
   end
 
   def cleanup_follow_app
@@ -46,7 +48,7 @@ class FollowTest < Minitest::Test
     buf = @editor.current_buffer
     assert_equal :live, buf.stream_state
 
-    @app.send(:handle_key, :ctrl_c)
+    @key_handler.handle(:ctrl_c)
     assert_nil buf.stream_state
     assert_includes @editor.message.to_s, "stopped"
   ensure
@@ -131,7 +133,7 @@ class FollowTest < Minitest::Test
     File.open(@path, "a") { |f| f.write("line3\nline4\n") }
 
     assert_eventually(timeout: 3) do
-      @app.send(:drain_stream_events!)
+      @stream_handler.drain_events!
       buf.line_count > 3
     end
 
@@ -155,7 +157,7 @@ class FollowTest < Minitest::Test
     File.open(@path, "a") { |f| f.write("line3\n") }
 
     assert_eventually(timeout: 3) do
-      @app.send(:drain_stream_events!)
+      @stream_handler.drain_events!
       buf.line_count > 2
     end
 

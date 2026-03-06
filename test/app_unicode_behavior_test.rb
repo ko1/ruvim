@@ -4,17 +4,18 @@ class AppUnicodeBehaviorTest < Minitest::Test
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
+    @key_handler = @app.instance_variable_get(:@key_handler)
     @editor.materialize_intro_buffer!
     @buffer = @editor.current_buffer
     @win = @editor.current_window
   end
 
   def press_normal(*keys)
-    keys.each { |k| @app.send(:handle_normal_key, k) }
+    keys.each { |k| @key_handler.send(:handle_normal_key, k) }
   end
 
   def press(*keys)
-    keys.each { |k| @app.send(:handle_key, k) }
+    keys.each { |k| @key_handler.handle(k) }
   end
 
   def test_word_motions_on_japanese_text_do_not_break_character_boundaries

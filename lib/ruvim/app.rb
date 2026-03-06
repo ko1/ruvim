@@ -158,56 +158,6 @@ module RuVim
 
     private
 
-    # Delegate methods for backward compatibility with tests
-    def handle_key(key)
-      @key_handler.handle(key)
-      load_current_ftplugin!
-    end
-
-    def handle_normal_key(key)
-      @key_handler.send(:handle_normal_key, key)
-    end
-
-    def handle_insert_key(key)
-      @key_handler.send(:handle_insert_key, key)
-    end
-
-    def drain_stream_events!
-      @stream_handler.drain_events!
-    end
-
-    def shutdown_stream_reader!
-      @stream_handler.shutdown!
-    end
-
-    def shutdown_background_readers!
-      @stream_handler.shutdown!
-    end
-
-    def prepare_stdin_stream_buffer!
-      @stream_handler.prepare_stdin_stream_buffer!
-    end
-
-    def push_command_line_history(prefix, line)
-      @completion.push_history(prefix, line)
-    end
-
-    def save_command_line_history!
-      @completion.save_history!
-    end
-
-    def command_line_history_file_path
-      @completion.send(:history_file_path)
-    end
-
-    def command_line_complete
-      @completion.command_line_complete
-    end
-
-    def path_completion_candidates(prefix)
-      @completion.send(:path_completion_candidates, prefix)
-    end
-
     def clear_expired_transient_message_if_any
       @needs_redraw = true if @key_handler.handle_idle_timeout
     end
