@@ -9,6 +9,7 @@ This project is RuVim, a Vim-like editor written in Ruby. Always run the full te
     * catch up changes
     * move completed tasks to done.md
   * update CLAUDE.md Source Tree section if files were added, removed, or renamed
+    * note that CLAUDE.md is a symbolic link to AGENTS.md. Commit AGENTS.md if modify CLAUDE.md
   * commit it
 * After committing, show the commit message
 
@@ -49,7 +50,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
-| `lang/json.rb` | JSON syntax highlighting via regex |
+| `lang/json.rb` | JSON syntax highlighting via regex; auto-indent |
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
 | `lang/diff.rb` | Diff syntax highlighting (add/delete/hunk/header colors) |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
@@ -68,6 +69,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `rich_view.rb` | Rich view mode (TSV/CSV/Markdown rendering) |
 | `rich_view/table_renderer.rb` | Table formatting with display-width-aware column alignment |
 | `rich_view/markdown_renderer.rb` | Markdown rendering (headings, inline, tables, code blocks, HR) |
+| `rich_view/json_renderer.rb` | JSON pretty-print into virtual buffer |
+| `rich_view/jsonl_renderer.rb` | JSONL per-line pretty-print into virtual buffer |
 
 ### Tests (test/)
 
