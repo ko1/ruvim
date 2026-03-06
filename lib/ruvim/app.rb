@@ -122,10 +122,17 @@ module RuVim
           @needs_redraw = true
 
           # Batch insert-mode keystrokes to avoid per-char rendering during paste
-          while @editor.mode == :insert && @input.has_pending_input?
-            batch_key = @input.read_key(timeout: 0, esc_timeout: 0)
-            break unless batch_key
-            handle_key(batch_key)
+          if @editor.mode == :insert && @input.has_pending_input?
+            @paste_batch = true
+            begin
+              while @editor.mode == :insert && @input.has_pending_input?
+                batch_key = @input.read_key(timeout: 0, esc_timeout: 0)
+                break unless batch_key
+                handle_key(batch_key)
+              end
+            ensure
+              @paste_batch = false
+            end
           end
         end
       end
@@ -1888,6 +1895,7 @@ module RuVim
     end
 
     def apply_insert_autoindent(row, x, previous_row:)
+      return x if @paste_batch
       buf = @editor.current_buffer
       win = @editor.current_window
       return x unless @editor.effective_option("autoindent", window: win, buffer: buf)

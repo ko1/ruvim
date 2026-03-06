@@ -695,6 +695,28 @@ class AppScenarioTest < Minitest::Test
     assert_equal :normal, @editor.mode
   end
 
+  def test_paste_batch_suppresses_autoindent
+    @editor.current_buffer.replace_all_lines!(["  hello"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+
+    # Normal enter in insert mode should autoindent
+    feed("A", :enter, :escape)
+    assert_equal ["  hello", "  "], @editor.current_buffer.lines
+
+    # Simulate paste batch: autoindent should be suppressed
+    @editor.current_buffer.replace_all_lines!(["  hello"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 0
+    feed("A")
+    @app.instance_variable_set(:@paste_batch, true)
+    feed(:enter, *"world".chars)
+    @app.instance_variable_set(:@paste_batch, false)
+    feed(:escape)
+
+    assert_equal ["  hello", "world"], @editor.current_buffer.lines
+  end
+
   def test_batch_insert_stops_on_escape
     @editor.current_buffer.replace_all_lines!([""])
     # Escape exits insert mode; subsequent keys are normal-mode commands
