@@ -47,15 +47,20 @@ module RuVim
         entries
       end
 
-      # Format entries into display lines for the blame buffer.
+      # Format entries into code lines and gutter labels.
+      # Returns [lines, labels] where lines are code-only and labels are metadata strings.
       def format_lines(entries)
         max_author = entries.map { |e| e[:author].to_s.length }.max || 0
         max_author = [max_author, 20].min
 
-        entries.map do |e|
+        lines = []
+        labels = []
+        entries.each do |e|
           author = (e[:author] || "").ljust(max_author)[0, max_author]
-          "#{e[:short_hash]} #{author} #{e[:date]} #{e[:text]}"
+          labels << "#{e[:short_hash]} #{author} #{e[:date]} "
+          lines << e[:text].to_s
         end
+        [lines, labels]
       end
 
       # Run git blame for a file at a given revision.
@@ -106,19 +111,22 @@ module RuVim
             return
           end
 
-          lines = Blame.format_lines(entries)
+          lines, labels = Blame.format_lines(entries)
           cursor_y = ctx.window.cursor_y
+          source_ft = source_buf.options["filetype"]
 
           blame_buf = ctx.editor.add_virtual_buffer(
             kind: :blame,
             name: "[Blame] #{File.basename(source_buf.path)}",
             lines: lines,
+            filetype: source_ft,
             readonly: true,
             modifiable: false
           )
           blame_buf.options["blame_entries"] = entries
           blame_buf.options["blame_source_path"] = source_buf.path
           blame_buf.options["blame_history"] = []
+          blame_buf.options["gutter_labels"] = labels
 
           ctx.editor.switch_to_buffer(blame_buf.id)
           ctx.window.cursor_y = [cursor_y, lines.length - 1].min
@@ -160,9 +168,10 @@ module RuVim
 
           history.push({ entries: entries, cursor_y: cursor_y })
 
-          new_lines = Blame.format_lines(new_entries)
+          new_lines, new_labels = Blame.format_lines(new_entries)
           buf.instance_variable_set(:@lines, new_lines)
           buf.options["blame_entries"] = new_entries
+          buf.options["gutter_labels"] = new_labels
           ctx.window.cursor_y = [cursor_y, new_lines.length - 1].min
           ctx.window.cursor_x = 0
           ctx.editor.echo("[Blame] #{commit_hash[0, 8]}^")
@@ -182,9 +191,10 @@ module RuVim
           end
 
           state = history.pop
-          lines = Blame.format_lines(state[:entries])
+          lines, labels = Blame.format_lines(state[:entries])
           buf.instance_variable_set(:@lines, lines)
           buf.options["blame_entries"] = state[:entries]
+          buf.options["gutter_labels"] = labels
           ctx.window.cursor_y = [state[:cursor_y], lines.length - 1].min
           ctx.window.cursor_x = 0
           ctx.editor.echo("[Blame] restored")

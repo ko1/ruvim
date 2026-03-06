@@ -81,12 +81,66 @@ class GitBlameTest < Minitest::Test
       { short_hash: "abc12345", author: "Alice", date: "2023-11-14", text: "hello", orig_line: 1, hash: "abc12345" * 5 },
       { short_hash: "def67890", author: "Bob",   date: "2023-11-15", text: "world", orig_line: 2, hash: "def67890" * 5 },
     ]
-    lines = RuVim::Git::Blame.format_lines(entries)
+    lines, labels = RuVim::Git::Blame.format_lines(entries)
     assert_equal 2, lines.length
-    assert_includes lines[0], "abc12345"
-    assert_includes lines[0], "Alice"
-    assert_includes lines[0], "hello"
-    assert_includes lines[1], "Bob"
+    assert_equal "hello", lines[0]
+    assert_equal "world", lines[1]
+    assert_equal 2, labels.length
+    assert_includes labels[0], "abc12345"
+    assert_includes labels[0], "Alice"
+    assert_includes labels[1], "Bob"
+  end
+
+  def test_blame_buffer_has_source_filetype
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.rb", "puts 'hello'\n")
+
+      file_path = File.join(dir, "test_file.rb")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+      assert_equal "ruby", buf.options["filetype"]
+
+      @dispatcher.dispatch_ex(@editor, "git blame")
+
+      blame_buf = @editor.current_buffer
+      assert_equal :blame, blame_buf.kind
+      assert_equal "ruby", blame_buf.options["filetype"]
+    end
+  end
+
+  def test_blame_buffer_has_gutter_labels
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git blame")
+
+      blame_buf = @editor.current_buffer
+      labels = blame_buf.options["gutter_labels"]
+      assert_kind_of Array, labels
+      assert_equal 2, labels.length
+      # Labels should contain hash and author info
+      assert_match(/\A[0-9a-f]{8} /, labels[0])
+    end
+  end
+
+  def test_blame_buffer_lines_are_code_only
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git blame")
+
+      blame_buf = @editor.current_buffer
+      assert_equal "line1", blame_buf.line_at(0)
+      assert_equal "line2", blame_buf.line_at(1)
+    end
   end
 
   # --- Status filename parsing ---

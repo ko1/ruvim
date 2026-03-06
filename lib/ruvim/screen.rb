@@ -786,6 +786,12 @@ module RuVim
     end
 
     def number_column_width(editor, window, buffer)
+      labels = buffer.options["gutter_labels"]
+      if labels && !labels.empty?
+        max_w = labels.map { |l| RuVim::DisplayWidth.display_width(l.to_s) }.max || 0
+        return max_w
+      end
+
       sign_w = sign_column_width(editor, window, buffer)
       enabled = editor.effective_option("number", window:, buffer:) || editor.effective_option("relativenumber", window:, buffer:)
       return sign_w unless enabled
@@ -817,6 +823,15 @@ module RuVim
     end
 
     def render_gutter_prefix(editor, window, buffer, buffer_row, width)
+      labels = buffer.options["gutter_labels"]
+      if labels
+        return " " * width if buffer_row.nil?
+
+        label = (labels[buffer_row] || "").ljust(width)[0, width]
+        color = line_number_fg_seq(editor, current_line: false)
+        return "#{color}#{label}\e[m"
+      end
+
       prefix = line_number_prefix(editor, window, buffer, buffer_row, width)
       return prefix if prefix.empty?
       return prefix if buffer_row.nil?
