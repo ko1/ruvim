@@ -181,7 +181,7 @@ class GitBlameTest < Minitest::Test
       buf = @editor.add_buffer_from_file(file_path)
       @editor.switch_to_buffer(buf.id)
 
-      @dispatcher.dispatch_ex(@editor, "blame")
+      @dispatcher.dispatch_ex(@editor, "GitBlame")
 
       blame_buf = @editor.current_buffer
       assert_equal :blame, blame_buf.kind
