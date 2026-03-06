@@ -378,6 +378,7 @@ module RuVim
       register_internal_unless(cmd, "git.command_mode", call: :enter_git_command_mode, desc: "Enter Git command-line mode")
       register_internal_unless(cmd, "git.close_buffer", call: :git_close_buffer, desc: "Close git buffer")
       register_internal_unless(cmd, "git.status.open_file", call: :git_status_open_file, desc: "Open file from git status")
+      register_internal_unless(cmd, "git.diff.open_file", call: :git_diff_open_file, desc: "Open file from git diff")
       register_ex_unless(ex, "git", call: :ex_git, desc: "Git subcommand dispatcher", nargs: :any)
     end
 
@@ -873,6 +874,7 @@ module RuVim
       buffer = @editor.current_buffer
       return handle_filter_buffer_enter if buffer.kind == :filter
       return handle_git_status_enter if buffer.kind == :git_status
+      return handle_git_diff_enter if buffer.kind == :git_diff || buffer.kind == :git_log
       return false unless buffer.kind == :quickfix || buffer.kind == :location_list
 
       item_index = @editor.current_window.cursor_y - 2
@@ -942,6 +944,11 @@ module RuVim
 
     def handle_git_status_enter
       @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.status.open_file"))
+      true
+    end
+
+    def handle_git_diff_enter
+      @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.diff.open_file"))
       true
     end
 

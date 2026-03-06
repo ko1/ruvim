@@ -291,6 +291,113 @@ class GitBlameTest < Minitest::Test
     end
   end
 
+  def test_git_diff_parse_location_on_hunk_header
+    lines = [
+      "diff --git a/lib/foo.rb b/lib/foo.rb",
+      "--- a/lib/foo.rb",
+      "+++ b/lib/foo.rb",
+      "@@ -1,3 +1,4 @@",
+      " line1",
+      "+added",
+      " line2",
+      " line3",
+    ]
+    # On hunk header line → file at start of hunk
+    file, line = RuVim::Git::Diff.parse_location(lines, 3)
+    assert_equal "lib/foo.rb", file
+    assert_equal 1, line
+  end
+
+  def test_git_diff_parse_location_on_context_line
+    lines = [
+      "diff --git a/lib/foo.rb b/lib/foo.rb",
+      "--- a/lib/foo.rb",
+      "+++ b/lib/foo.rb",
+      "@@ -1,3 +1,4 @@",
+      " line1",
+      "+added",
+      " line2",
+    ]
+    # On " line2" (index 6): new-side lines are " line1"(+1), "+added"(+2), " line2"(+3)
+    file, line = RuVim::Git::Diff.parse_location(lines, 6)
+    assert_equal "lib/foo.rb", file
+    assert_equal 3, line
+  end
+
+  def test_git_diff_parse_location_on_added_line
+    lines = [
+      "diff --git a/lib/foo.rb b/lib/foo.rb",
+      "--- a/lib/foo.rb",
+      "+++ b/lib/foo.rb",
+      "@@ -1,3 +1,4 @@",
+      " line1",
+      "+added",
+      " line2",
+    ]
+    file, line = RuVim::Git::Diff.parse_location(lines, 5)
+    assert_equal "lib/foo.rb", file
+    assert_equal 2, line
+  end
+
+  def test_git_diff_parse_location_on_deleted_line
+    lines = [
+      "diff --git a/lib/foo.rb b/lib/foo.rb",
+      "--- a/lib/foo.rb",
+      "+++ b/lib/foo.rb",
+      "@@ -1,3 +1,3 @@",
+      " line1",
+      "-removed",
+      " line2",
+    ]
+    # Deleted line → jump to the next new-side line position
+    file, line = RuVim::Git::Diff.parse_location(lines, 5)
+    assert_equal "lib/foo.rb", file
+    assert_equal 2, line
+  end
+
+  def test_git_diff_parse_location_on_diff_header
+    lines = [
+      "diff --git a/lib/foo.rb b/lib/foo.rb",
+      "index abc..def 100644",
+      "--- a/lib/foo.rb",
+      "+++ b/lib/foo.rb",
+      "@@ -1,3 +1,3 @@",
+    ]
+    # On "diff --git" line → file, line 1
+    file, line = RuVim::Git::Diff.parse_location(lines, 0)
+    assert_equal "lib/foo.rb", file
+    assert_equal 1, line
+  end
+
+  def test_git_diff_parse_location_returns_nil_for_empty
+    assert_nil RuVim::Git::Diff.parse_location([], 0)
+  end
+
+  def test_git_diff_enter_opens_file
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\nline3\n")
+      File.write(File.join(dir, "test_file.txt"), "line1\nmodified\nline3\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git diff")
+      assert_equal :git_diff, @editor.current_buffer.kind
+
+      # Find a line with the modified content
+      diff_buf = @editor.current_buffer
+      target_line = diff_buf.lines.index { |l| l.start_with?("+modified") }
+      assert target_line, "Expected +modified in diff output"
+      @editor.current_window.cursor_y = target_line
+
+      feed(:enter)
+
+      # Should have opened test_file.txt
+      assert_equal File.join(dir, "test_file.txt"), @editor.current_buffer.path
+    end
+  end
+
   def test_git_diff_clean_shows_message
     Dir.mktmpdir do |dir|
       setup_git_repo(dir, "test_file.txt", "line1\n")

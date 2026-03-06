@@ -8,17 +8,17 @@ module RuVim
       module_function
 
       # Run git log with optional extra args.
-      # Returns [lines, error_message].
+      # Returns [lines, root, error_message].
       def run(file_path, args: [])
         root, err = Git.repo_root(file_path)
-        return [nil, err] unless root
+        return [nil, nil, err] unless root
 
         cmd = ["git", "log", *args]
         out, err, status = Open3.capture3(*cmd, chdir: root)
         unless status.success?
-          return [nil, err.strip]
+          return [nil, nil, err.strip]
         end
-        [out.lines(chomp: true), nil]
+        [out.lines(chomp: true), root, nil]
       end
 
       # Command handler methods
@@ -30,7 +30,7 @@ module RuVim
             return
           end
 
-          lines, err = Log.run(file_path, args: argv)
+          lines, root, err = Log.run(file_path, args: argv)
           unless lines
             ctx.editor.echo_error("git log: #{err}")
             return
@@ -45,6 +45,7 @@ module RuVim
             readonly: true,
             modifiable: false
           )
+          buf.options["git_repo_root"] = root
           ctx.editor.switch_to_buffer(buf.id)
           bind_git_buffer_keys(ctx.editor, buf.id)
           ctx.editor.echo("[Git Log]")
