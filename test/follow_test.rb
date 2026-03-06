@@ -18,7 +18,9 @@ class FollowTest < Minitest::Test
   def cleanup_follow_app
     return unless @app
 
-    watchers = @app.instance_variable_get(:@follow_watchers)
+    sh = @app.instance_variable_get(:@stream_handler)
+    watchers = sh&.follow_watchers
+    return unless watchers
     watchers.each_value { |w| w.stop rescue nil }
     watchers.clear
     @tmpfile&.close!
@@ -27,7 +29,7 @@ class FollowTest < Minitest::Test
   def test_follow_starts_on_file_buffer
     create_follow_app
     @dispatcher.dispatch_ex(@editor, "follow")
-    watchers = @app.instance_variable_get(:@follow_watchers)
+    watchers = @app.instance_variable_get(:@stream_handler).follow_watchers
     buf = @editor.current_buffer
 
     assert !@editor.message_error?, "Unexpected error: #{@editor.message}"
@@ -58,7 +60,7 @@ class FollowTest < Minitest::Test
     assert_equal :live, buf.stream_state
 
     @dispatcher.dispatch_ex(@editor, "follow")
-    watchers = @app.instance_variable_get(:@follow_watchers)
+    watchers = @app.instance_variable_get(:@stream_handler).follow_watchers
     assert_nil buf.stream_state
     refute watchers.key?(buf.id)
     assert_includes @editor.message.to_s, "stopped"
@@ -170,7 +172,7 @@ class FollowTest < Minitest::Test
 
     app = RuVim::App.new(paths: [tmp1.path, tmp2.path], follow: true, clean: true)
     editor = app.instance_variable_get(:@editor)
-    watchers = app.instance_variable_get(:@follow_watchers)
+    watchers = app.instance_variable_get(:@stream_handler).follow_watchers
 
     bufs = editor.buffers.values.select(&:file_buffer?)
     assert_equal 2, bufs.size

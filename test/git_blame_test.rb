@@ -17,7 +17,8 @@ class GitBlameTest < Minitest::Test
   end
 
   def drain_git_stream!
-    threads = @app.instance_variable_get(:@git_stream_threads)
+    sh = @app.instance_variable_get(:@stream_handler)
+    threads = sh.instance_variable_get(:@git_stream_threads)
     threads&.each_value(&:join)
     @app.send(:drain_stream_events!)
   end

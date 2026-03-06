@@ -373,7 +373,8 @@ class AppScenarioTest < Minitest::Test
 
   def test_normal_ctrl_c_stops_stdin_stream_via_default_binding
     stream = StringIO.new("hello\n")
-    @app.instance_variable_set(:@stdin_stream_source, stream)
+    sh = @app.instance_variable_get(:@stream_handler)
+    sh.stdin_stream_source = stream
     @app.send(:prepare_stdin_stream_buffer!)
 
     @app.send(:handle_key, :ctrl_c)
@@ -392,6 +393,7 @@ class AppScenarioTest < Minitest::Test
     end
     terminal_stub.define_singleton_method(:suspend_calls) { @suspend_calls }
     @app.instance_variable_set(:@terminal, terminal_stub)
+    @app.instance_variable_get(:@key_handler).instance_variable_set(:@terminal, terminal_stub)
 
     feed("i", "a", :ctrl_z)
 
@@ -404,6 +406,7 @@ class AppScenarioTest < Minitest::Test
     terminal_stub = Object.new
     terminal_stub.define_singleton_method(:suspend_for_tstp) {}
     @app.instance_variable_set(:@terminal, terminal_stub)
+    @app.instance_variable_get(:@key_handler).instance_variable_set(:@terminal, terminal_stub)
 
     screen_stub = Object.new
     screen_stub.instance_variable_set(:@invalidated, false)
@@ -412,6 +415,7 @@ class AppScenarioTest < Minitest::Test
     end
     screen_stub.define_singleton_method(:invalidated?) { @invalidated }
     @app.instance_variable_set(:@screen, screen_stub)
+    @app.instance_variable_get(:@key_handler).instance_variable_set(:@screen, screen_stub)
 
     feed(:ctrl_z)
 
@@ -709,9 +713,9 @@ class AppScenarioTest < Minitest::Test
     @editor.current_window.cursor_y = 0
     @editor.current_window.cursor_x = 0
     feed("A")
-    @app.instance_variable_set(:@paste_batch, true)
+    @app.instance_variable_get(:@key_handler).paste_batch = true
     feed(:enter, *"world".chars)
-    @app.instance_variable_set(:@paste_batch, false)
+    @app.instance_variable_get(:@key_handler).paste_batch = false
     feed(:escape)
 
     assert_equal ["  hello", "world"], @editor.current_buffer.lines

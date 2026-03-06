@@ -262,7 +262,7 @@ class AppStartupTest < Minitest::Test
 
     20.times do
       app.send(:drain_stream_events!)
-      thread = app.instance_variable_get(:@stream_reader_thread)
+      thread = app.instance_variable_get(:@stream_handler).instance_variable_get(:@stream_reader_thread)
       break unless thread&.alive?
       sleep 0.005
     end
@@ -299,7 +299,7 @@ class AppStartupTest < Minitest::Test
         100.times do
           app.send(:drain_stream_events!)
           break if buf.loading_state != :live
-          state = app.instance_variable_get(:@async_file_loads)[buf.id]
+          state = app.instance_variable_get(:@stream_handler).instance_variable_get(:@async_file_loads)[buf.id]
           break unless state && state[:thread]&.alive?
           sleep 0.005
         end
@@ -369,7 +369,7 @@ class AppStartupTest < Minitest::Test
       assert_equal true, File.file?(path)
 
       app2 = RuVim::App.new(clean: true)
-      hist = app2.instance_variable_get(:@cmdline_history)
+      hist = app2.instance_variable_get(:@completion).instance_variable_get(:@cmdline_history)
       assert_equal ["set number"], hist[":"]
       assert_equal ["foo"], hist["/"]
       assert_equal ["bar"], hist["?"]
