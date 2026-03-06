@@ -173,6 +173,22 @@ class GitBlameTest < Minitest::Test
     end
   end
 
+  def test_ex_blame_command
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\nline2\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "blame")
+
+      blame_buf = @editor.current_buffer
+      assert_equal :blame, blame_buf.kind
+      assert_equal 2, blame_buf.line_count
+    end
+  end
+
   def test_git_blame_on_non_git_file_shows_error
     Dir.mktmpdir do |dir|
       file_path = File.join(dir, "no_git.txt")

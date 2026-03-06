@@ -375,6 +375,10 @@ module RuVim
       register_internal_unless(cmd, "git.blame.prev", call: :git_blame_prev, desc: "Blame at parent commit")
       register_internal_unless(cmd, "git.blame.back", call: :git_blame_back, desc: "Restore previous blame")
       register_internal_unless(cmd, "git.blame.commit", call: :git_blame_commit, desc: "Show commit details")
+      register_ex_unless(ex, "blame", call: :git_blame, desc: "Open git blame buffer", nargs: 0)
+      register_ex_unless(ex, "blameprev", call: :git_blame_prev, desc: "Blame at parent commit", nargs: 0)
+      register_ex_unless(ex, "blameback", call: :git_blame_back, desc: "Restore previous blame", nargs: 0)
+      register_ex_unless(ex, "blamecommit", call: :git_blame_commit, desc: "Show commit details", nargs: 0)
     end
 
     def bind_default_keys!
