@@ -592,6 +592,12 @@ module RuVim
       Time.now.to_f
     end
 
+    def apply_startup_buffer_flags!
+      apply_startup_readonly! if @startup_readonly
+      apply_startup_nomodifiable! if @startup_nomodifiable
+      apply_startup_follow! if @startup_follow
+    end
+
     def apply_startup_readonly!
       buf = @editor.current_buffer
       return unless buf&.file_buffer?
@@ -646,9 +652,7 @@ module RuVim
 
       first, *rest = list
       @editor.open_path(first)
-      apply_startup_readonly! if @startup_readonly
-      apply_startup_nomodifiable! if @startup_nomodifiable
-      apply_startup_follow! if @startup_follow
+      apply_startup_buffer_flags!
 
       case @startup_open_layout
       when :horizontal
@@ -684,16 +688,12 @@ module RuVim
     def open_path_in_split!(path, layout:)
       @editor.split_current_window(layout:)
       @editor.open_path(path)
-      apply_startup_readonly! if @startup_readonly
-      apply_startup_nomodifiable! if @startup_nomodifiable
-      apply_startup_follow! if @startup_follow
+      apply_startup_buffer_flags!
     end
 
     def open_path_in_tab!(path)
       @editor.tabnew(path:)
-      apply_startup_readonly! if @startup_readonly
-      apply_startup_nomodifiable! if @startup_nomodifiable
-      apply_startup_follow! if @startup_follow
+      apply_startup_buffer_flags!
     end
 
     def move_cursor_to_line(line_number)
