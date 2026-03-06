@@ -176,4 +176,67 @@ class CLITest < Minitest::Test
     assert_equal 2, code
     assert_match(/config file not found/, err.string)
   end
+
+  def test_parse_double_dash_stops_options
+    opts = RuVim::CLI.parse(["--", "-R", "--help"])
+    assert_equal ["-R", "--help"], opts.files
+    assert_equal false, opts.readonly
+    assert_equal false, opts.show_help
+  end
+
+  def test_parse_unknown_option_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["--unknown-flag"])
+    end
+  end
+
+  def test_parse_startuptime_missing_arg_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["--startuptime"])
+    end
+  end
+
+  def test_parse_cmd_missing_arg_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["--cmd"])
+    end
+  end
+
+  def test_parse_q_missing_arg_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["-q"])
+    end
+  end
+
+  def test_parse_u_missing_arg_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["-u"])
+    end
+  end
+
+  def test_parse_c_missing_arg_raises
+    assert_raises(RuVim::CLI::ParseError) do
+      RuVim::CLI.parse(["-c"])
+    end
+  end
+
+  def test_parse_combined_u_value
+    opts = RuVim::CLI.parse(["-u/tmp/myrc.rb"])
+    assert_equal "/tmp/myrc.rb", opts.config_path
+  end
+
+  def test_parse_verbose_without_level
+    opts = RuVim::CLI.parse(["--verbose"])
+    assert_equal 1, opts.verbose_level
+  end
+
+  def test_parse_multiple_files
+    opts = RuVim::CLI.parse(["a.txt", "b.txt", "c.txt"])
+    assert_equal ["a.txt", "b.txt", "c.txt"], opts.files
+  end
+
+  def test_parse_plus_ex_command
+    opts = RuVim::CLI.parse(["+set number", "file.txt"])
+    assert_equal [{ type: :ex, value: "set number" }], opts.startup_actions
+  end
 end
