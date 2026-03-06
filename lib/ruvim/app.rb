@@ -3,9 +3,9 @@
 require "json"
 require "fileutils"
 require_relative "file_watcher"
-require_relative "app/stream_handler"
-require_relative "app/completion_manager"
-require_relative "app/key_handler"
+require_relative "stream_handler"
+require_relative "completion_manager"
+require_relative "key_handler"
 
 module RuVim
   class App

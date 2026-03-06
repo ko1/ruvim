@@ -4,8 +4,7 @@ require "json"
 require "fileutils"
 
 module RuVim
-  class App
-    class CompletionManager
+  class CompletionManager
       def initialize(editor:, terminal:, verbose_logger: nil)
         @editor = editor
         @terminal = terminal
@@ -668,4 +667,4 @@ module RuVim
       end
     end
   end
-end
+

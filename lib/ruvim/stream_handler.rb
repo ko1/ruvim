@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module RuVim
-  class App
-    class StreamHandler
+  class StreamHandler
       LARGE_FILE_ASYNC_THRESHOLD_BYTES = 64 * 1024 * 1024
       LARGE_FILE_STAGED_PREFIX_BYTES = 8 * 1024 * 1024
       ASYNC_FILE_READ_CHUNK_BYTES = 1 * 1024 * 1024
@@ -573,4 +572,4 @@ module RuVim
       end
     end
   end
-end
+

@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 module RuVim
-  class App
-    class KeyHandler
+  class KeyHandler
       # Rich mode: delegates to normal mode key handling but blocks mutating operations.
       RICH_MODE_BLOCKED_COMMANDS = %w[
         mode.insert mode.append mode.append_line_end mode.insert_nonblank
@@ -1501,4 +1500,4 @@ module RuVim
       end
     end
   end
-end
+
