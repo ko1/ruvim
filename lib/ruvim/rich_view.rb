@@ -3,6 +3,7 @@
 require_relative "rich_view/table_renderer"
 require_relative "rich_view/markdown_renderer"
 require_relative "rich_view/json_renderer"
+require_relative "rich_view/jsonl_renderer"
 
 module RuVim
   module RichView

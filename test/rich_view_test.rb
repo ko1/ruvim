@@ -623,4 +623,88 @@ class RichViewTest < Minitest::Test
     editor = RuVim::Editor.new
     assert_equal "jsonl", editor.detect_filetype("data.jsonl")
   end
+
+  # --- JSONL Rich View tests ---
+
+  def test_jsonl_registered
+    assert RuVim::RichView.renderer_for("jsonl")
+  end
+
+  def test_jsonl_open_creates_virtual_buffer
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}', '{"b":2}'])
+    buf.options["filetype"] = "jsonl"
+    count_before = editor.buffers.length
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    assert_equal count_before + 1, editor.buffers.length
+    new_buf = editor.current_buffer
+    refute_equal buf.id, new_buf.id
+    assert_equal :jsonl_formatted, new_buf.kind
+    assert new_buf.readonly?
+  end
+
+  def test_jsonl_open_pretty_prints_each_line
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1,"b":[2,3]}', '{"c":4}'])
+    buf.options["filetype"] = "jsonl"
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    new_buf = editor.current_buffer
+    lines = new_buf.lines
+    # Each JSON object should be expanded; separated by "---"
+    assert lines.length > 2, "JSONL should be expanded to multiple lines"
+    assert lines.any? { |l| l.include?("---") }, "Entries should be separated"
+  end
+
+  def test_jsonl_open_maps_cursor_to_correct_entry
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}', '{"b":2}', '{"c":3}'])
+    buf.options["filetype"] = "jsonl"
+    editor.current_window.cursor_y = 1  # on second entry
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    new_buf = editor.current_buffer
+    cy = editor.current_window.cursor_y
+    # Cursor should be within the second entry's formatted block
+    nearby = (cy..[cy + 2, new_buf.lines.length - 1].min).map { |r| new_buf.line_at(r) }.join("\n")
+    assert_match(/"b"/, nearby, "Cursor should be near the entry with \"b\"")
+  end
+
+  def test_jsonl_open_skips_blank_lines
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}', '', '{"b":2}'])
+    buf.options["filetype"] = "jsonl"
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    new_buf = editor.current_buffer
+    lines = new_buf.lines
+    # Should contain both entries
+    assert lines.any? { |l| l.include?('"a"') }
+    assert lines.any? { |l| l.include?('"b"') }
+  end
+
+  def test_jsonl_open_shows_parse_error_inline
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}', 'bad json', '{"b":2}'])
+    buf.options["filetype"] = "jsonl"
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    new_buf = editor.current_buffer
+    lines = new_buf.lines
+    # Invalid line should show an error marker
+    assert lines.any? { |l| l.include?("PARSE ERROR") }, "Invalid JSON line should show error"
+  end
+
+  def test_jsonl_filetype_detected
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.options["filetype"] = "jsonl"
+    assert_equal "jsonl", RuVim::RichView.detect_format(buf)
+  end
 end
