@@ -1507,6 +1507,7 @@ module RuVim
       ctx.editor.switch_to_buffer(blame_buf.id)
       ctx.window.cursor_y = [cursor_y, lines.length - 1].min
 
+      bind_git_buffer_keys(ctx.editor, blame_buf.id)
       bind_blame_keys(ctx.editor, blame_buf.id)
       ctx.editor.echo("[Blame] #{File.basename(source_buf.path)}")
     end
@@ -1610,6 +1611,7 @@ module RuVim
         modifiable: false
       )
       ctx.editor.switch_to_buffer(show_buf.id)
+      bind_git_buffer_keys(ctx.editor, show_buf.id)
       ctx.editor.echo("[Commit] #{commit_hash[0, 8]}")
     end
 
@@ -1634,6 +1636,7 @@ module RuVim
         modifiable: false
       )
       ctx.editor.switch_to_buffer(buf.id)
+      bind_git_buffer_keys(ctx.editor, buf.id)
       ctx.editor.echo("[Git Status]")
     end
 
@@ -1664,6 +1667,7 @@ module RuVim
         modifiable: false
       )
       ctx.editor.switch_to_buffer(buf.id)
+      bind_git_buffer_keys(ctx.editor, buf.id)
       ctx.editor.echo("[Git Diff]")
     end
 
@@ -1690,16 +1694,31 @@ module RuVim
         modifiable: false
       )
       ctx.editor.switch_to_buffer(buf.id)
+      bind_git_buffer_keys(ctx.editor, buf.id)
       ctx.editor.echo("[Git Log]")
     end
 
+    def git_close_buffer(ctx, **)
+      editor = ctx.editor
+      buf = ctx.buffer
+      editor.delete_buffer(buf.id)
+    end
+
     private
+
+    GIT_BUFFER_KINDS = %i[blame git_status git_diff git_log git_show].freeze
 
     def git_resolve_path(ctx)
       path = ctx.buffer.path
       return path if path && File.exist?(path)
       dir = Dir.pwd
       File.directory?(dir) ? dir : nil
+    end
+
+    def bind_git_buffer_keys(editor, buffer_id)
+      km = editor.keymap_manager
+      km.bind_buffer(buffer_id, "\e", "git.close_buffer")
+      km.bind_buffer(buffer_id, "<C-c>", "git.close_buffer")
     end
 
     def bind_blame_keys(editor, buffer_id)

@@ -297,6 +297,59 @@ class GitBlameTest < Minitest::Test
     end
   end
 
+  # --- Close with Esc/C-c ---
+
+  def test_esc_closes_git_blame_buffer
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      original_buf_id = buf.id
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git blame")
+      assert_equal :blame, @editor.current_buffer.kind
+
+      feed(:escape)
+      assert_equal original_buf_id, @editor.current_buffer.id
+    end
+  end
+
+  def test_esc_closes_git_status_buffer
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      original_buf_id = buf.id
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git status")
+      assert_equal :git_status, @editor.current_buffer.kind
+
+      feed(:escape)
+      assert_equal original_buf_id, @editor.current_buffer.id
+    end
+  end
+
+  def test_esc_closes_git_log_buffer
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      original_buf_id = buf.id
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git log")
+      assert_equal :git_log, @editor.current_buffer.kind
+
+      feed(:escape)
+      assert_equal original_buf_id, @editor.current_buffer.id
+    end
+  end
+
   # --- Error cases ---
 
   def test_git_blame_on_non_git_file_shows_error

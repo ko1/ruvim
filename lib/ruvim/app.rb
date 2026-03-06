@@ -376,6 +376,7 @@ module RuVim
       register_internal_unless(cmd, "git.blame.back", call: :git_blame_back, desc: "Restore previous blame")
       register_internal_unless(cmd, "git.blame.commit", call: :git_blame_commit, desc: "Show commit details")
       register_internal_unless(cmd, "git.command_mode", call: :enter_git_command_mode, desc: "Enter Git command-line mode")
+      register_internal_unless(cmd, "git.close_buffer", call: :git_close_buffer, desc: "Close git buffer")
       register_ex_unless(ex, "git", call: :ex_git, desc: "Git subcommand dispatcher", nargs: :any)
     end
 
