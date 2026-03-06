@@ -275,10 +275,37 @@ module RuVim
     end
 
     def render_text_line(text, editor, buffer_row:, window:, buffer:, width:)
+      # Ultra-fast path: plain ASCII line with no highlighting — skip Cell creation entirely
+      if can_bulk_render_line?(text, editor, buffer_row:, window:, buffer:)
+        return bulk_render_line(text, width, col_offset: window.col_offset)
+      end
+
       tabstop = tabstop_for(editor, window, buffer)
       cells, display_col = RuVim::TextMetrics.clip_cells_for_width(text, width, source_col_start: window.col_offset, tabstop:)
       render_cells(cells, display_col, editor, buffer_row:, window:, buffer:, width:, source_line: buffer.line_at(buffer_row),
                    source_col_offset: window.col_offset, leading_display_prefix: "")
+    end
+
+    def can_bulk_render_line?(text, editor, buffer_row:, window:, buffer:)
+      return false if editor.current_window_id == window.id && window.cursor_y == buffer_row
+      return false if editor.current_window_id == window.id && editor.visual_active?
+      return false if !!editor.effective_option("cursorline", window:, buffer:)
+      return false if !!editor.effective_option("list", window:, buffer:)
+      return false unless colorcolumn_display_cols(editor, window, buffer).empty?
+      return false if text.include?("\t")
+      return false unless text.ascii_only?
+      return false if text.match?(/[\x00-\x1f\x7f]/)  # control chars need sanitizing
+
+      source_text = text[window.col_offset..].to_s
+      return false unless search_highlight_source_cols(editor, source_text, source_col_offset: window.col_offset).empty?
+      return false unless syntax_highlight_source_cols(editor, window, buffer, source_text, source_col_offset: window.col_offset).empty?
+
+      true
+    end
+
+    def bulk_render_line(text, width, col_offset:)
+      clipped = text[col_offset, width].to_s
+      clipped + (" " * [width - clipped.length, 0].max)
     end
 
     def render_text_segment(source_line, editor, buffer_row:, window:, buffer:, width:, source_col_start:, display_prefix: "")
