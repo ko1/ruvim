@@ -459,6 +459,84 @@ class RichViewTest < Minitest::Test
     assert_equal dc0, dc1, "Second field start should align across CJK and ASCII rows"
   end
 
+  # --- JSON Rich View tests ---
+
+  def test_json_registered
+    assert RuVim::RichView.renderer_for("json")
+  end
+
+  def test_json_open_creates_virtual_buffer
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1,"b":[2,3]}'])
+    buf.options["filetype"] = "json"
+    count_before = editor.buffers.length
+
+    RuVim::RichView.open!(editor, format: "json")
+    assert_equal count_before + 1, editor.buffers.length
+    new_buf = editor.current_buffer
+    refute_equal buf.id, new_buf.id
+    assert_equal :json_formatted, new_buf.kind
+    assert new_buf.readonly?
+  end
+
+  def test_json_open_pretty_prints
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1,"b":[2,3]}'])
+    buf.options["filetype"] = "json"
+
+    RuVim::RichView.open!(editor, format: "json")
+    new_buf = editor.current_buffer
+    lines = new_buf.lines
+    assert lines.length > 1, "Minified JSON should be expanded to multiple lines"
+    assert_equal "{", lines.first.strip
+    assert_equal "}", lines.last.strip
+  end
+
+  def test_json_open_multiline_buffer
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{', '"key": "value"', '}'])
+    buf.options["filetype"] = "json"
+
+    RuVim::RichView.open!(editor, format: "json")
+    new_buf = editor.current_buffer
+    lines = new_buf.lines
+    assert lines.length >= 3
+  end
+
+  def test_json_open_invalid_json_shows_error
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"invalid json'])
+    buf.options["filetype"] = "json"
+
+    RuVim::RichView.open!(editor, format: "json")
+    # Should stay on original buffer
+    assert_equal buf.id, editor.current_buffer.id
+    assert_match(/JSON/, editor.message.to_s)
+  end
+
+  def test_json_open_does_not_enter_rich_mode
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}'])
+    buf.options["filetype"] = "json"
+
+    RuVim::RichView.open!(editor, format: "json")
+    # Virtual buffer approach — no rich mode
+    assert_equal :normal, editor.mode
+    assert_nil editor.rich_state
+  end
+
+  def test_json_filetype_detected
+    editor = fresh_editor
+    buf = editor.current_buffer
+    buf.options["filetype"] = "json"
+    assert_equal "json", RuVim::RichView.detect_format(buf)
+  end
+
   # --- Filetype detection tests ---
 
   def test_detect_filetype_tsv

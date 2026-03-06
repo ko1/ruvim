@@ -2,6 +2,7 @@
 
 require_relative "rich_view/table_renderer"
 require_relative "rich_view/markdown_renderer"
+require_relative "rich_view/json_renderer"
 
 module RuVim
   module RichView
@@ -45,6 +46,11 @@ module RuVim
 
       renderer = @renderers[format]
       raise RuVim::CommandError, "No renderer for format: #{format}" unless renderer
+
+      if renderer.respond_to?(:open_view!)
+        renderer.open_view!(editor)
+        return
+      end
 
       delimiter = renderer.delimiter_for(format)
       editor.enter_rich_mode(format: format, delimiter: delimiter)
