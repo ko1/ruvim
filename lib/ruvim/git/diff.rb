@@ -10,7 +10,7 @@ module RuVim
       # Run git diff with optional extra args.
       # Returns [lines, error_message].
       def run(file_path, args: [])
-        root, err = Commands.repo_root(file_path)
+        root, err = Git.repo_root(file_path)
         return [nil, err] unless root
 
         cmd = ["git", "diff", *args]

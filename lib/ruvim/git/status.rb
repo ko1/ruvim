@@ -10,7 +10,7 @@ module RuVim
       # Run git status.
       # Returns [lines, root, error_message].
       def run(file_path)
-        root, err = Commands.repo_root(file_path)
+        root, err = Git.repo_root(file_path)
         return [nil, nil, err] unless root
 
         out, err, status = Open3.capture3("git", "status", chdir: root)
