@@ -51,8 +51,16 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex |
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
+| `lang/diff.rb` | Diff syntax highlighting (add/delete/hunk/header colors) |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
+| `git/blame.rb` | Git blame: parser, runner, command handlers |
+| `git/status.rb` | Git status: runner, filename parser, command handlers |
+| `git/diff.rb` | Git diff: runner, command handlers |
+| `git/log.rb` | Git log: runner, command handlers |
+| `git/branch.rb` | Git branch: listing, checkout, command handlers |
+| `git/commit.rb` | Git commit: message buffer, execute, command handlers |
+| `git/handler.rb` | Git module (repo_root), dispatcher, close, shared helpers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
@@ -64,7 +72,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 ### Tests (test/)
 
 - Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `command_line_test`
-- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`
+- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 
 ### Docs (docs/)
