@@ -26,12 +26,16 @@ module RuVim
         "status"      => :git_status,
         "diff"        => :git_diff,
         "log"         => :git_log,
+        "branch"      => :git_branch,
+        "commit"      => :git_commit,
       }.freeze
 
       include Blame::HandlerMethods
       include Status::HandlerMethods
       include Diff::HandlerMethods
       include Log::HandlerMethods
+      include Branch::HandlerMethods
+      include Commit::HandlerMethods
 
       def enter_git_command_mode(ctx, **)
         ctx.editor.enter_command_line_mode(":")

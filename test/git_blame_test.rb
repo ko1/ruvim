@@ -451,6 +451,161 @@ class GitBlameTest < Minitest::Test
     end
   end
 
+  # --- GitBranch ---
+
+  def test_git_branch
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git branch")
+
+      branch_buf = @editor.current_buffer
+      assert_equal :git_branch, branch_buf.kind
+      assert branch_buf.readonly?
+      assert_match(/\[Git Branch\]/, branch_buf.name)
+      assert branch_buf.lines.any? { |l| l.include?("master") || l.include?("main") }
+    end
+  end
+
+  def test_git_branch_parse_name
+    assert_equal "master", RuVim::Git::Branch.parse_branch_name("* master\t2025-03-06\tInitial")
+    assert_equal "feature", RuVim::Git::Branch.parse_branch_name("  feature\t2025-03-05\tAdd feature")
+    assert_nil RuVim::Git::Branch.parse_branch_name("")
+  end
+
+  def test_git_branch_enter_checks_out
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+      # Create a second branch
+      Dir.chdir(dir) do
+        system("git branch test-branch", exception: true)
+      end
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git branch")
+      assert_equal :git_branch, @editor.current_buffer.kind
+
+      branch_buf = @editor.current_buffer
+      target_line = branch_buf.lines.index { |l| l.include?("test-branch") }
+      assert target_line, "Expected test-branch in branch output"
+      @editor.current_window.cursor_y = target_line
+
+      feed(:enter)
+
+      # Branch buffer should be closed, and we should have switched
+      refute_equal :git_branch, @editor.current_buffer.kind
+      # Verify checkout happened
+      Dir.chdir(dir) do
+        current = `git rev-parse --abbrev-ref HEAD`.strip
+        assert_equal "test-branch", current
+      end
+    end
+  end
+
+  # --- GitCommit ---
+
+  def test_git_commit_prepare
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+      File.write(File.join(dir, "test_file.txt"), "modified\n")
+      Dir.chdir(dir) { system("git add test_file.txt", exception: true) }
+
+      lines, root, err = RuVim::Git::Commit.prepare(File.join(dir, "test_file.txt"))
+      assert_nil err
+      assert_equal dir, File.realpath(root)
+      assert_equal "", lines.first  # Empty line for message
+      assert lines.any? { |l| l.start_with?("#") }
+    end
+  end
+
+  def test_git_commit_extract_message
+    lines = ["Fix the bug", "", "Detailed description", "# comment line", "# another"]
+    msg = RuVim::Git::Commit.extract_message(lines)
+    assert_equal "Fix the bug\n\nDetailed description", msg
+  end
+
+  def test_git_commit_extract_message_empty
+    lines = ["# comment only", "# another"]
+    msg = RuVim::Git::Commit.extract_message(lines)
+    assert_equal "", msg
+  end
+
+  def test_git_commit_opens_buffer
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git commit")
+
+      commit_buf = @editor.current_buffer
+      assert_equal :git_commit, commit_buf.kind
+      refute commit_buf.readonly?
+      assert commit_buf.modifiable?
+      assert_equal :insert, @editor.mode
+    end
+  end
+
+  def test_git_commit_via_write
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+      File.write(File.join(dir, "test_file.txt"), "modified\n")
+      Dir.chdir(dir) { system("git add test_file.txt", exception: true) }
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git commit")
+      assert_equal :git_commit, @editor.current_buffer.kind
+
+      # Type a commit message on the first line
+      commit_buf = @editor.current_buffer
+      commit_buf.lines[0] = "Test commit message"
+
+      # :w should trigger the commit
+      @dispatcher.dispatch_ex(@editor, "w")
+
+      # Commit buffer should be closed
+      refute_equal :git_commit, @editor.current_buffer.kind
+
+      # Verify commit happened
+      Dir.chdir(dir) do
+        log = `git log --oneline -1`.strip
+        assert_includes log, "Test commit message"
+      end
+    end
+  end
+
+  def test_git_commit_empty_message_aborts
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git commit")
+      assert_equal :git_commit, @editor.current_buffer.kind
+
+      # Don't type anything, just try to write
+      @dispatcher.dispatch_ex(@editor, "w")
+
+      # Should still be on commit buffer (abort didn't close it)
+      assert_equal :git_commit, @editor.current_buffer.kind
+      assert_match(/Empty commit message/, @editor.message)
+    end
+  end
+
   # --- Close with Esc/C-c ---
 
   def test_esc_closes_git_blame_buffer

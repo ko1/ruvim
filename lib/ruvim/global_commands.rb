@@ -775,6 +775,11 @@ module RuVim
     end
 
     def file_write(ctx, argv:, bang:, **)
+      if ctx.buffer.kind == :git_commit
+        git_commit_execute(ctx)
+        return
+      end
+
       path = argv[0]
       target = ctx.buffer.write_to(path)
       size = File.exist?(target) ? File.size(target) : 0
