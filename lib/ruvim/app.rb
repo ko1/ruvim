@@ -370,6 +370,11 @@ module RuVim
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
       register_internal_unless(cmd, "quickfix.open", call: :ex_copen, desc: "Open quickfix list")
+
+      register_internal_unless(cmd, "git.blame", call: :git_blame, desc: "Open git blame buffer")
+      register_internal_unless(cmd, "git.blame.prev", call: :git_blame_prev, desc: "Blame at parent commit")
+      register_internal_unless(cmd, "git.blame.back", call: :git_blame_back, desc: "Restore previous blame")
+      register_internal_unless(cmd, "git.blame.commit", call: :git_blame_commit, desc: "Show commit details")
     end
 
     def bind_default_keys!
@@ -463,6 +468,7 @@ module RuVim
       @keymaps.bind(:normal, "gf", "file.goto_under_cursor")
       @keymaps.bind(:normal, "gr", "rich.toggle")
       @keymaps.bind(:normal, "g/", "search.filter")
+      @keymaps.bind(:normal, "gb", "git.blame")
       @keymaps.bind(:normal, "Q", "quickfix.open")
       @keymaps.bind(:normal, ["]", "q"], "quickfix.next")
       @keymaps.bind(:normal, ["[", "q"], "quickfix.prev")
