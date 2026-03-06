@@ -369,6 +369,7 @@ module RuVim
       register_ex_unless(ex, "filter", call: :ex_filter, desc: "Filter lines matching search pattern", nargs: :any)
       register_internal_unless(cmd, "search.filter", call: :search_filter, desc: "Filter lines matching search pattern")
       register_internal_unless(cmd, "rich.toggle", call: :rich_toggle, desc: "Toggle Rich View")
+      register_internal_unless(cmd, "rich.close_buffer", call: :rich_view_close_buffer, desc: "Close rich view buffer")
       register_internal_unless(cmd, "quickfix.next", call: :ex_cnext, desc: "Next quickfix item")
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
       register_internal_unless(cmd, "quickfix.open", call: :ex_copen, desc: "Open quickfix list")

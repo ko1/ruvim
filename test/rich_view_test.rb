@@ -480,6 +480,18 @@ class RichViewTest < Minitest::Test
     assert new_buf.readonly?
   end
 
+  def test_json_open_binds_close_keys
+    editor = fresh_editor
+    editor.keymap_manager = RuVim::KeymapManager.new
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}'])
+    buf.options["filetype"] = "json"
+
+    RuVim::RichView.open!(editor, format: "json")
+    result = editor.keymap_manager.resolve_with_context(:normal, ["\e"], editor: editor)
+    assert_equal "rich.close_buffer", result.invocation.id
+  end
+
   def test_json_open_pretty_prints
     editor = fresh_editor
     buf = editor.current_buffer
@@ -643,6 +655,18 @@ class RichViewTest < Minitest::Test
     refute_equal buf.id, new_buf.id
     assert_equal :jsonl_formatted, new_buf.kind
     assert new_buf.readonly?
+  end
+
+  def test_jsonl_open_binds_close_keys
+    editor = fresh_editor
+    editor.keymap_manager = RuVim::KeymapManager.new
+    buf = editor.current_buffer
+    buf.replace_all_lines!(['{"a":1}', '{"b":2}'])
+    buf.options["filetype"] = "jsonl"
+
+    RuVim::RichView.open!(editor, format: "jsonl")
+    result = editor.keymap_manager.resolve_with_context(:normal, ["\e"], editor: editor)
+    assert_equal "rich.close_buffer", result.invocation.id
   end
 
   def test_jsonl_open_pretty_prints_each_line

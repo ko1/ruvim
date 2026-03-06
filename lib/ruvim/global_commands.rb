@@ -1376,6 +1376,10 @@ module RuVim
       RuVim::RichView.toggle!(ctx.editor)
     end
 
+    def rich_view_close_buffer(ctx, **)
+      ctx.editor.delete_buffer(ctx.buffer.id)
+    end
+
     def search_filter(ctx, **)
       editor = ctx.editor
       search = editor.last_search

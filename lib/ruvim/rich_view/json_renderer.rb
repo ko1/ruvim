@@ -39,6 +39,7 @@ module RuVim
           modifiable: false
         )
         editor.switch_to_buffer(buf.id)
+        RichView.bind_close_keys(editor, buf.id)
         window.cursor_y = [target_line, lines.length - 1].min
         window.cursor_x = 0
         editor.echo("[JSON Formatted] #{lines.length} lines")

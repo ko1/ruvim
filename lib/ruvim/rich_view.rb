@@ -96,5 +96,14 @@ module RuVim
 
       editor.exit_rich_mode
     end
+
+    # Bind Esc and C-c to close a virtual buffer created by a renderer.
+    def bind_close_keys(editor, buffer_id)
+      km = editor.keymap_manager
+      return unless km
+
+      km.bind_buffer(buffer_id, "\e", "rich.close_buffer")
+      km.bind_buffer(buffer_id, "<C-c>", "rich.close_buffer")
+    end
   end
 end
