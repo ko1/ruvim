@@ -361,7 +361,7 @@ module RuVim
         end
       else
         cells.each do |cell|
-          ch = display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
+          ch = display_glyph_for_cell(cell, source_line, list_enabled, listchars, tab_seen, trail_from)
           buffer_col = cell.source_col
           selected = selected_in_visual?(visual, buffer_row, buffer_col)
           cursor_here = (current_line && window.cursor_x == buffer_col)
@@ -768,7 +768,7 @@ module RuVim
       ""
     end
 
-    def display_glyph_for_cell(cell, source_line, list_enabled:, listchars:, tab_seen:, trail_from:)
+    def display_glyph_for_cell(cell, source_line, list_enabled, listchars, tab_seen, trail_from)
       return cell.glyph unless list_enabled
 
       src = source_line[cell.source_col]
