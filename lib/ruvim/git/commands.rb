@@ -58,6 +58,92 @@ module RuVim
         end
         [out.lines(chomp: true), nil]
       end
+
+      # Command handler methods (included via Git::Handler)
+      module HandlerMethods
+        def git_status(ctx, **)
+          file_path = git_resolve_path(ctx)
+          unless file_path
+            ctx.editor.echo_error("No file or directory to resolve git repo")
+            return
+          end
+
+          lines, err = Commands.status(file_path)
+          unless lines
+            ctx.editor.echo_error("git status: #{err}")
+            return
+          end
+
+          buf = ctx.editor.add_virtual_buffer(
+            kind: :git_status,
+            name: "[Git Status]",
+            lines: lines,
+            readonly: true,
+            modifiable: false
+          )
+          ctx.editor.switch_to_buffer(buf.id)
+          bind_git_buffer_keys(ctx.editor, buf.id)
+          ctx.editor.echo("[Git Status]")
+        end
+
+        def git_diff(ctx, argv: [], **)
+          file_path = git_resolve_path(ctx)
+          unless file_path
+            ctx.editor.echo_error("No file or directory to resolve git repo")
+            return
+          end
+
+          lines, err = Commands.diff(file_path, args: argv)
+          unless lines
+            ctx.editor.echo_error("git diff: #{err}")
+            return
+          end
+
+          if lines.empty?
+            ctx.editor.echo("No diff output (working tree clean)")
+            return
+          end
+
+          buf = ctx.editor.add_virtual_buffer(
+            kind: :git_diff,
+            name: "[Git Diff]",
+            lines: lines,
+            filetype: "diff",
+            readonly: true,
+            modifiable: false
+          )
+          ctx.editor.switch_to_buffer(buf.id)
+          bind_git_buffer_keys(ctx.editor, buf.id)
+          ctx.editor.echo("[Git Diff]")
+        end
+
+        def git_log(ctx, argv: [], **)
+          file_path = git_resolve_path(ctx)
+          unless file_path
+            ctx.editor.echo_error("No file or directory to resolve git repo")
+            return
+          end
+
+          lines, err = Commands.log(file_path, args: argv)
+          unless lines
+            ctx.editor.echo_error("git log: #{err}")
+            return
+          end
+
+          filetype = argv.include?("-p") ? "diff" : nil
+          buf = ctx.editor.add_virtual_buffer(
+            kind: :git_log,
+            name: "[Git Log]",
+            lines: lines,
+            filetype: filetype,
+            readonly: true,
+            modifiable: false
+          )
+          ctx.editor.switch_to_buffer(buf.id)
+          bind_git_buffer_keys(ctx.editor, buf.id)
+          ctx.editor.echo("[Git Log]")
+        end
+      end
     end
   end
 end
