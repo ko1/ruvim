@@ -1498,6 +1498,5 @@ module RuVim
         @editor.echo_error("Error: #{e.message}")
         @editor.enter_normal_mode
       end
-    end
   end
-
+end

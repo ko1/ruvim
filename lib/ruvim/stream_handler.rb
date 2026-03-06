@@ -570,6 +570,5 @@ module RuVim
       rescue IO::WaitWritable, Errno::EPIPE
         nil
       end
-    end
   end
-
+end

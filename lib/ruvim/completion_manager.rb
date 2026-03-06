@@ -665,6 +665,5 @@ module RuVim
       def whitespace_char?(ch)
         ch && ch.match?(/\s/)
       end
-    end
   end
-
+end
