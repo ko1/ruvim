@@ -265,7 +265,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `p`, `P`: paste
 - `r<char>`: 1文字置換
 - `c` + motion / `cc`: change（削除して Insert mode）
-- `=` + motion / `==`: auto-indent（Ruby filetype でインデント自動調整。`=j`, `=G` 等）
+- `=` + motion / `==`: auto-indent（Ruby / JSON filetype でインデント自動調整。`=j`, `=G` 等）
 - `v`: Visual (characterwise)
 - `V`: Visual (linewise)
 - `Ctrl-v`: Visual (blockwise, 最小)

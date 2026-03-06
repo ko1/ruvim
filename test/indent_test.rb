@@ -1,5 +1,91 @@
 require_relative "test_helper"
 
+class JsonIndentTest < Minitest::Test
+  def calc(lines, target_row, sw = 2)
+    RuVim::Lang::Json.calculate_indent(lines, target_row, sw)
+  end
+
+  def test_first_line_is_zero
+    assert_equal 0, calc(["{"], 0)
+  end
+
+  def test_after_open_brace
+    lines = ["{", '  "key": "value"']
+    assert_equal 2, calc(lines, 1)
+  end
+
+  def test_close_brace
+    lines = ["{", '  "key": "value"', "}"]
+    assert_equal 0, calc(lines, 2)
+  end
+
+  def test_after_open_bracket
+    lines = ["[", "  1"]
+    assert_equal 2, calc(lines, 1)
+  end
+
+  def test_close_bracket
+    lines = ["[", "  1,", "  2", "]"]
+    assert_equal 0, calc(lines, 3)
+  end
+
+  def test_nested_objects
+    lines = [
+      "{",
+      '  "a": {',
+      '    "b": 1',
+      "  }",
+      "}"
+    ]
+    assert_equal 2, calc(lines, 1)
+    assert_equal 4, calc(lines, 2)
+    assert_equal 2, calc(lines, 3)
+    assert_equal 0, calc(lines, 4)
+  end
+
+  def test_array_in_object
+    lines = [
+      "{",
+      '  "items": [',
+      "    1,",
+      "    2",
+      "  ]",
+      "}"
+    ]
+    assert_equal 2, calc(lines, 1)
+    assert_equal 4, calc(lines, 2)
+    assert_equal 4, calc(lines, 3)
+    assert_equal 2, calc(lines, 4)
+    assert_equal 0, calc(lines, 5)
+  end
+
+  def test_shiftwidth_4
+    lines = ["{", '    "key": 1', "}"]
+    assert_equal 4, calc(lines, 1, 4)
+    assert_equal 0, calc(lines, 2, 4)
+  end
+
+  def test_indent_trigger_open_brace
+    assert RuVim::Lang::Json.indent_trigger?("{")
+    assert RuVim::Lang::Json.indent_trigger?('  "key": {')
+    assert RuVim::Lang::Json.indent_trigger?('  "key": [')
+  end
+
+  def test_indent_trigger_no_trigger
+    refute RuVim::Lang::Json.indent_trigger?('  "key": "value"')
+    refute RuVim::Lang::Json.indent_trigger?("}")
+  end
+
+  def test_dedent_trigger_close_brace
+    assert_kind_of Regexp, RuVim::Lang::Json.dedent_trigger("}")
+    assert_kind_of Regexp, RuVim::Lang::Json.dedent_trigger("]")
+  end
+
+  def test_dedent_trigger_no_trigger
+    assert_nil RuVim::Lang::Json.dedent_trigger("a")
+  end
+end
+
 class RubyIndentTest < Minitest::Test
   def calc(lines, target_row, sw = 2)
     RuVim::Lang::Ruby.calculate_indent(lines, target_row, sw)
