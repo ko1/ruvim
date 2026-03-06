@@ -618,4 +618,9 @@ class RichViewTest < Minitest::Test
     editor = RuVim::Editor.new
     assert_equal "tsv", editor.detect_filetype("DATA.TSV")
   end
+
+  def test_detect_filetype_jsonl
+    editor = RuVim::Editor.new
+    assert_equal "jsonl", editor.detect_filetype("data.jsonl")
+  end
 end

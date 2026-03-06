@@ -14,6 +14,12 @@ class HighlighterTest < Minitest::Test
     assert_equal "\e[33m", cols[6] # number start
   end
 
+  def test_jsonl_highlighter_reuses_json_colors
+    cols = RuVim::Highlighter.color_columns("jsonl", '{"a": 10}')
+    assert_equal "\e[36m", cols[1] # key chars
+    assert_equal "\e[33m", cols[6] # number start
+  end
+
   def test_ruby_highlighter_marks_instance_variables_and_constants
     cols = RuVim::Highlighter.color_columns("ruby", "@x = Foo")
     assert_equal "\e[93m", cols[0] # @x

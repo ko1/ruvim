@@ -19,7 +19,7 @@ module RuVim
       case ft
       when "ruby"
         Lang::Ruby.color_columns(text)
-      when "json"
+      when "json", "jsonl"
         Lang::Json.color_columns(text)
       when "markdown"
         Lang::Markdown.color_columns(text)

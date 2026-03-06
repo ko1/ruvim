@@ -276,6 +276,7 @@ module RuVim
         ".tsx" => "typescriptreact",
         ".jsx" => "javascriptreact",
         ".json" => "json",
+        ".jsonl" => "jsonl",
         ".yml" => "yaml",
         ".yaml" => "yaml",
         ".md" => "markdown",
