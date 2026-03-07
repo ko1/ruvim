@@ -1097,8 +1097,8 @@ module RuVim
           errf.flush
           outf.rewind
           errf.rewind
-          stdout_text = outf.read.to_s
-          stderr_text = errf.read.to_s
+          stdout_text = outf.read
+          stderr_text = errf.read
         end
       end
       if !stdout_text.empty? || !stderr_text.empty?
