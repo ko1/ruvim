@@ -1171,6 +1171,36 @@ module RuVim
       raise RuVim::CommandError, "Shell error: #{e.message}"
     end
 
+    def ex_read(ctx, argv:, kwargs:, **)
+      arg = argv.join(" ")
+      raise RuVim::CommandError, "Usage: :r[ead] [file] or :r[ead] !command" if arg.strip.empty?
+
+      insert_line = kwargs[:range_start] || ctx.window.cursor_y
+      new_lines = if arg.start_with?("!")
+                    command = arg[1..].strip
+                    raise RuVim::CommandError, "Usage: :r !<command>" if command.empty?
+
+                    shell = ENV["SHELL"].to_s
+                    shell = "/bin/sh" if shell.empty?
+                    stdout_text, stderr_text, _status = Open3.capture3(shell, "-c", command)
+                    unless stderr_text.empty?
+                      ctx.editor.echo_error(stderr_text.lines(chomp: true).first)
+                    end
+                    stdout_text.lines(chomp: true)
+                  else
+                    path = File.expand_path(arg.strip)
+                    raise RuVim::CommandError, "File not found: #{arg.strip}" unless File.exist?(path)
+
+                    File.read(path).lines(chomp: true)
+                  end
+
+      return if new_lines.empty?
+
+      ctx.buffer.insert_lines_at(insert_line + 1, new_lines)
+      ctx.window.cursor_y = insert_line + new_lines.length
+      ctx.editor.echo("#{new_lines.length} line(s) inserted")
+    end
+
     def ex_commands(ctx, **)
       rows = RuVim::ExCommandRegistry.instance.all.map do |spec|
         alias_text = spec.aliases.empty? ? "" : " (#{spec.aliases.join(', ')})"

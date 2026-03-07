@@ -444,6 +444,13 @@ RuVim::ExCommandRegistry.instance.register(
 - `stdout` / `stderr` に出力があれば `[Ruby Output]` 仮想バッファに表示（返り値も表示）
 - 出力がない場合、返り値を message line に表示（`inspect`）
 
+### `:r` / `:read`（ファイル・コマンド出力の挿入）
+
+- `:r <file>` でファイルの内容をカーソル行の下に挿入
+- `:r !<command>` でシェルコマンドの stdout を挿入
+- 行番号指定可: `:3r file.txt`（3行目の下に挿入）
+- stderr が出た場合、最初の行をエラーメッセージとして表示
+
 ### `:!`（shell 実行, 最小）
 
 - `:!<command>` で shell コマンドを同期実行

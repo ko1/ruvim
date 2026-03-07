@@ -143,6 +143,43 @@ class DispatcherTest < Minitest::Test
     assert_includes body, "err"
   end
 
+  def test_dispatch_ex_read_file_inserts_after_cursor_line
+    @editor.materialize_intro_buffer!
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "data.txt")
+      File.write(path, "aaa\nbbb\n")
+      @editor.current_buffer.replace_all_lines!(%w[line1 line2 line3])
+      @editor.current_window.cursor_y = 1  # on line2
+
+      @dispatcher.dispatch_ex(@editor, "r #{path}")
+
+      assert_equal %w[line1 line2 aaa bbb line3], @editor.current_buffer.lines
+    end
+  end
+
+  def test_dispatch_ex_read_with_range_inserts_after_specified_line
+    @editor.materialize_intro_buffer!
+    Dir.mktmpdir do |dir|
+      path = File.join(dir, "data.txt")
+      File.write(path, "inserted\n")
+      @editor.current_buffer.replace_all_lines!(%w[line1 line2 line3])
+
+      @dispatcher.dispatch_ex(@editor, "2r #{path}")
+
+      assert_equal %w[line1 line2 inserted line3], @editor.current_buffer.lines
+    end
+  end
+
+  def test_dispatch_ex_read_shell_command_inserts_output
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(%w[line1 line2])
+    @editor.current_window.cursor_y = 0
+
+    @dispatcher.dispatch_ex(@editor, "r !echo hello")
+
+    assert_equal %w[line1 hello line2], @editor.current_buffer.lines
+  end
+
   def test_dispatch_ex_set_commands
     @dispatcher.dispatch_ex(@editor, "set number")
     assert_equal true, @editor.current_window.options["number"]

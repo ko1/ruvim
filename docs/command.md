@@ -213,6 +213,15 @@
 
 ### `:!`（shell 実行, 最小）
 
+### `:r` / `:read`（ファイル・コマンド出力の挿入）
+
+- 形式: `:r <file>` または `:r !<command>`
+- ファイルの内容またはシェルコマンドの stdout をカーソル行の下に挿入します
+- 行番号指定可: `:3r file.txt`（3行目の下に挿入）
+- `:r !command` で stderr が出た場合、最初の行をエラーメッセージとして表示します
+
+### `:!`（shell 実行）
+
 - 形式: `:!<command>`
 - alternate screen を一時的に抜けて main screen 上で shell コマンドを同期実行します（Vim 互換）
 - 実行後 "Press ENTER or type command to continue" を表示し、入力待ち後にエディタに復帰
