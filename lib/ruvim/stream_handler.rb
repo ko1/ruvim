@@ -434,6 +434,13 @@ module RuVim
         if staged_mode
           prefix = io.read(staged_prefix_bytes) || "".b
           unless prefix.empty?
+            # Split at last newline to avoid displaying a partial line
+            last_nl = prefix.rindex("\n".b)
+            if last_nl && last_nl < prefix.bytesize - 1
+              remainder = prefix.bytesize - last_nl - 1
+              prefix = prefix[0..last_nl]
+              io.seek(-remainder, IO::SEEK_CUR)
+            end
             buf.append_stream_text!(Buffer.decode_text(prefix))
             state[:ended_with_newline] = prefix.end_with?("\n")
           end

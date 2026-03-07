@@ -375,7 +375,7 @@ class AppStartupTest < Minitest::Test
 
         buf = editor.open_path(f.path)
         assert_equal :live, buf.loading_state
-        assert_equal ["ab", "c"], buf.lines
+        assert_equal ["ab", ""], buf.lines
         assert_match(/showing first/i, editor.message)
 
         100.times do
