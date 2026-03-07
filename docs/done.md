@@ -124,6 +124,15 @@
 - `-q {errorfile}`（quickfix 読み込み起動）
 - `-S [session]`（session 読み込み）
 
+## セキュリティ修正
+
+- `:grep` / `:lgrep` のシェルインジェクション対策（argv 配列実行 + `Dir.glob` 展開）
+- Rich view レンダリング時のターミナルエスケープインジェクション対策（制御文字の無害化）
+- Restricted mode (`-Z`) の網羅強化（`:grep`, `:lgrep`, `:git`, `:gh` を無効化）
+- Git branch checkout の安全化（Enter で即時実行せずコマンドラインにプリセットして確認ステップを挟む）
+- 非同期ファイルローダーの OOM 対策（`bulk_once` モード廃止、チャンク読み込み）
+- 特殊ファイル（FIFO/デバイス/ソケット）の読み込み拒否（`Buffer.ensure_regular_file!` で統一ガード）
+
 ## ドキュメント整理 / 仕様整備
 
 - `docs/spec.md`, `docs/tutorial.md`, `docs/binding.md`, `docs/command.md`, `docs/config.md`, `docs/vim_diff.md` の継続更新

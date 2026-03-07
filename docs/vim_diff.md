@@ -84,6 +84,19 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - 補完: Ex コマンド名 + 引数補完, Insert mode buffer words（`Ctrl-n` / `Ctrl-p`）
 - CLI: `--help`, `--version`, `--clean`, `-u`, `-R`, `-M`, `-Z`, `-f`, `-o/-O/-p`, `-c`, `+{cmd}`, `-V`, `--startuptime`, `--cmd`
 
+## セキュリティ / Restricted mode (`-Z`)
+
+- Vim と同様に `-Z` で restricted mode を有効化
+- RuVim では以下のコマンドが無効化される:
+  - `:!`（シェル実行）
+  - `:ruby` / `:rb`（Ruby eval）
+  - `:grep` / `:lgrep`（外部 grep 実行）
+  - `:git`（Git 操作全般）
+  - `:gh`（GitHub 操作全般）
+- `:grep` / `:lgrep` はシェル経由ではなく argv 配列で安全に実行（シェルインジェクション対策済み）
+- Rich view レンダリング時にバッファ内容の制御文字を無害化（ターミナルエスケープインジェクション対策）
+- 特殊ファイル（FIFO/デバイス/ソケット）の読み込みを拒否（DoS 対策）
+
 ## 動作の微細な差分
 
 - undo 粒度は簡略化（Insert mode は「入ってから出るまで」が 1 undo 単位）

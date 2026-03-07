@@ -90,8 +90,9 @@
 - `gr` : Rich mode をトグル（TSV/CSV をテーブル整形表示、同一バッファ上で動作）
 - `g/` : 検索パターンにマッチする行だけを集めたフィルタバッファを作成（再帰フィルタ可、Enter で元行へジャンプ、`:q` で戻る）
 - `Ctrl-g` : Git コマンドモード（`:git ` がプリセットされたコマンドラインに入る）
-  - `blame` → Git blame を開く / `status` → Git status / `diff` → Git diff / `log` → Git log
+  - `blame` → Git blame を開く / `status` → Git status / `diff` → Git diff / `log` → Git log / `branch` → ブランチ一覧
   - Blame バッファ内: `p` 親コミットの blame へ遷移 / `P` 前の blame へ戻る / `c` コミット詳細を表示
+  - Branch バッファ内: `Enter` で `:git checkout <branch>` をコマンドラインにプリセット（即時実行ではなく確認ステップあり）
 - `Ctrl-c` : stdin stream 停止（stdin バッファ表示時）
 - `Esc` : メッセージ/保留入力のクリア
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）

@@ -115,13 +115,44 @@
   - current window の location list を開く / 閉じる
 - `:lnext` / `:ln`, `:lprev` / `:lp`
   - location list 項目を前後移動して該当位置へジャンプ
-- `:grep /pattern/ [path...]`
+- `:grep pattern [path...]`
   - 外部 grep（`grepprg`）を実行して quickfix list を作成
-- `:lgrep /pattern/ [path...]`
+  - シェル経由ではなく argv 配列で安全に実行（シェルインジェクション対策済み）
+  - ワイルドカード（`*.txt` 等）は Ruby の `Dir.glob` で展開
+  - `-Z`（restricted mode）では無効
+- `:lgrep pattern [path...]`
   - 外部 grep（`grepprg`）を実行して location list を作成
+  - `:grep` と同じセキュリティ仕様
+- 一覧バッファ上で `Enter` : 選択項目へジャンプ（一覧ウィンドウから元の編集ウィンドウへ戻る）
 - 現状の制限:
   - `:make`, `:cfile`, `:lfile` は未実装
-  - 一覧バッファ上で `Enter` からのジャンプは未実装
+
+### `:git`
+
+- 形式: `:git <subcommand> [args...]`
+- Git 操作の統合インターフェース
+- `-Z`（restricted mode）では無効
+- サブコマンド:
+  - `blame` : 現在ファイルの git blame を表示（read-only バッファ）
+    - blame バッファ内: `p` 親コミットの blame / `P` 前の blame へ戻る / `c` コミット詳細
+  - `status` : git status を表示
+  - `diff` : git diff を表示
+  - `log` : git log を表示
+  - `branch` : ブランチ一覧を表示
+    - branch バッファ内: `Enter` で `:git checkout <branch>` をコマンドラインにプリセット（確認ステップあり）
+  - `checkout <branch>` : 指定ブランチへチェックアウト
+  - `commit` : コミットメッセージ入力バッファを開く
+- Git バッファは `Esc` / `Ctrl-c` で閉じる
+
+### `:gh`
+
+- 形式: `:gh <subcommand> [args...]`
+- GitHub 連携の統合インターフェース
+- `-Z`（restricted mode）では無効
+- サブコマンド:
+  - `link` : 現在ファイル/選択範囲の GitHub URL を生成してクリップボードにコピー
+  - `browse` : 現在ファイルの GitHub URL をブラウザで開く
+  - `pr` : 現在ブランチの PR ページをブラウザで開く
 
 ### `:rich`
 
