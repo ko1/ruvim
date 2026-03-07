@@ -152,7 +152,7 @@ module RuVim
     end
 
     def set_last_search(pattern:, direction:)
-      @last_search = { pattern: pattern.to_s, direction: direction.to_sym }
+      @last_search = { pattern: pattern, direction: direction.to_sym }
       @hlsearch_suppressed = false
     end
 
@@ -165,7 +165,7 @@ module RuVim
     end
 
     def set_last_find(char:, direction:, till:)
-      @last_find = { char: char.to_s, direction: direction.to_sym, till: !!till }
+      @last_find = { char: char, direction: direction.to_sym, till: !!till }
     end
 
     def current_window
@@ -316,7 +316,7 @@ module RuVim
     end
 
     def store_operator_register(name = "\"", text:, type:, kind:)
-      key = (name || "\"").to_s
+      key = (name || "\"")
       payload = { text: text.to_s, type: type.to_sym }
       return payload if key == "_"
 
@@ -1222,7 +1222,7 @@ module RuVim
         prog = tokens[i].to_s
       end
 
-      File.basename(prog.to_s)
+      File.basename(prog)
     end
 
     def default_global_options

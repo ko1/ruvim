@@ -354,12 +354,11 @@ module RuVim
 
     # Append externally-streamed text without touching undo history or modifiable state.
     def append_stream_text!(text)
-      chunk = text.to_s
-      return [@lines.length - 1, @lines[-1].length] if chunk.empty?
+      return [@lines.length - 1, @lines[-1].length] if text.empty?
 
-      parts = chunk.split("\n", -1)
+      parts = text.split("\n", -1)
       head = parts.shift || ""
-      @lines[-1] = @lines[-1].to_s + head
+      @lines[-1] = @lines[-1] + head
       @lines.concat(parts)
       @lines = [""] if @lines.empty?
       @modified = false

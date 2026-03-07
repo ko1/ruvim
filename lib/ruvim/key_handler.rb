@@ -1032,7 +1032,7 @@ module RuVim
         current_indent = m[1].length
         return if current_indent == target_indent
 
-        stripped = line.to_s.strip
+        stripped = line.strip
         buf.delete_span(row, 0, row, current_indent) if current_indent > 0
         buf.insert_text(row, 0, " " * target_indent) if target_indent > 0
         @editor.current_window.cursor_x = target_indent + stripped.length

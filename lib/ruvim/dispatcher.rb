@@ -21,9 +21,9 @@ module RuVim
     end
 
     def dispatch_ex(editor, line)
-      raw = line.to_s.strip
+      raw = line.strip
       if raw.start_with?("!")
-        command = raw[1..].to_s.strip
+        command = raw[1..].strip
         invocation = CommandInvocation.new(id: "__shell__", argv: [command])
         ctx = Context.new(editor:, invocation:)
         @command_host.ex_shell(ctx, command:)
@@ -68,7 +68,7 @@ module RuVim
     end
 
     def parse_ex(line)
-      raw = line.to_s.strip
+      raw = line.strip
       return nil if raw.empty?
 
       tokens = Shellwords.shellsplit(raw)
@@ -85,7 +85,7 @@ module RuVim
     # Parse a substitute command: s/pat/repl/flags
     # Returns {pattern:, replacement:, flags_str:} or nil
     def parse_substitute(line)
-      raw = line.to_s.strip
+      raw = line.strip
       return nil unless raw.match?(/\As[^a-zA-Z]/)
       return nil if raw.length < 2
 
@@ -189,7 +189,7 @@ module RuVim
     # Parse a range from the beginning of raw.
     # Returns {range_start:, range_end:, rest:} or nil.
     def parse_range(raw, editor)
-      str = raw.to_s
+      str = raw
       return nil if str.empty?
 
       # % = whole file

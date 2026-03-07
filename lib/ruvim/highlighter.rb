@@ -13,20 +13,19 @@ module RuVim
 
     def color_columns(filetype, line)
       ft = filetype.to_s
-      text = line.to_s
-      return {} if text.empty?
+      return {} if line.empty?
 
       case ft
       when "ruby"
-        Lang::Ruby.color_columns(text)
+        Lang::Ruby.color_columns(line)
       when "json", "jsonl"
-        Lang::Json.color_columns(text)
+        Lang::Json.color_columns(line)
       when "markdown"
-        Lang::Markdown.color_columns(text)
+        Lang::Markdown.color_columns(line)
       when "scheme"
-        Lang::Scheme.color_columns(text)
+        Lang::Scheme.color_columns(line)
       when "diff"
-        Lang::Diff.color_columns(text)
+        Lang::Diff.color_columns(line)
       else
         {}
       end

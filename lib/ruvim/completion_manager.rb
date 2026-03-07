@@ -19,8 +19,9 @@ module RuVim
       # --- Command-line history ---
 
       def push_history(prefix, line)
-        text = line.to_s
-        return if text.empty?
+        return if line.empty?
+
+        text = line
 
         hist = @cmdline_history[prefix]
         hist.delete(text)
@@ -44,17 +45,15 @@ module RuVim
 
         loaded = Hash.new { |h, k| h[k] = [] }
         data.each do |prefix, items|
-          key = prefix.to_s
-          next unless [":", "/", "?"].include?(key)
+          next unless [":", "/", "?"].include?(prefix)
           next unless items.is_a?(Array)
 
-          hist = loaded[key]
+          hist = loaded[prefix]
           items.each do |item|
-            text = item.to_s
-            next if text.empty?
+            next if item.empty?
 
-            hist.delete(text)
-            hist << text
+            hist.delete(item)
+            hist << item
           end
           hist.shift while hist.length > 100
         end
@@ -200,7 +199,7 @@ module RuVim
 
         cmd = @editor.command_line
         ensure_incsearch_preview_origin!(direction: (cmd.prefix == "/" ? :forward : :backward))
-        pattern = cmd.text.to_s
+        pattern = cmd.text
         if pattern.empty?
           clear_incsearch_preview_state(apply: false)
           return
@@ -342,7 +341,7 @@ module RuVim
         return [:full] if raw.empty?
 
         raw.split(",").flat_map do |tok|
-          tok.to_s.split(":").map do |part|
+          tok.split(":").map do |part|
             case part.strip.downcase
             when "longest" then :longest
             when "list" then :list
@@ -562,22 +561,21 @@ module RuVim
       end
 
       def ex_arg_completion_candidates(command_name, arg_index, prefix)
-        cmd = command_name.to_s
         return [] unless arg_index.zero?
 
-        if %w[e edit w write tabnew].include?(cmd)
+        if %w[e edit w write tabnew].include?(command_name)
           return path_completion_candidates(prefix)
         end
 
-        if %w[buffer b].include?(cmd)
+        if %w[buffer b].include?(command_name)
           return buffer_completion_candidates(prefix)
         end
 
-        if %w[set setlocal setglobal].include?(cmd)
+        if %w[set setlocal setglobal].include?(command_name)
           return option_completion_candidates(prefix)
         end
 
-        if cmd == "git"
+        if command_name == "git"
           return Git::Handler::GIT_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
         end
 
@@ -585,18 +583,17 @@ module RuVim
       end
 
       def path_completion_candidates(prefix)
-        input = prefix.to_s
         base_dir =
-          if input.empty?
+          if prefix.empty?
             "."
-          elsif input.end_with?("/")
-            input
+          elsif prefix.end_with?("/")
+            prefix
           else
-            File.dirname(input)
+            File.dirname(prefix)
           end
-        partial = input.end_with?("/") ? "" : File.basename(input)
+        partial = prefix.end_with?("/") ? "" : File.basename(prefix)
         pattern =
-          if input.empty?
+          if prefix.empty?
             "*"
           elsif base_dir == "."
             "#{partial}*"
@@ -606,12 +603,12 @@ module RuVim
         partial_starts_with_dot = partial.start_with?(".")
         entries = Dir.glob(pattern, File::FNM_DOTMATCH).filter_map do |p|
           next if [".", ".."].include?(File.basename(p))
-          next unless p.start_with?(input) || input.empty?
+          next unless p.start_with?(prefix) || prefix.empty?
           next if wildignore_path?(p)
           File.directory?(p) ? "#{p}/" : p
         end
         entries.sort_by do |p|
-          base = File.basename(p.to_s.sub(%r{/\z}, ""))
+          base = File.basename(p.sub(%r{/\z}, ""))
           hidden_rank = (!partial_starts_with_dot && base.start_with?(".")) ? 1 : 0
           [hidden_rank, p]
         end
@@ -624,30 +621,27 @@ module RuVim
         return false if spec.empty?
 
         flags = @editor.global_options["wildignorecase"] ? File::FNM_CASEFOLD : 0
-        name = path.to_s
-        base = File.basename(name)
+        base = File.basename(path)
         spec.split(",").map(&:strip).reject(&:empty?).any? do |pat|
-          File.fnmatch?(pat, name, flags) || File.fnmatch?(pat, base, flags)
+          File.fnmatch?(pat, path, flags) || File.fnmatch?(pat, base, flags)
         end
       rescue StandardError
         false
       end
 
       def buffer_completion_candidates(prefix)
-        pfx = prefix.to_s
         items = @editor.buffers.values.flat_map do |b|
           path = b.path.to_s
           base = path.empty? ? nil : File.basename(path)
           [b.id.to_s, path, base].compact
         end.uniq.sort
-        items.select { |s| s.start_with?(pfx) }
+        items.select { |s| s.start_with?(prefix) }
       end
 
       def option_completion_candidates(prefix)
-        pfx = prefix.to_s
         names = RuVim::Editor::OPTION_DEFS.keys
         tokens = names + names.map { |n| "no#{n}" } + names.map { |n| "inv#{n}" } + names.map { |n| "#{n}?" }
-        tokens.uniq.sort.select { |s| s.start_with?(pfx) }
+        tokens.uniq.sort.select { |s| s.start_with?(prefix) }
       end
 
       def token_start_index(text, cursor)

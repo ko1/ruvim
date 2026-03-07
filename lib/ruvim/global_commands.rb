@@ -366,7 +366,7 @@ module RuVim
         chunk = char_at_cursor_for_delete(ctx.buffer, ctx.window.cursor_y, ctx.window.cursor_x)
         ok = ctx.buffer.delete_char(ctx.window.cursor_y, ctx.window.cursor_x)
         break unless ok
-        deleted << chunk.to_s
+        deleted << chunk
       end
       ctx.buffer.end_change_group
       store_delete_register(ctx, text: deleted, type: :charwise) unless deleted.empty?
@@ -391,7 +391,7 @@ module RuVim
         break if x >= line.length
 
         ch = line[x]
-        swapped = ch.to_s.swapcase
+        swapped = ch.swapcase
         if !swapped.empty? && swapped != ch
           ctx.buffer.delete_span(y, x, y, x + 1)
           ctx.buffer.insert_char(y, x, swapped[0])
@@ -1137,23 +1137,22 @@ module RuVim
     def ex_shell(ctx, command:, **)
       raise RuVim::CommandError, "Restricted mode: :! is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 
-      cmd = command.to_s
-      raise RuVim::CommandError, "Usage: :!<command>" if cmd.strip.empty?
+      raise RuVim::CommandError, "Usage: :!<command>" if command.strip.empty?
 
       shell = ENV["SHELL"].to_s
       shell = "/bin/sh" if shell.empty?
-      stdout_text, stderr_text, status = Open3.capture3(shell, "-c", cmd)
+      stdout_text, stderr_text, status = Open3.capture3(shell, "-c", command)
 
-      if !stdout_text.to_s.empty? || !stderr_text.to_s.empty?
-        lines = ["Shell output", "", "[command]", cmd, ""]
-        unless stdout_text.to_s.empty?
+      if !stdout_text.empty? || !stderr_text.empty?
+        lines = ["Shell output", "", "[command]", command, ""]
+        unless stdout_text.empty?
           lines << "[stdout]"
-          lines.concat(stdout_text.to_s.lines(chomp: true))
+          lines.concat(stdout_text.lines(chomp: true))
           lines << ""
         end
-        unless stderr_text.to_s.empty?
+        unless stderr_text.empty?
           lines << "[stderr]"
-          lines.concat(stderr_text.to_s.lines(chomp: true))
+          lines.concat(stderr_text.lines(chomp: true))
           lines << ""
         end
         lines << "[status]"
@@ -1171,7 +1170,7 @@ module RuVim
         alias_text = spec.aliases.empty? ? "" : " (#{spec.aliases.join(', ')})"
         source = spec.source == :user ? " [user]" : ""
         name = "#{spec.name}#{alias_text}#{source}"
-        desc = spec.desc.to_s
+        desc = spec.desc
         keys = ex_command_binding_labels(ctx.editor, spec)
         [name, desc, keys]
       end

@@ -309,7 +309,7 @@ module RuVim
     end
 
     def render_text_segment(source_line, editor, buffer_row:, window:, buffer:, width:, source_col_start:, display_prefix: "")
-      prefix = display_prefix.to_s
+      prefix = display_prefix
 
       # Bulk path: no prefix, printable ASCII, no highlighting
       if prefix.empty? && can_bulk_render_line?(source_line, editor, buffer_row:, window:, buffer:)
@@ -498,7 +498,7 @@ module RuVim
     def render_rich_view_line_sc(text, width:, skip_sc:)
       # Phase 1: skip `skip_sc` display columns
       # Collect ANSI sequences encountered during skip so active styles carry over.
-      chars = text.to_s
+      chars = text
       pos = 0
       skipped = 0
       len = chars.length
@@ -683,7 +683,6 @@ module RuVim
       linebreak = !!editor.effective_option("linebreak", window:, buffer:)
       showbreak = editor.effective_option("showbreak", window:, buffer:).to_s
       breakindent = !!editor.effective_option("breakindent", window:, buffer:)
-      line = line.to_s
       return [{ source_col_start: 0, display_prefix: "" }] if line.empty?
 
       cache_key = [line.object_id, line.length, line.hash, width, tabstop, linebreak, showbreak, breakindent]
@@ -787,7 +786,7 @@ module RuVim
     end
 
     def parse_listchars(raw)
-      raw_key = raw.to_s
+      raw_key = raw
       @listchars_cache ||= {}
       return @listchars_cache[raw_key] if @listchars_cache.key?(raw_key)
 
