@@ -142,15 +142,8 @@ module RuVim
               @editor.echo("[follow] file deleted, waiting for re-creation: #{buf.display_name}")
               changed = true
             end
-          when :file_progress
-            buf = @editor.buffers[event[:buffer_id]]
-            if buf && event[:file_size] && event[:file_size] > 0
-              pct = (event[:loaded_bytes] * 100.0 / event[:file_size]).clamp(0, 100)
-              @editor.echo(format("\"%s\" loading... %d%%", buf.display_name, pct))
-              changed = true
-            end
-          when :file_data
-            changed = apply_async_file_chunk!(event[:buffer_id], event[:data]) || changed
+          when :file_lines
+            changed = apply_async_file_lines!(event[:buffer_id], event[:head], event[:lines], loaded_bytes: event[:loaded_bytes], file_size: event[:file_size]) || changed
           when :file_eof
             changed = finish_async_file_load!(event[:buffer_id], ended_with_newline: event[:ended_with_newline]) || changed
           when :file_error
@@ -302,9 +295,7 @@ module RuVim
         true
       end
 
-      def apply_async_file_chunk!(buffer_id, text)
-        return false if text.to_s.empty?
-
+      def apply_async_file_lines!(buffer_id, head, lines, loaded_bytes: nil, file_size: nil)
         buf = @editor.buffers[buffer_id]
         return false unless buf
 
@@ -317,11 +308,16 @@ module RuVim
           end
         end
 
-        buf.append_stream_text!(text)
+        buf.append_stream_lines!(head, lines)
 
         following_win_ids&.each do |win_id|
           win = @editor.windows[win_id]
           move_window_to_stream_end!(win, buf) if win
+        end
+
+        if loaded_bytes && file_size && file_size > 0
+          pct = (loaded_bytes * 100.0 / file_size).clamp(0, 100)
+          @editor.echo(format("\"%s\" loading... %d%%", buf.display_name, pct))
         end
 
         true
@@ -502,29 +498,40 @@ module RuVim
 
       def start_async_file_loader_thread(buffer_id, io, file_size: nil)
         Thread.new do
-          chunks = []
+          pending_bytes = "".b
           ended_with_newline = false
           loaded_bytes = io.pos
-          last_progress_bytes = loaded_bytes
           loop do
             chunk = io.readpartial(ASYNC_FILE_READ_CHUNK_BYTES)
             next if chunk.nil? || chunk.empty?
 
-            chunks << chunk
             loaded_bytes += chunk.bytesize
             ended_with_newline = chunk.end_with?("\n")
+            pending_bytes << chunk
+            next if pending_bytes.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
 
-            if file_size && (loaded_bytes - last_progress_bytes) >= ASYNC_FILE_EVENT_FLUSH_BYTES
-              @stream_event_queue << { type: :file_progress, buffer_id: buffer_id, loaded_bytes: loaded_bytes, file_size: file_size }
-              last_progress_bytes = loaded_bytes
-              notify_signal_wakeup
+            # Split at last newline in raw bytes
+            last_nl = pending_bytes.rindex("\n".b)
+            if last_nl
+              send_bytes = pending_bytes[0..last_nl]
+              pending_bytes = pending_bytes[(last_nl + 1)..] || "".b
+            else
+              send_bytes = pending_bytes
+              pending_bytes = "".b
             end
+            # Decode and split in this thread to avoid blocking the main thread
+            decoded = Buffer.decode_text(send_bytes)
+            parts = decoded.split("\n", -1)
+            head = parts.shift || ""
+            @stream_event_queue << { type: :file_lines, buffer_id: buffer_id, head: head, lines: parts, loaded_bytes: loaded_bytes, file_size: file_size }
+            notify_signal_wakeup
           end
         rescue EOFError
-          rest = chunks.join
-          chunks = nil
-          unless rest.empty?
-            @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(rest) }
+          unless pending_bytes.empty?
+            decoded = Buffer.decode_text(pending_bytes)
+            parts = decoded.split("\n", -1)
+            head = parts.shift || ""
+            @stream_event_queue << { type: :file_lines, buffer_id: buffer_id, head: head, lines: parts }
             notify_signal_wakeup
           end
           @stream_event_queue << { type: :file_eof, buffer_id: buffer_id, ended_with_newline: ended_with_newline }

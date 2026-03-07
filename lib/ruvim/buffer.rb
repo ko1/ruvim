@@ -370,6 +370,15 @@ module RuVim
       [@lines.length - 1, @lines[-1].length]
     end
 
+    # Append pre-split lines (from background thread).
+    # head_suffix is concatenated to the current last line.
+    def append_stream_lines!(head_suffix, lines)
+      @lines[-1] = @lines[-1] + head_suffix unless head_suffix.empty?
+      @lines.concat(lines) unless lines.empty?
+      @lines = [""] if @lines.empty?
+      @modified = false
+    end
+
     def finalize_async_file_load!(ended_with_newline:)
       if ended_with_newline && @lines.length > 1 && @lines[-1] == ""
         @lines.pop
