@@ -49,20 +49,20 @@ module RuVim
     end
 
     def self.decode_text(bytes)
-      s = bytes.to_s.dup
-      return s if s.encoding == Encoding::UTF_8 && s.valid_encoding?
+      s = bytes.to_s
+      return s.dup if s.encoding == Encoding::UTF_8 && s.valid_encoding?
 
       utf8 = s.dup.force_encoding(Encoding::UTF_8)
       return utf8 if utf8.valid_encoding?
 
       ext = Encoding.default_external
       if ext && ext != Encoding::UTF_8
-        return s.dup.force_encoding(ext).encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+        return utf8.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
       end
 
       utf8.scrub
     rescue StandardError
-      s.dup.force_encoding(Encoding::UTF_8).scrub
+      bytes.to_s.dup.force_encoding(Encoding::UTF_8).scrub
     end
 
     def initialize(id:, path: nil, lines: [""], kind: :file, name: nil, readonly: false, modifiable: true)

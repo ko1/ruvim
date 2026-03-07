@@ -501,7 +501,7 @@ module RuVim
       def start_async_file_loader_thread(buffer_id, io, file_size: nil)
         Thread.new do
           ended_with_newline = false
-          pending_text = +""
+          pending_bytes = "".b
           loaded_bytes = io.pos
           loop do
             chunk = io.readpartial(ASYNC_FILE_READ_CHUNK_BYTES)
@@ -509,23 +509,24 @@ module RuVim
 
             loaded_bytes += chunk.bytesize
             ended_with_newline = chunk.end_with?("\n")
-            pending_text << Buffer.decode_text(chunk)
-            next if pending_text.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
+            pending_bytes << chunk
+            next if pending_bytes.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
 
-            # Split at last newline to avoid sending partial lines
-            last_nl = pending_text.rindex("\n")
+            # Split at last newline in raw bytes to avoid partial lines
+            last_nl = pending_bytes.rindex("\n".b)
             if last_nl
-              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text[0..last_nl], loaded_bytes: loaded_bytes, file_size: file_size }
-              pending_text = pending_text[(last_nl + 1)..] || +""
+              send_bytes = pending_bytes[0..last_nl]
+              pending_bytes = pending_bytes[(last_nl + 1)..] || "".b
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(send_bytes), loaded_bytes: loaded_bytes, file_size: file_size }
             else
-              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text, loaded_bytes: loaded_bytes, file_size: file_size }
-              pending_text = +""
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(pending_bytes), loaded_bytes: loaded_bytes, file_size: file_size }
+              pending_bytes = "".b
             end
             notify_signal_wakeup
           end
         rescue EOFError
-          unless pending_text.empty?
-            @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
+          unless pending_bytes.empty?
+            @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(pending_bytes) }
             notify_signal_wakeup
           end
           @stream_event_queue << { type: :file_eof, buffer_id: buffer_id, ended_with_newline: ended_with_newline }
