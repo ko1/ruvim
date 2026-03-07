@@ -2944,7 +2944,7 @@ module RuVim
         operator_pending: 5,
         command_line: 6
       }
-      order.fetch(mode.to_sym, 99)
+      order.fetch(mode, 99)
     end
 
     def sort_binding_entries(entries, sort:)
@@ -3027,7 +3027,7 @@ module RuVim
       lhs = format_binding_tokens(entry.tokens)
       if entry.scope == :global
         "global:#{lhs}"
-      elsif entry.mode && entry.mode.to_sym != :normal
+      elsif entry.mode && entry.mode != :normal
         "#{entry.mode}:#{lhs}"
       else
         lhs
@@ -3062,7 +3062,7 @@ module RuVim
     end
 
     def invert_direction(direction)
-      direction.to_sym == :forward ? :backward : :forward
+      direction == :forward ? :backward : :forward
     end
 
     def move_to_search(ctx, pattern:, direction:, count:)
@@ -3083,7 +3083,7 @@ module RuVim
     def find_next_match(buffer, window, regex, direction:)
       return nil unless regex
 
-      if direction.to_sym == :backward
+      if direction == :backward
         find_backward_match(buffer, window, regex)
       else
         find_forward_match(buffer, window, regex)

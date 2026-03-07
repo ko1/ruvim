@@ -152,7 +152,7 @@ module RuVim
     end
 
     def set_last_search(pattern:, direction:)
-      @last_search = { pattern: pattern, direction: direction.to_sym }
+      @last_search = { pattern: pattern, direction: direction }
       @hlsearch_suppressed = false
     end
 
@@ -165,7 +165,7 @@ module RuVim
     end
 
     def set_last_find(char:, direction:, till:)
-      @last_find = { char: char, direction: direction.to_sym, till: !!till }
+      @last_find = { char: char, direction: direction, till: !!till }
     end
 
     def current_window
@@ -188,7 +188,7 @@ module RuVim
       handler = @app_action_handler
       return false unless handler
 
-      handler.call(name.to_sym, **kwargs)
+      handler.call(name, **kwargs)
       true
     end
 
@@ -213,7 +213,7 @@ module RuVim
 
     def get_option(name, scope: :effective, window: current_window, buffer: current_buffer)
       key = name.to_s
-      case scope.to_sym
+      case scope
       when :global
         @global_options[key]
       when :buffer
@@ -228,7 +228,7 @@ module RuVim
     def set_option(name, value, scope: :auto, window: current_window, buffer: current_buffer)
       key = name.to_s
       value = coerce_option_value(key, value)
-      actual_scope = (scope.to_sym == :auto ? option_default_scope(key) : scope.to_sym)
+      actual_scope = (scope == :auto ? option_default_scope(key) : scope)
       case actual_scope
       when :global
         @global_options[key] = value
@@ -301,9 +301,9 @@ module RuVim
 
     def set_register(name = "\"", text:, type: :charwise)
       key = name.to_s
-      return { text: text.to_s, type: type.to_sym } if key == "_"
+      return { text: text, type: type } if key == "_"
 
-      payload = write_register_payload(key, text: text.to_s, type: type.to_sym)
+      payload = write_register_payload(key, text: text, type: type)
       write_clipboard_register(key, payload)
       if key == "\""
         if (default_clip = clipboard_default_register_key)
@@ -317,13 +317,13 @@ module RuVim
 
     def store_operator_register(name = "\"", text:, type:, kind:)
       key = (name || "\"")
-      payload = { text: text.to_s, type: type.to_sym }
+      payload = { text: text, type: type }
       return payload if key == "_"
 
       written = set_register(key, text: payload[:text], type: payload[:type])
       op_payload = dup_register_payload(written)
 
-      case kind.to_sym
+      case kind
       when :yank
         @registers["0"] = dup_register_payload(op_payload)
       when :delete, :change
@@ -485,9 +485,9 @@ module RuVim
     end
 
     def enter_visual(mode)
-      @mode = mode.to_sym
+      @mode = mode
       @visual_state = {
-        mode: mode.to_sym,
+        mode: mode,
         anchor_y: current_window.cursor_y,
         anchor_x: current_window.cursor_x
       }
@@ -645,10 +645,10 @@ module RuVim
       win.row_offset = src.row_offset
       win.col_offset = src.col_offset
 
-      split_type = (layout.to_sym == :vertical ? :vsplit : :hsplit)
+      split_type = (layout == :vertical ? :vsplit : :hsplit)
       new_leaf = { type: :window, id: win.id }
 
-      @layout_tree = tree_split_leaf(@layout_tree, src.id, split_type, new_leaf, place.to_sym)
+      @layout_tree = tree_split_leaf(@layout_tree, src.id, split_type, new_leaf, place)
 
       @current_window_id = win.id
       save_current_tabpage_state! unless @suspend_tab_autosave
@@ -849,8 +849,7 @@ module RuVim
     end
 
     def delete_buffer(buffer_id)
-      id = buffer_id.to_i
-      buffer = @buffers[id]
+      buffer = @buffers[buffer_id]
       return nil unless buffer
 
       if @buffers.length <= 1
@@ -863,13 +862,13 @@ module RuVim
         if replacement
           replacement.id
         else
-          candidates = @buffers.keys.reject { |bid| bid == id }
+          candidates = @buffers.keys.reject { |bid| bid == buffer_id }
           alt = @alternate_buffer_id
-          (alt && alt != id && @buffers.key?(alt)) ? alt : candidates.first
+          (alt && alt != buffer_id && @buffers.key?(alt)) ? alt : candidates.first
         end
 
       @windows.each_value do |win|
-        next unless win.buffer_id == id
+        next unless win.buffer_id == buffer_id
         next unless fallback_id
 
         win.buffer_id = fallback_id
@@ -879,9 +878,9 @@ module RuVim
         win.col_offset = 0
       end
 
-      @buffers.delete(id)
-      @local_marks.delete(id)
-      @alternate_buffer_id = nil if @alternate_buffer_id == id
+      @buffers.delete(buffer_id)
+      @local_marks.delete(buffer_id)
+      @alternate_buffer_id = nil if @alternate_buffer_id == buffer_id
       save_current_tabpage_state! unless @suspend_tab_autosave
       ensure_bootstrap_buffer! if @buffers.empty?
       true
@@ -1023,11 +1022,10 @@ module RuVim
     end
 
     def find_window_ids_by_buffer_kind(kind)
-      sym = kind.to_sym
       window_order.select do |wid|
         win = @windows[wid]
         buf = win && @buffers[win.buffer_id]
-        buf && buf.kind == sym
+        buf && buf.kind == kind
       end
     end
 
@@ -1277,7 +1275,7 @@ module RuVim
     def dup_register_payload(payload)
       return nil unless payload
 
-      { text: payload[:text].to_s.dup, type: payload[:type].to_sym }
+      { text: payload[:text].dup, type: payload[:type] }
     end
 
     def assign_detected_filetype(buffer)

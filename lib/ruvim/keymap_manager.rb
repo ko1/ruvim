@@ -14,7 +14,7 @@ module RuVim
 
     def bind(mode, seq, id, argv: [], kwargs: {}, bang: false)
       tokens = normalize_seq(seq)
-      @mode_maps[mode.to_sym][tokens] = build_invocation(id, argv:, kwargs:, bang:, tokens:)
+      @mode_maps[mode][tokens] = build_invocation(id, argv:, kwargs:, bang:, tokens:)
     end
 
     def bind_global(seq, id, argv: [], kwargs: {}, bang: false)
@@ -29,20 +29,20 @@ module RuVim
 
     def bind_filetype(filetype, seq, id, mode: :normal, argv: [], kwargs: {}, bang: false)
       tokens = normalize_seq(seq)
-      @filetype_maps[filetype.to_s][mode.to_sym][tokens] = build_invocation(id, argv:, kwargs:, bang:, tokens:)
+      @filetype_maps[filetype.to_s][mode][tokens] = build_invocation(id, argv:, kwargs:, bang:, tokens:)
     end
 
     def resolve(mode, pending_tokens)
-      resolve_layers([@mode_maps[mode.to_sym]], pending_tokens)
+      resolve_layers([@mode_maps[mode]], pending_tokens)
     end
 
     def resolve_with_context(mode, pending_tokens, editor:)
       buffer = editor.current_buffer
       filetype = detect_filetype(buffer)
       layers = []
-      layers << @filetype_maps[filetype][mode.to_sym] if filetype && @filetype_maps.key?(filetype)
+      layers << @filetype_maps[filetype][mode] if filetype && @filetype_maps.key?(filetype)
       layers << @buffer_maps[buffer.id] if @buffer_maps.key?(buffer.id)
-      layers << @mode_maps[mode.to_sym]
+      layers << @mode_maps[mode]
       layers << @global_map
       resolve_layers(layers, pending_tokens)
     end
@@ -135,7 +135,7 @@ module RuVim
     def normalized_mode_filter(mode)
       return nil if mode.nil?
 
-      ary = Array(mode).compact.map { |m| m.to_sym }
+      ary = Array(mode).compact
       ary.empty? ? nil : ary
     end
 
@@ -153,7 +153,7 @@ module RuVim
         operator_pending: 5,
         command_line: 6
       }
-      [order.fetch(mode.to_sym, 99), mode.to_s]
+      [order.fetch(mode, 99), mode.to_s]
     end
 
     def detect_filetype(buffer)

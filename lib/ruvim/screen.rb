@@ -26,7 +26,7 @@ module RuVim
 
       rects = window_rects(editor, text_rows:, text_cols:)
       if (current_rect = rects[editor.current_window_id])
-        editor.current_window_view_height_hint = [current_rect[:height].to_i, 1].max
+        editor.current_window_view_height_hint = [current_rect[:height], 1].max
       end
       editor.window_order.each do |win_id|
         win = editor.windows.fetch(win_id)
@@ -80,7 +80,7 @@ module RuVim
       text_rows = [text_rows, 1].max
       text_cols = [text_cols, 1].max
       rect = window_rects(editor, text_rows:, text_cols:)[editor.current_window_id]
-      height = [rect ? rect[:height].to_i : text_rows, 1].max
+      height = [rect ? rect[:height] : text_rows, 1].max
       editor.current_window_view_height_hint = height if editor.respond_to?(:current_window_view_height_hint=)
       height
     rescue StandardError
@@ -357,7 +357,7 @@ module RuVim
          syntax_cols.empty? && colorcolumns.empty?
         cells.each do |cell|
           highlighted << cell.glyph
-          display_pos += [cell.display_width.to_i, 1].max
+          display_pos += [cell.display_width, 1].max
         end
       else
         cells.each do |cell|
@@ -381,7 +381,7 @@ module RuVim
           else
             highlighted << ch
           end
-          display_pos += [cell.display_width.to_i, 1].max
+          display_pos += [cell.display_width, 1].max
         end
       end
 
@@ -421,7 +421,7 @@ module RuVim
 
       base = RuVim::TextMetrics.screen_col_for_char_index(source_line, cursor_x, tabstop:) -
              RuVim::TextMetrics.screen_col_for_char_index(source_line, source_col_offset, tabstop:)
-      extra = [cursor_x.to_i - source_line.to_s.length, 0].max
+      extra = [cursor_x - source_line.length, 0].max
       leading_prefix_width + [base, 0].max + extra
     end
 
@@ -588,9 +588,9 @@ module RuVim
     end
 
     def ensure_visible_under_wrap(editor, window, buffer, height:, content_w:)
-      return if height.to_i <= 0 || buffer.line_count <= 0
+      return if height <= 0 || buffer.line_count <= 0
 
-      window.row_offset = [[window.row_offset.to_i, 0].max, buffer.line_count - 1].min
+      window.row_offset = [[window.row_offset, 0].max, buffer.line_count - 1].min
       return if window.cursor_y < window.row_offset
 
       cursor_line = buffer.line_at(window.cursor_y)
@@ -723,7 +723,7 @@ module RuVim
         end
 
         segs << { source_col_start: start_col, display_prefix: display_prefix }.freeze
-        next_start = cells.last.source_col.to_i + 1
+        next_start = cells.last.source_col + 1
         if linebreak
           next_start += 1 while next_start < line.length && line[next_start] == " "
         end
@@ -737,7 +737,7 @@ module RuVim
     end
 
     def wrapped_segment_index(segs, cursor_x)
-      x = cursor_x.to_i
+      x = cursor_x
       seg_index = 0
       segs.each_with_index do |seg, i|
         nxt = segs[i + 1]
@@ -990,7 +990,7 @@ module RuVim
 
       state = buffer.loading_state
       return "" unless state
-      return "" if state.to_sym == :closed
+      return "" if state == :closed
 
       " [load/#{state}]"
     end
@@ -1002,7 +1002,7 @@ module RuVim
     end
 
     def compose_status_body(left, msg, width)
-      w = [width.to_i, 0].max
+      w = [width, 0].max
       return "" if w.zero?
       return left.ljust(w)[0, w] if msg.to_s.empty?
 
@@ -1083,12 +1083,12 @@ module RuVim
                             RuVim::TextMetrics.screen_col_for_char_index(line, window.col_offset, tabstop:)
         col = rect[:left] + gutter_w + [prefix_screen_col, 0].max + extra_virtual
       end
-      min_row = [rect[:top].to_i, 1].max
-      max_row = [rect[:top].to_i + [rect[:height].to_i, 1].max - 1, min_row].max
-      min_col = [rect[:left].to_i, 1].max
-      max_col = [rect[:left].to_i + [rect[:width].to_i, 1].max - 1, min_col].max
-      row = [[row.to_i, min_row].max, max_row].min
-      col = [[col.to_i, min_col].max, max_col].min
+      min_row = [rect[:top], 1].max
+      max_row = [rect[:top] + [rect[:height], 1].max - 1, min_row].max
+      min_col = [rect[:left], 1].max
+      max_col = [rect[:left] + [rect[:width], 1].max - 1, min_col].max
+      row = [[row, min_row].max, max_row].min
+      col = [[col, min_col].max, max_col].min
       [row, col]
     end
 

@@ -19,17 +19,17 @@ module RuVim
     end
 
     def cursor_x=(value)
-      @cursor_x = value.to_i
+      @cursor_x = value
       @preferred_x = nil
     end
 
     def cursor_y=(value)
-      @cursor_y = value.to_i
+      @cursor_y = value
     end
 
     def clamp_to_buffer(buffer, max_extra_col: 0)
       @cursor_y = [[@cursor_y, 0].max, buffer.line_count - 1].min
-      max_col = buffer.line_length(@cursor_y) + [max_extra_col.to_i, 0].max
+      max_col = buffer.line_length(@cursor_y) + [max_extra_col, 0].max
       @cursor_x = [[@cursor_x, 0].max, max_col].min
       self
     end
@@ -71,7 +71,7 @@ module RuVim
 
     def ensure_visible(buffer, height:, width:, tabstop: 2, scrolloff: 0, sidescrolloff: 0)
       clamp_to_buffer(buffer)
-      so = [[scrolloff.to_i, 0].max, [height.to_i - 1, 0].max].min
+      so = [[scrolloff, 0].max, [height - 1, 0].max].min
 
       top_target = @cursor_y - so
       bottom_target = @cursor_y + so
@@ -82,7 +82,7 @@ module RuVim
       line = buffer.line_at(@cursor_y)
       cursor_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, @cursor_x, tabstop:)
       offset_screen_col = RuVim::TextMetrics.screen_col_for_char_index(line, @col_offset, tabstop:)
-      sso = [[sidescrolloff.to_i, 0].max, [width.to_i - 1, 0].max].min
+      sso = [[sidescrolloff, 0].max, [width - 1, 0].max].min
 
       if cursor_screen_col < offset_screen_col + sso
         target_left = [cursor_screen_col - sso, 0].max

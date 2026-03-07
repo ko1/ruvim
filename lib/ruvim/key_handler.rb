@@ -131,20 +131,20 @@ module RuVim
 
       def handle_editor_app_action(name, **kwargs)
         if @editor.rich_mode?
-          case name.to_sym
+          case name
           when :normal_operator_start
-            op = (kwargs[:name] || kwargs["name"]).to_sym
+            op = kwargs[:name] || kwargs["name"]
             return if op == :delete || op == :change
           when :normal_replace_pending_start, :normal_change_repeat
             return
           end
         end
 
-        case name.to_sym
+        case name
         when :normal_register_pending_start
           start_register_pending
         when :normal_operator_start
-          start_operator_pending((kwargs[:name] || kwargs["name"]).to_sym)
+          start_operator_pending(kwargs[:name] || kwargs["name"])
         when :normal_replace_pending_start
           start_replace_pending
         when :normal_find_pending_start

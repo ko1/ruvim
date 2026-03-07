@@ -17,10 +17,10 @@ module RuVim
     # Cursor positions in RuVim are currently "character index" (Ruby String#[] index on UTF-8),
     # not byte offsets. Grapheme-aware movement is layered on top of that.
     def previous_grapheme_char_index(line, char_index)
-      idx = [char_index.to_i, 0].max
+      idx = [char_index, 0].max
       return 0 if idx <= 0
 
-      left = line.to_s[0...idx].to_s
+      left = line[0...idx].to_s
       clusters = left.scan(/\X/)
       return 0 if clusters.empty?
 
@@ -29,7 +29,7 @@ module RuVim
 
     def next_grapheme_char_index(line, char_index)
       s = line.to_s
-      idx = [[char_index.to_i, 0].max, s.length].min
+      idx = [[char_index, 0].max, s.length].min
       return s.length if idx >= s.length
 
       rest = s[idx..].to_s
@@ -40,8 +40,8 @@ module RuVim
     end
 
     def screen_col_for_char_index(line, char_index, tabstop: 2)
-      idx = [char_index.to_i, 0].max
-      prefix = line.to_s[0...idx].to_s
+      idx = [char_index, 0].max
+      prefix = line[0...idx].to_s
       RuVim::DisplayWidth.display_width(prefix, tabstop:)
     end
 
@@ -49,7 +49,7 @@ module RuVim
     # aligned to a grapheme-cluster boundary.
     def char_index_for_screen_col(line, target_screen_col, tabstop: 2, align: :floor)
       s = line.to_s
-      target = [target_screen_col.to_i, 0].max
+      target = [target_screen_col, 0].max
       screen_col = 0
       char_index = 0
 
@@ -67,10 +67,10 @@ module RuVim
     end
 
     def clip_cells_for_width(text, width, source_col_start: 0, tabstop: 2)
-      max_width = [width.to_i, 0].max
+      max_width = [width, 0].max
       cells = []
       display_col = 0
-      source_col = source_col_start.to_i
+      source_col = source_col_start
 
       text.to_s.each_char do |ch|
         code = ch.ord
@@ -119,7 +119,7 @@ module RuVim
     def pad_plain_to_screen_width(text, width, tabstop: 2)
       cells, used = clip_cells_for_width(text, width, tabstop:)
       out = cells.map(&:glyph).join
-      out << (" " * [width.to_i - used, 0].max)
+      out << (" " * [width - used, 0].max)
       out
     end
 

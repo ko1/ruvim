@@ -506,7 +506,7 @@ module RuVim
     end
 
     def verbose_log(level, message)
-      return if @verbose_level.to_i < level.to_i
+      return if @verbose_level < level
       return unless @verbose_io
 
       @verbose_io.puts("[ruvim:v#{@verbose_level}] #{message}")
@@ -651,7 +651,7 @@ module RuVim
       buf = @editor.current_buffer
       return unless win && buf
 
-      target = [[line_number.to_i - 1, 0].max, buf.line_count - 1].min
+      target = [[line_number - 1, 0].max, buf.line_count - 1].min
       win.cursor_y = target
       win.clamp_to_buffer(buf)
     end

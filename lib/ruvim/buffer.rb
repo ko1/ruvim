@@ -63,7 +63,7 @@ module RuVim
     def initialize(id:, path: nil, lines: [""], kind: :file, name: nil, readonly: false, modifiable: true)
       @id = id
       @path = path
-      @kind = kind.to_sym
+      @kind = kind
       @name = name
       @lines = lines.dup
       @lines = [""] if @lines.empty?
@@ -123,7 +123,7 @@ module RuVim
     end
 
     def configure_special!(kind:, name: nil, readonly: true, modifiable: false)
-      @kind = kind.to_sym
+      @kind = kind
       @name = name
       @readonly = !!readonly
       @modifiable = !!modifiable
