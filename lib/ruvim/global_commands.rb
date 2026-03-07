@@ -774,9 +774,15 @@ module RuVim
       ctx.editor.clear_message
     end
 
-    def file_write(ctx, argv:, bang:, **)
+    def file_write(ctx, argv:, bang:, kwargs: {}, **)
       if ctx.buffer.kind == :git_commit
         git_commit_execute(ctx)
+        return
+      end
+
+      arg = argv.join(" ")
+      if arg.start_with?("!")
+        file_write_to_shell(ctx, command: arg[1..].strip, kwargs: kwargs)
         return
       end
 

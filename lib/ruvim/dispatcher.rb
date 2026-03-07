@@ -48,21 +48,6 @@ module RuVim
         return
       end
 
-      # :w !command — pipe buffer to shell command
-      if rest.match?(/\Aw(?:rite)?\s+!/)
-        command = rest.sub(/\Aw(?:rite)?\s+!/, "").strip
-        range_kwargs = {}
-        if range_result
-          range_kwargs[:range_start] = range_result[:range_start]
-          range_kwargs[:range_end] = range_result[:range_end]
-        end
-        invocation = CommandInvocation.new(id: "w", argv: [])
-        ctx = Context.new(editor:, invocation:)
-        @command_host.file_write_to_shell(ctx, command:, kwargs: range_kwargs)
-        editor.enter_normal_mode
-        return
-      end
-
       parsed = parse_ex(rest)
       return if parsed.nil?
 

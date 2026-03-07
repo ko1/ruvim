@@ -283,7 +283,7 @@ module RuVim
         desc: "Stop stdin follow stream (or cancel pending state)"
       )
 
-      register_ex_unless(ex, "w", call: :file_write, aliases: %w[write], desc: "Write current buffer", nargs: :maybe_one, bang: true)
+      register_ex_unless(ex, "w", call: :file_write, aliases: %w[write], desc: "Write current buffer", nargs: :any, bang: true)
       register_ex_unless(ex, "q", call: :app_quit, aliases: %w[quit], desc: "Quit", nargs: 0, bang: true)
       register_ex_unless(ex, "qa", call: :app_quit_all, aliases: %w[qall], desc: "Quit all", nargs: 0, bang: true)
       register_ex_unless(ex, "wq", call: :file_write_quit, desc: "Write and quit", nargs: :maybe_one, bang: true)
