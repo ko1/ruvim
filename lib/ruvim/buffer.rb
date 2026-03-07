@@ -21,13 +21,16 @@ module RuVim
     end
     attr_accessor :lang_module
 
+    def self.ensure_regular_file!(path)
+      raise RuVim::CommandError, "Not a regular file: #{path}" if File.exist?(path) && !File.file?(path)
+    end
+
     def self.from_file(id:, path:)
+      ensure_regular_file!(path)
       lines =
         if File.file?(path)
           data = decode_text(File.binread(path))
           split_lines(data)
-        elsif File.exist?(path)
-          raise RuVim::CommandError, "Not a regular file: #{path}"
         else
           [""]
         end
@@ -392,7 +395,7 @@ module RuVim
       target = path || @path
       raise RuVim::CommandError, "No file name" if target.nil? || target.empty?
 
-      raise RuVim::CommandError, "Not a regular file: #{target}" if File.exist?(target) && !File.file?(target)
+      self.class.ensure_regular_file!(target)
 
       data = File.file?(target) ? self.class.decode_text(File.binread(target)) : ""
       @lines = self.class.split_lines(data)

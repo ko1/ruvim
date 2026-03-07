@@ -174,7 +174,7 @@ module RuVim
 
       def start_follow!(buf)
         ensure_event_queue!
-        raise RuVim::CommandError, "Not a regular file: #{buf.path}" if buf.path && File.exist?(buf.path) && !File.file?(buf.path)
+        Buffer.ensure_regular_file!(buf.path) if buf.path
 
         if buf.path && File.file?(buf.path)
           data = File.binread(buf.path)
