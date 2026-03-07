@@ -105,6 +105,11 @@ class GhLinkTest < Minitest::Test
 
   # --- Ex command integration ---
 
+  def test_gh_browse_listed_in_subcommands
+    @dispatcher.dispatch_ex(@editor, "gh")
+    assert_match(/browse/, @editor.message)
+  end
+
   def test_gh_no_subcommand_shows_help
     @dispatcher.dispatch_ex(@editor, "gh")
     assert_match(/link/, @editor.message)

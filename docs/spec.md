@@ -863,7 +863,16 @@ Blame バッファ内のバッファローカルバインディング:
 - ファイルがリモートと異なる場合、URL の後に `(remote may differ)` を注記
 - GitHub リモートが見つからない場合はエラー
 
-実装: `lib/ruvim/gh/link.rb`
+### gh browse
+
+`:gh browse` で現在のファイル・カーソル行の GitHub URL をブラウザで開く。
+
+- `:gh link` と同じ URL 解決ロジック（行範囲、リモート自動検出、リモート指定）
+- ブラウザ起動は `Browser` モジュールを使用（macOS: `open`, Linux: `xdg-open`, WSL: `wslview` / PowerShell）
+- 開いた URL を message line に表示
+- ファイルがリモートと異なる場合、`(remote may differ)` を注記
+
+実装: `lib/ruvim/gh/link.rb`, `lib/ruvim/browser.rb`
 
 ## テスト（現状）
 

@@ -112,21 +112,46 @@ module RuVim
 
       module HandlerMethods
         def gh_link(ctx, argv: [], kwargs: {}, **)
+          url, warning = gh_resolve_url(ctx, argv: argv, kwargs: kwargs, command: "gh link")
+          return unless url
+
+          # Copy to clipboard via OSC 52
+          $stdout.write(Link.osc52_copy_sequence(url))
+          $stdout.flush
+
+          msg = warning ? "#{url} #{warning}" : url
+          ctx.editor.echo(msg)
+        end
+
+        def gh_browse(ctx, argv: [], kwargs: {}, **)
+          url, warning = gh_resolve_url(ctx, argv: argv, kwargs: kwargs, command: "gh browse")
+          return unless url
+
+          unless Browser.open_url(url)
+            ctx.editor.echo_error("gh browse: could not open browser")
+            return
+          end
+
+          msg = warning ? "Opened #{url} #{warning}" : "Opened #{url}"
+          ctx.editor.echo(msg)
+        end
+
+        private
+
+        def gh_resolve_url(ctx, argv:, kwargs:, command:)
           path = ctx.buffer.path
           unless path && File.exist?(path)
             ctx.editor.echo_error("Buffer has no file path")
-            return
+            return nil
           end
 
           line_start = kwargs[:range_start]
           line_end = kwargs[:range_end]
 
           if line_start
-            # Range lines are 0-based, GitHub uses 1-based
             line_start += 1
             line_end += 1 if line_end
           else
-            # Current cursor line (0-based) → 1-based
             line_start = ctx.window.cursor_y + 1
             line_end = nil
           end
@@ -135,16 +160,11 @@ module RuVim
 
           url, warning, err = Link.resolve(path, line_start, line_end, remote_name: remote_name)
           unless url
-            ctx.editor.echo_error("gh link: #{err}")
-            return
+            ctx.editor.echo_error("#{command}: #{err}")
+            return nil
           end
 
-          # Copy to clipboard via OSC 52
-          $stdout.write(Link.osc52_copy_sequence(url))
-          $stdout.flush
-
-          msg = warning ? "#{url} #{warning}" : url
-          ctx.editor.echo(msg)
+          [url, warning]
         end
       end
     end

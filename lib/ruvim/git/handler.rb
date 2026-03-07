@@ -39,7 +39,8 @@ module RuVim
       include Gh::Link::HandlerMethods
 
       GH_SUBCOMMANDS = {
-        "link" => :gh_link,
+        "link"   => :gh_link,
+        "browse" => :gh_browse,
       }.freeze
 
       def enter_git_command_mode(ctx, **)
