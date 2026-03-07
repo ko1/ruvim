@@ -849,6 +849,19 @@ Blame バッファ内のバッファローカルバインディング:
 
 実装: `lib/ruvim/git/blame.rb`（blame パース・実行）、`lib/ruvim/git/commands.rb`（status/diff/log 実行）、`lib/ruvim/global_commands.rb`（コマンドハンドラ）
 
+## GitHub 連携
+
+### gh link
+
+`:gh link` で現在のファイル・カーソル行の GitHub URL を生成し、メッセージに表示する。同時に OSC 52 エスケープシーケンスでクリップボードにコピーする。
+
+- ビジュアル選択範囲（`:'<,'>gh link`）を指定すると `#L5-L10` 形式の行範囲リンクを生成
+- `git remote get-url origin` から GitHub リモートを検出（SSH/HTTPS 両対応）
+- 現在のブランチ名を使用
+- GitHub 以外のリモートはエラー
+
+実装: `lib/ruvim/git/link.rb`
+
 ## テスト（現状）
 
 - `Minitest` を利用

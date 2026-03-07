@@ -36,6 +36,11 @@ module RuVim
       include Log::HandlerMethods
       include Branch::HandlerMethods
       include Commit::HandlerMethods
+      include Link::HandlerMethods
+
+      GH_SUBCOMMANDS = {
+        "link" => :gh_link,
+      }.freeze
 
       def enter_git_command_mode(ctx, **)
         ctx.editor.enter_command_line_mode(":")
@@ -57,6 +62,22 @@ module RuVim
         end
 
         public_send(method, ctx, argv: argv[1..], kwargs: {}, bang: false, count: 1)
+      end
+
+      def ex_gh(ctx, argv: [], kwargs: {}, **)
+        sub = argv.first.to_s.downcase
+        if sub.empty?
+          ctx.editor.echo("GitHub subcommands: #{GH_SUBCOMMANDS.keys.join(', ')}")
+          return
+        end
+
+        method = GH_SUBCOMMANDS[sub]
+        unless method
+          ctx.editor.echo_error("Unknown GitHub subcommand: #{sub}")
+          return
+        end
+
+        public_send(method, ctx, argv: argv[1..], kwargs: kwargs, bang: false, count: 1)
       end
 
       def git_close_buffer(ctx, **)

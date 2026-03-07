@@ -64,7 +64,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `git/log.rb` | Git log: runner, command handlers |
 | `git/branch.rb` | Git branch: listing, checkout, command handlers |
 | `git/commit.rb` | Git commit: message buffer, execute, command handlers |
-| `git/handler.rb` | Git module (repo_root), dispatcher, close, shared helpers |
+| `git/link.rb` | GitHub link: URL generation, OSC 52 clipboard, command handlers |
+| `git/handler.rb` | Git/GitHub module (repo_root), dispatcher, close, shared helpers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
@@ -78,7 +79,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 ### Tests (test/)
 
 - Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`
-- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`
+- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`, `gh_link_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 
 ### Docs (docs/)

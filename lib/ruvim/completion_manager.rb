@@ -579,6 +579,10 @@ module RuVim
           return Git::Handler::GIT_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
         end
 
+        if command_name == "gh"
+          return Git::Handler::GH_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
+        end
+
         []
       end
 
