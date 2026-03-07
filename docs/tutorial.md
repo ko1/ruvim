@@ -27,7 +27,7 @@ ruvim path/to/file.txt
 - `-S Session.vim`（session startup placeholder。現状は未実装メッセージのみ）
 - `-R`（readonly で開く。現在バッファの `:w` を拒否）
 - `-M`（modifiable off 相当。編集操作を拒否し、あわせて readonly）
-- `-Z`（restricted mode。config/ftplugin を読まず、`:ruby` と `:!` を無効化）
+- `-Z`（restricted mode。config/ftplugin を読まず、`:ruby`、`:!`、`:grep`、`:lgrep`、`:git`、`:gh` を無効化）
 - `-f`（follow mode: `tail -f` 相当。ファイルの追記をリアルタイムに追従）
 - `-n`（現状 no-op。将来の swap/永続機能向け互換フラグ）
 - `-o[N]` / `-O[N]` / `-p[N]`（複数ファイルを split / vsplit / tab で開く）
@@ -146,6 +146,10 @@ ruvim -p a.rb b.rb
 - `:copen`, `:cnext`, `:cprev`, `:cclose`
 - `:lvimgrep /foo/`
 - `:lopen`, `:lnext`, `:lprev`, `:lclose`
+- `:grep pattern [files...]`（外部 grep → quickfix）
+- `:lgrep pattern [files...]`（外部 grep → location list）
+- `:git blame` / `:git status` / `:git diff` / `:git log` / `:git branch` / `:git commit`
+- `:gh link` / `:gh browse` / `:gh pr`
 
 ## Follow mode（`tail -f` 相当）
 
