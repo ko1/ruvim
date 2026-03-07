@@ -193,6 +193,8 @@ RuVim::ExCommandRegistry.instance.register(
   - `:ruby` / `:rb` を禁止する
   - `:!` を禁止する
   - `:grep` / `:lgrep` を禁止する
+  - `:git` / `:gh` を禁止する
+  - Ruby 構文チェック（`on_save`）を無効化する
 - `-n`
   - 現状は no-op（将来の swap / 永続 undo / session 互換の先行予約）
 - `-o[N]`, `-O[N]`, `-p[N]`

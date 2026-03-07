@@ -51,6 +51,8 @@ module RuVim
       end
 
       def ex_git(ctx, argv: [], **)
+        raise RuVim::CommandError, "Restricted mode: :git is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+
         sub = argv.first.to_s.downcase
         if sub.empty?
           ctx.editor.echo("Git subcommands: #{GIT_SUBCOMMANDS.keys.join(', ')}")
@@ -67,6 +69,8 @@ module RuVim
       end
 
       def ex_gh(ctx, argv: [], kwargs: {}, **)
+        raise RuVim::CommandError, "Restricted mode: :gh is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+
         sub = argv.first.to_s.downcase
         if sub.empty?
           ctx.editor.echo("GitHub subcommands: #{GH_SUBCOMMANDS.keys.join(', ')}")

@@ -129,17 +129,5 @@ module RuVim
       text.to_s.gsub(UNSAFE_CONTROL_CHAR_RE, "?")
     end
 
-    def terminal_unsafe_control_char?(ch)
-      return false if ch.nil? || ch.empty? || ch == "\t"
-
-      code = ch.ord
-      (code >= 0x00 && code < 0x20) || code == 0x7F || (0x80..0x9F).cover?(code)
-    rescue StandardError
-      false
-    end
-
-    def terminal_safe_placeholder(_ch)
-      "?"
-    end
   end
 end

@@ -189,6 +189,7 @@ module RuVim
 
       def on_save(ctx, path)
         return unless path && File.exist?(path)
+        return if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
         output, status = Open3.capture2e("ruby", "-wc", path)
         message = output.sub(/^Syntax OK\n?\z/m, "").strip
 
