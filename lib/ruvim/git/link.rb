@@ -38,28 +38,76 @@ module RuVim
         "\e]52;c;#{encoded}\a"
       end
 
-      # Resolve GitHub link for a file path at given line(s).
-      # Returns [url, error_message].
-      def resolve(file_path, line_start, line_end = nil)
-        root, err = Git.repo_root(file_path)
-        return [nil, err] unless root
+      # Find a GitHub remote. If remote_name is given, use that specific remote.
+      # Otherwise, scan all remotes (preferring "origin", then "upstream", then others).
+      # Returns [remote_name, base_url] or [nil, nil].
+      def find_github_remote(root, remote_name = nil)
+        if remote_name
+          url, _, status = Open3.capture3("git", "remote", "get-url", remote_name, chdir: root)
+          return [nil, nil] unless status.success?
 
-        remote_url, err, status = Open3.capture3("git", "remote", "get-url", "origin", chdir: root)
-        unless status.success?
-          return [nil, "No remote 'origin': #{err.strip}"]
+          base = github_url_from_remote(url.strip)
+          return base ? [remote_name, base] : [nil, nil]
         end
 
-        base_url = github_url_from_remote(remote_url.strip)
-        return [nil, "Not a GitHub remote: #{remote_url.strip}"] unless base_url
+        remotes_out, _, status = Open3.capture3("git", "remote", chdir: root)
+        return [nil, nil] unless status.success?
+
+        remotes = remotes_out.lines(chomp: true)
+        # Prefer origin, then upstream, then others
+        ordered = []
+        ordered << "origin" if remotes.include?("origin")
+        ordered << "upstream" if remotes.include?("upstream")
+        remotes.each { |r| ordered << r unless ordered.include?(r) }
+
+        ordered.each do |name|
+          url, _, st = Open3.capture3("git", "remote", "get-url", name, chdir: root)
+          next unless st.success?
+
+          base = github_url_from_remote(url.strip)
+          return [name, base] if base
+        end
+
+        [nil, nil]
+      end
+
+      # Check if a file differs from the remote tracking branch.
+      def file_differs_from_remote?(root, remote_name, branch, file_path)
+        remote_ref = "#{remote_name}/#{branch}"
+        diff_out, _, status = Open3.capture3("git", "diff", remote_ref, "--", file_path, chdir: root)
+        # If the remote ref doesn't exist or diff fails, consider it as differing
+        return true unless status.success?
+
+        !diff_out.empty?
+      end
+
+      # Resolve GitHub link for a file path at given line(s).
+      # Returns [url, warning, error_message].
+      def resolve(file_path, line_start, line_end = nil, remote_name: nil)
+        root, err = Git.repo_root(file_path)
+        return [nil, nil, err] unless root
+
+        found_remote, base_url = find_github_remote(root, remote_name)
+        unless base_url
+          msg = remote_name ? "Remote '#{remote_name}' is not a GitHub remote" : "No GitHub remote found"
+          return [nil, nil, msg]
+        end
 
         branch, _, status = Open3.capture3("git", "rev-parse", "--abbrev-ref", "HEAD", chdir: root)
         unless status.success?
-          return [nil, "Cannot determine branch"]
+          return [nil, nil, "Cannot determine branch"]
         end
+        branch = branch.strip
 
         relative_path = file_path.sub(%r{\A#{Regexp.escape(root)}/?}, "")
-        url = build_url(base_url, branch.strip, relative_path, line_start, line_end)
-        [url, nil]
+        url = build_url(base_url, branch, relative_path, line_start, line_end)
+
+        warning = nil
+        if file_differs_from_remote?(root, found_remote, branch, file_path)
+          warning = "(remote may differ)"
+        end
+
+        [url, warning, nil]
       end
 
       module HandlerMethods
@@ -83,7 +131,9 @@ module RuVim
             line_end = nil
           end
 
-          url, err = Link.resolve(path, line_start, line_end)
+          remote_name = argv.first
+
+          url, warning, err = Link.resolve(path, line_start, line_end, remote_name: remote_name)
           unless url
             ctx.editor.echo_error("gh link: #{err}")
             return
@@ -93,7 +143,8 @@ module RuVim
           $stdout.write(Link.osc52_copy_sequence(url))
           $stdout.flush
 
-          ctx.editor.echo(url)
+          msg = warning ? "#{url} #{warning}" : url
+          ctx.editor.echo(msg)
         end
       end
     end

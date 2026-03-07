@@ -853,12 +853,15 @@ Blame バッファ内のバッファローカルバインディング:
 
 ### gh link
 
-`:gh link` で現在のファイル・カーソル行の GitHub URL を生成し、メッセージに表示する。同時に OSC 52 エスケープシーケンスでクリップボードにコピーする。
+`:gh link` で現在のファイル・カーソル行の GitHub URL を生成し、message line に表示する。同時に OSC 52 エスケープシーケンスでクリップボードにコピーする。
 
 - ビジュアル選択範囲（`:'<,'>gh link`）を指定すると `#L5-L10` 形式の行範囲リンクを生成
-- `git remote get-url origin` から GitHub リモートを検出（SSH/HTTPS 両対応）
+- GitHub リモートを自動検出（全リモートを走査し、`origin` → `upstream` → その他の優先順位）
+- SSH / HTTPS 両対応
+- `:gh link <remote>` でリモート名を明示指定可能
 - 現在のブランチ名を使用
-- GitHub 以外のリモートはエラー
+- ファイルがリモートと異なる場合、URL の後に `(remote may differ)` を注記
+- GitHub リモートが見つからない場合はエラー
 
 実装: `lib/ruvim/git/link.rb`
 

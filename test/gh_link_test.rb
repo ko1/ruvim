@@ -67,6 +67,42 @@ class GhLinkTest < Minitest::Test
     assert_equal expected, seq
   end
 
+  # --- Remote detection ---
+
+  def test_find_github_remote_with_specific_name
+    # This test runs in the actual ruvim repo
+    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd, "origin")
+    if url
+      assert_equal "origin", name
+      assert_match(%r{\Ahttps://github\.com/}, url)
+    else
+      skip "origin is not a GitHub remote in this repo"
+    end
+  end
+
+  def test_find_github_remote_auto_detect
+    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd)
+    if url
+      assert_kind_of String, name
+      assert_match(%r{\Ahttps://github\.com/}, url)
+    else
+      skip "No GitHub remote in this repo"
+    end
+  end
+
+  def test_find_github_remote_nonexistent_returns_nil
+    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd, "nonexistent_remote_xyz")
+    assert_nil name
+    assert_nil url
+  end
+
+  # --- Resolve warning ---
+
+  def test_resolve_returns_warning_when_file_differs
+    # file_differs_from_remote? returns true for non-existent remote ref
+    assert RuVim::Git::Link.file_differs_from_remote?(Dir.pwd, "nonexistent_remote_xyz", "main", __FILE__)
+  end
+
   # --- Ex command integration ---
 
   def test_gh_no_subcommand_shows_help
