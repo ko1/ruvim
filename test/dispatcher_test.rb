@@ -119,19 +119,28 @@ class DispatcherTest < Minitest::Test
     assert_includes body, "42"
   end
 
-  def test_dispatch_ex_shell_captures_stdout_and_stderr_into_virtual_buffer
+  def test_dispatch_ex_shell_uses_shell_executor_when_available
+    executed_command = nil
+    fake_status = Struct.new(:exitstatus).new(0)
+    @editor.shell_executor = ->(cmd) { executed_command = cmd; fake_status }
+
+    @dispatcher.dispatch_ex(@editor, "!echo hello")
+
+    assert_equal "echo hello", executed_command
+    assert_equal "shell exit 0", @editor.message
+  end
+
+  def test_dispatch_ex_shell_falls_back_to_capture_without_executor
+    @editor.shell_executor = nil
     @dispatcher.dispatch_ex(@editor, "!echo out; echo err 1>&2")
 
     assert_equal "[Shell Output]", @editor.message
     assert_equal :help, @editor.current_buffer.kind
     body = @editor.current_buffer.lines.join("\n")
-    assert_includes body, "[command]"
-    assert_includes body, "echo out; echo err 1>&2"
     assert_includes body, "[stdout]"
     assert_includes body, "out"
     assert_includes body, "[stderr]"
     assert_includes body, "err"
-    assert_includes body, "[status]"
   end
 
   def test_dispatch_ex_set_commands

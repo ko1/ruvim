@@ -447,8 +447,9 @@ RuVim::ExCommandRegistry.instance.register(
 ### `:!`（shell 実行, 最小）
 
 - `:!<command>` で shell コマンドを同期実行
-- `stdout` / `stderr` があれば `[Shell Output]` 仮想バッファに表示（終了ステータスを含む）
-- 出力がない場合は `shell exit N` をステータス表示
+- alternate screen を一時的に抜けて main screen 上でコマンドを実行（Vim 互換）
+- 実行後 "Press ENTER or type command to continue" を表示し、入力待ち後にエディタに復帰
+- 完了後は `shell exit N` をステータス表示
 - restricted mode（`-Z`）では禁止
 
 ### バッファ管理 Ex コマンド（現状仕様）

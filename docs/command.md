@@ -214,9 +214,9 @@
 ### `:!`（shell 実行, 最小）
 
 - 形式: `:!<command>`
-- shell コマンドを同期実行します
-- `stdout` / `stderr` に出力があった場合は `[Shell Output]` 仮想バッファに表示（終了ステータスも表示）
-- 出力がない場合は `shell exit N` をステータス表示
+- alternate screen を一時的に抜けて main screen 上で shell コマンドを同期実行します（Vim 互換）
+- 実行後 "Press ENTER or type command to continue" を表示し、入力待ち後にエディタに復帰
+- 完了後は `shell exit N` をステータス表示
 - `-Z`（restricted mode）では無効
 
 ### `:ls` / `:buffers`

@@ -1139,27 +1139,33 @@ module RuVim
 
       raise RuVim::CommandError, "Usage: :!<command>" if command.strip.empty?
 
-      shell = ENV["SHELL"].to_s
-      shell = "/bin/sh" if shell.empty?
-      stdout_text, stderr_text, status = Open3.capture3(shell, "-c", command)
-
-      if !stdout_text.empty? || !stderr_text.empty?
-        lines = ["Shell output", "", "[command]", command, ""]
-        unless stdout_text.empty?
-          lines << "[stdout]"
-          lines.concat(stdout_text.lines(chomp: true))
-          lines << ""
-        end
-        unless stderr_text.empty?
-          lines << "[stderr]"
-          lines.concat(stderr_text.lines(chomp: true))
-          lines << ""
-        end
-        lines << "[status]"
-        lines << "exit #{status.exitstatus}"
-        ctx.editor.show_help_buffer!(title: "[Shell Output]", lines:, filetype: "sh")
-      else
+      executor = ctx.editor.shell_executor
+      if executor
+        status = executor.call(command)
         ctx.editor.echo("shell exit #{status.exitstatus}")
+      else
+        shell = ENV["SHELL"].to_s
+        shell = "/bin/sh" if shell.empty?
+        stdout_text, stderr_text, status = Open3.capture3(shell, "-c", command)
+
+        if !stdout_text.empty? || !stderr_text.empty?
+          lines = ["Shell output", "", "[command]", command, ""]
+          unless stdout_text.empty?
+            lines << "[stdout]"
+            lines.concat(stdout_text.lines(chomp: true))
+            lines << ""
+          end
+          unless stderr_text.empty?
+            lines << "[stderr]"
+            lines.concat(stderr_text.lines(chomp: true))
+            lines << ""
+          end
+          lines << "[status]"
+          lines << "exit #{status.exitstatus}"
+          ctx.editor.show_help_buffer!(title: "[Shell Output]", lines:, filetype: "sh")
+        else
+          ctx.editor.echo("shell exit #{status.exitstatus}")
+        end
       end
     rescue Errno::ENOENT => e
       raise RuVim::CommandError, "Shell error: #{e.message}"

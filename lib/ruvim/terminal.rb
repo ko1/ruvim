@@ -29,6 +29,20 @@ module RuVim
       end
     end
 
+    def suspend_for_shell(command)
+      shell = ENV["SHELL"].to_s
+      shell = "/bin/sh" if shell.empty?
+      @stdin.cooked do
+        write("\e[?25h\e[?1049l")
+        system(shell, "-c", command)
+        status = $?
+        write("\r\nPress ENTER or type command to continue")
+        @stdin.raw { @stdin.getc }
+        write("\e[?1049h\e[?25l")
+        status
+      end
+    end
+
     def suspend_for_tstp
       prev_tstp = Signal.trap("TSTP", "DEFAULT")
       @stdin.cooked do
