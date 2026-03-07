@@ -486,7 +486,7 @@ module RuVim
       # Collect lines before the visible area for state tracking (e.g., code fences)
       pre_lines = []
       (0...window.row_offset).each do |row|
-        pre_lines << RuVim::TextMetrics.terminal_safe_text(buffer.line_at(row)) if row < buffer.line_count
+        pre_lines << buffer.line_at(row) if row < buffer.line_count
       end
       { pre_context_lines: pre_lines }
     end

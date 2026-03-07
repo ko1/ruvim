@@ -123,8 +123,10 @@ module RuVim
       out
     end
 
+    UNSAFE_CONTROL_CHAR_RE = /[\u0000-\u0008\u000a-\u001f\u007f\u0080-\u009f]/
+
     def terminal_safe_text(text)
-      text.to_s.each_char.map { |ch| terminal_unsafe_control_char?(ch) ? terminal_safe_placeholder(ch) : ch }.join
+      text.to_s.gsub(UNSAFE_CONTROL_CHAR_RE, "?")
     end
 
     def terminal_unsafe_control_char?(ch)
