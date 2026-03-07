@@ -301,7 +301,22 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return false unless buf
 
+        # If follow mode is active, track windows at the end before appending
+        following_win_ids = if @follow_watchers[buffer_id]
+          @editor.windows.values.filter_map do |win|
+            next unless win.buffer_id == buffer_id
+            next unless stream_window_following_end?(win, buf)
+            win.id
+          end
+        end
+
         buf.append_stream_text!(text)
+
+        following_win_ids&.each do |win_id|
+          win = @editor.windows[win_id]
+          move_window_to_stream_end!(win, buf) if win
+        end
+
         true
       end
 
