@@ -4,17 +4,38 @@ require "open3"
 
 module RuVim
   module Browser
+    ALLOWED_SCHEMES = %w[https http].freeze
+
     module_function
 
     def open_url(url)
+      return false unless valid_url?(url)
+
       backend = detect_backend
       return false unless backend
 
-      cmd = backend[:command] + [url]
-      _, _, status = Open3.capture3(*cmd)
+      if backend[:type] == :powershell
+        cmd = powershell_encoded_command(backend[:ps_path], url)
+        _, _, status = Open3.capture3(*cmd)
+      else
+        _, _, status = Open3.capture3(*backend[:command], url)
+      end
       status.success?
     rescue StandardError
       false
+    end
+
+    def valid_url?(url)
+      scheme = url.to_s.split(":", 2).first.to_s.downcase
+      ALLOWED_SCHEMES.include?(scheme)
+    end
+
+    def powershell_encoded_command(ps_path, url)
+      # Encode as UTF-16LE Base64 to avoid any command injection via -Command.
+      # This matches the approach used by Node.js "open" package.
+      ps_script = "Start-Process '#{url.gsub("'", "''")}'"
+      encoded = [ps_script.encode("UTF-16LE")].pack("m0")
+      [ps_path, "-NoProfile", "-NonInteractive", "-EncodedCommand", encoded]
     end
 
     def detect_backend
@@ -24,7 +45,7 @@ module RuVim
 
       ps_path = powershell_path(wsl_mount_point)
       if wsl? && File.exist?(ps_path)
-        return { command: [ps_path, "-NoProfile", "-NonInteractive", "-Command", "Start-Process"], type: :powershell }
+        return { ps_path: ps_path, type: :powershell }
       end
 
       nil
