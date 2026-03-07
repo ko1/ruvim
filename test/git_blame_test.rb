@@ -541,10 +541,9 @@ class GitBlameTest < Minitest::Test
     assert_nil RuVim::Git::Branch.parse_branch_name("")
   end
 
-  def test_git_branch_enter_checks_out
+  def test_git_branch_enter_populates_checkout_command
     Dir.mktmpdir do |dir|
       setup_git_repo(dir, "test_file.txt", "line1\n")
-      # Create a second branch
       Dir.chdir(dir) do
         system("git branch test-branch", exception: true)
       end
@@ -563,9 +562,27 @@ class GitBlameTest < Minitest::Test
 
       feed(:enter)
 
-      # Branch buffer should be closed, and we should have switched
-      refute_equal :git_branch, @editor.current_buffer.kind
-      # Verify checkout happened
+      # Should enter command-line mode with checkout command pre-filled
+      assert_equal :command_line, @editor.mode
+      assert_equal "git checkout test-branch", @editor.command_line.text
+    end
+  end
+
+  def test_git_checkout_subcommand_executes
+    Dir.mktmpdir do |dir|
+      setup_git_repo(dir, "test_file.txt", "line1\n")
+      Dir.chdir(dir) do
+        system("git branch test-branch", exception: true)
+      end
+
+      file_path = File.join(dir, "test_file.txt")
+      buf = @editor.add_buffer_from_file(file_path)
+      @editor.switch_to_buffer(buf.id)
+
+      @dispatcher.dispatch_ex(@editor, "git checkout test-branch")
+
+      refute @editor.message_error?, "Unexpected error: #{@editor.message}"
+      assert_includes @editor.message.to_s, "Switched to branch"
       Dir.chdir(dir) do
         current = `git rev-parse --abbrev-ref HEAD`.strip
         assert_equal "test-branch", current

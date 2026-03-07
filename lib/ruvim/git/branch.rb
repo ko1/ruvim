@@ -80,15 +80,30 @@ module RuVim
             return
           end
 
-          root = buf.options["git_repo_root"]
-          _out, err, status = Open3.capture3("git", "checkout", branch, chdir: root)
-          unless status.success?
-            ctx.editor.echo_error("git checkout: #{err.strip}")
-            return
+          ctx.editor.enter_command_line_mode(":")
+          ctx.editor.command_line.replace_text("git checkout #{branch}")
+        end
+
+        def git_branch_execute_checkout(ctx, argv: [], **)
+          branch = argv.first.to_s.strip
+          raise RuVim::CommandError, "Usage: :git checkout <branch>" if branch.empty?
+
+          root = ctx.buffer.kind == :git_branch ? ctx.buffer.options["git_repo_root"] : nil
+          unless root
+            file_path = git_resolve_path(ctx)
+            root, err = Git.repo_root(file_path) if file_path
+            raise RuVim::CommandError, "Not in a git repository" unless root
           end
 
-          # Refresh the branch list
-          ctx.editor.delete_buffer(buf.id)
+          _out, err, status = Open3.capture3("git", "checkout", branch, chdir: root)
+          unless status.success?
+            raise RuVim::CommandError, "git checkout: #{err.strip}"
+          end
+
+          # Close git branch buffer if we're in one
+          if ctx.buffer.kind == :git_branch
+            ctx.editor.delete_buffer(ctx.buffer.id)
+          end
           ctx.editor.echo("Switched to branch '#{branch}'")
         end
       end

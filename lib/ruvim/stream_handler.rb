@@ -174,7 +174,9 @@ module RuVim
 
       def start_follow!(buf)
         ensure_event_queue!
-        if buf.path && File.exist?(buf.path)
+        raise RuVim::CommandError, "Not a regular file: #{buf.path}" if buf.path && File.exist?(buf.path) && !File.file?(buf.path)
+
+        if buf.path && File.file?(buf.path)
           data = File.binread(buf.path)
           if data.end_with?("\n") && buf.lines.last.to_s != ""
             following_wins = @editor.windows.values.select do |w|
@@ -445,7 +447,7 @@ module RuVim
         end
 
         @async_file_loads[buf.id] = state
-        state[:thread] = start_async_file_loader_thread(buf.id, io, bulk_once: staged_mode)
+        state[:thread] = start_async_file_loader_thread(buf.id, io)
 
         size_mb = file_size.fdiv(1024 * 1024)
         if staged_mode
@@ -467,19 +469,8 @@ module RuVim
         LARGE_FILE_STAGED_PREFIX_BYTES
       end
 
-      def start_async_file_loader_thread(buffer_id, io, bulk_once: false)
+      def start_async_file_loader_thread(buffer_id, io)
         Thread.new do
-          if bulk_once
-            rest = io.read || "".b
-            unless rest.empty?
-              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: Buffer.decode_text(rest) }
-              notify_signal_wakeup
-            end
-            @stream_event_queue << { type: :file_eof, buffer_id: buffer_id, ended_with_newline: rest.end_with?("\n") }
-            notify_signal_wakeup
-            next
-          end
-
           ended_with_newline = false
           pending_text = +""
           loop do

@@ -27,6 +27,7 @@ module RuVim
         "diff"        => :git_diff,
         "log"         => :git_log,
         "branch"      => :git_branch,
+        "checkout"    => :git_branch_execute_checkout,
         "commit"      => :git_commit,
       }.freeze
 

@@ -41,6 +41,30 @@ class BufferTest < Minitest::Test
     end
   end
 
+  def test_from_file_rejects_non_regular_file
+    Dir.mktmpdir do |dir|
+      fifo_path = File.join(dir, "test_fifo")
+      system("mkfifo", fifo_path)
+      assert File.exist?(fifo_path), "FIFO should exist"
+
+      err = assert_raises(RuVim::CommandError) do
+        RuVim::Buffer.from_file(id: 1, path: fifo_path)
+      end
+      assert_match(/Not a regular file/, err.message)
+    end
+  end
+
+  def test_reload_rejects_non_regular_file
+    b = RuVim::Buffer.new(id: 1, path: "/dev/null")
+    # /dev/null exists but is not a regular file on Linux
+    if !File.file?("/dev/null") && File.exist?("/dev/null")
+      err = assert_raises(RuVim::CommandError) do
+        b.reload_from_file!("/dev/null")
+      end
+      assert_match(/Not a regular file/, err.message)
+    end
+  end
+
   def test_utf8_file_is_loaded_as_utf8_text_not_binary_bytes
     Dir.mktmpdir do |dir|
       path = File.join(dir, "ruvim_utf8_test.txt")

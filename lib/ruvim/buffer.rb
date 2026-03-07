@@ -23,9 +23,11 @@ module RuVim
 
     def self.from_file(id:, path:)
       lines =
-        if File.exist?(path)
+        if File.file?(path)
           data = decode_text(File.binread(path))
           split_lines(data)
+        elsif File.exist?(path)
+          raise RuVim::CommandError, "Not a regular file: #{path}"
         else
           [""]
         end
@@ -390,7 +392,9 @@ module RuVim
       target = path || @path
       raise RuVim::CommandError, "No file name" if target.nil? || target.empty?
 
-      data = File.exist?(target) ? self.class.decode_text(File.binread(target)) : ""
+      raise RuVim::CommandError, "Not a regular file: #{target}" if File.exist?(target) && !File.file?(target)
+
+      data = File.file?(target) ? self.class.decode_text(File.binread(target)) : ""
       @lines = self.class.split_lines(data)
       @path = target
       @modified = false

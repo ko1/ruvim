@@ -377,6 +377,8 @@ RuVim::ExCommandRegistry.instance.register(
   - `grepprg` を argv 配列として実行（シェル経由ではない）
   - ファイル引数の glob パターンは Ruby 側で展開
   - restricted mode（`-Z`）では禁止
+- `:git checkout <branch>` でブランチ切り替え
+  - ブランチ一覧（`:git branch`）で Enter を押すとコマンドラインにプリフィル、明示的に Enter で確定
 - `:filter [/pattern/]` : 検索マッチ行のみのフィルタバッファを作成（`g/` キーバインド）
 - `:rich [format]`
 - `:d [count]` / `:delete`
@@ -417,10 +419,11 @@ RuVim::ExCommandRegistry.instance.register(
   - 任意で mode filter を受ける（例 `:bindings normal`）
 - 大きいファイルを開くときは、閾値以上で段階読み込みになる場合がある
   - statusline に `[load/live]`（失敗時 `[load/error]`）
-  - デフォルト実装は先頭 `8MB` を先に表示し、残りをバックグラウンド読み込み後に反映
+  - デフォルト実装は先頭 `8MB` を先に表示し、残りをチャンク単位でバックグラウンド読み込み
   - 環境変数:
     - `RUVIM_ASYNC_FILE_THRESHOLD_BYTES`
     - `RUVIM_ASYNC_FILE_PREFIX_BYTES`
+- ファイルを開く際、FIFO・デバイス・ソケット等の特殊ファイルは拒否する（`File.file?` チェック）
 
 ### `:command`（現状仕様）
 
