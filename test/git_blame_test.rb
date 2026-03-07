@@ -277,9 +277,14 @@ class GitBlameTest < Minitest::Test
     end
   end
 
-  def test_git_unknown_subcommand_shows_error
-    @dispatcher.dispatch_ex(@editor, "git unknown")
-    assert_match(/Unknown Git subcommand/, @editor.message)
+  def test_git_unknown_subcommand_runs_shell
+    executed = nil
+    fake_status = Struct.new(:exitstatus).new(0)
+    @editor.shell_executor = ->(cmd) { executed = cmd; fake_status }
+
+    @dispatcher.dispatch_ex(@editor, "git stash")
+
+    assert_equal "git stash", executed
   end
 
   def test_git_no_subcommand_shows_list

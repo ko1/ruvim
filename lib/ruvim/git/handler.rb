@@ -64,7 +64,7 @@ module RuVim
 
         method = GIT_SUBCOMMANDS[sub]
         unless method
-          ctx.editor.echo_error("Unknown Git subcommand: #{sub}")
+          run_shell_fallback(ctx, "git", argv)
           return
         end
 
@@ -82,7 +82,7 @@ module RuVim
 
         method = GH_SUBCOMMANDS[sub]
         unless method
-          ctx.editor.echo_error("Unknown GitHub subcommand: #{sub}")
+          run_shell_fallback(ctx, "gh", argv)
           return
         end
 
@@ -96,6 +96,17 @@ module RuVim
       end
 
       private
+
+      def run_shell_fallback(ctx, cmd, argv)
+        command = ([cmd] + argv).join(" ")
+        executor = ctx.editor.shell_executor
+        if executor
+          status = executor.call(command)
+          ctx.editor.echo("shell exit #{status.exitstatus}")
+        else
+          ctx.editor.echo_error("Unknown #{cmd} subcommand: #{argv.first}")
+        end
+      end
 
       def git_resolve_path(ctx)
         path = ctx.buffer.path

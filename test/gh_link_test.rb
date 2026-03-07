@@ -129,9 +129,13 @@ class GhLinkTest < Minitest::Test
     assert_match(/link/, @editor.message)
   end
 
-  def test_gh_unknown_subcommand_shows_error
-    @dispatcher.dispatch_ex(@editor, "gh unknown")
-    assert @editor.message_error?
-    assert_match(/Unknown/, @editor.message)
+  def test_gh_unknown_subcommand_runs_shell
+    executed = nil
+    fake_status = Struct.new(:exitstatus).new(0)
+    @editor.shell_executor = ->(cmd) { executed = cmd; fake_status }
+
+    @dispatcher.dispatch_ex(@editor, "gh issue list")
+
+    assert_equal "gh issue list", executed
   end
 end
