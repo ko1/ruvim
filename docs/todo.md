@@ -229,6 +229,15 @@
 - `spelllang`（スペルチェック言語）
 - `[PARTIAL]` `termguicolors`（検索/`cursorline`/`colorcolumn` 背景色の最小 truecolor 対応）
 
+## 大きいファイルの非同期ロード
+
+- `-c` で渡したコマンドが非同期ロード中の不完全なバッファに対して実行される
+  - startup actions をロード完了後に遅延実行するコールバックを `finish_async_file_load!` に追加する
+  - ユーザーの対話操作は制限しない（`-c` 起動コマンドのみ遅延）
+- 非同期ロードの性能改善（現状は同期パスの約3倍遅い）
+  - `Array<String>` ベースのバッファ構造が根本原因（split + GC 負荷）
+  - rope / lazy split 等のデータ構造変更が必要（大きな変更）
+
 ## メモ（実装方針）
 
 - Vim 完全互換の CLI を目指すより、よく使うフラグから互換寄りに実装する
