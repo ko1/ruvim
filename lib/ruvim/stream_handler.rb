@@ -332,6 +332,7 @@ module RuVim
 
         buf.finalize_async_file_load!(ended_with_newline: !!ended_with_newline)
         buf.loading_state = :closed
+        @editor.echo(format("\"%s\" %dL", buf.display_name, buf.line_count))
         true
       end
 
