@@ -142,6 +142,7 @@
     - branch バッファ内: `Enter` で `:git checkout <branch>` をコマンドラインにプリセット（確認ステップあり）
   - `checkout <branch>` : 指定ブランチへチェックアウト
   - `commit` : コミットメッセージ入力バッファを開く
+  - `grep <pattern> [args...]` : git grep -n を実行、結果バッファで Enter ジャンプ
 - Git バッファは `Esc` / `Ctrl-c` で閉じる
 
 ### `:gh`

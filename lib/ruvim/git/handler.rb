@@ -29,6 +29,7 @@ module RuVim
         "branch"      => :git_branch,
         "checkout"    => :git_branch_execute_checkout,
         "commit"      => :git_commit,
+        "grep"        => :git_grep,
       }.freeze
 
       include Blame::HandlerMethods
@@ -37,6 +38,7 @@ module RuVim
       include Log::HandlerMethods
       include Branch::HandlerMethods
       include Commit::HandlerMethods
+      include Grep::HandlerMethods
       include Gh::Link::HandlerMethods
 
       GH_SUBCOMMANDS = {

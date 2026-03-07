@@ -651,6 +651,7 @@ module RuVim
         return handle_filter_buffer_enter if buffer.kind == :filter
         return handle_git_status_enter if buffer.kind == :git_status
         return handle_git_diff_enter if buffer.kind == :git_diff || buffer.kind == :git_log
+        return handle_git_grep_enter if buffer.kind == :git_grep
         return handle_git_branch_enter if buffer.kind == :git_branch
         return false unless buffer.kind == :quickfix || buffer.kind == :location_list
 
@@ -726,6 +727,11 @@ module RuVim
 
       def handle_git_diff_enter
         @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.diff.open_file"))
+        true
+      end
+
+      def handle_git_grep_enter
+        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.grep.open_file"))
         true
       end
 
