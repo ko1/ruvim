@@ -451,6 +451,11 @@ RuVim::ExCommandRegistry.instance.register(
 - 行番号指定可: `:3r file.txt`（3行目の下に挿入）
 - stderr が出た場合、最初の行をエラーメッセージとして表示
 
+### `:w !`（バッファ内容をコマンドへパイプ）
+
+- `:w !<command>` でバッファ全体をシェルコマンドの stdin に渡す
+- 範囲指定可: `:'<,'>w !sort`（選択範囲のみ渡す）
+
 ### `:!`（shell 実行, 最小）
 
 - `:!<command>` で shell コマンドを同期実行

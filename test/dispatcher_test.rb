@@ -180,6 +180,30 @@ class DispatcherTest < Minitest::Test
     assert_equal %w[line1 hello line2], @editor.current_buffer.lines
   end
 
+  def test_dispatch_ex_write_to_shell_command
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(%w[hello world])
+
+    Dir.mktmpdir do |dir|
+      outfile = File.join(dir, "out.txt")
+      @dispatcher.dispatch_ex(@editor, "w !cat > #{outfile}")
+
+      assert_equal "hello\nworld\n", File.read(outfile)
+    end
+  end
+
+  def test_dispatch_ex_write_range_to_shell_command
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(%w[aaa bbb ccc])
+
+    Dir.mktmpdir do |dir|
+      outfile = File.join(dir, "out.txt")
+      @dispatcher.dispatch_ex(@editor, "2,3w !cat > #{outfile}")
+
+      assert_equal "bbb\nccc\n", File.read(outfile)
+    end
+  end
+
   def test_dispatch_ex_set_commands
     @dispatcher.dispatch_ex(@editor, "set number")
     assert_equal true, @editor.current_window.options["number"]

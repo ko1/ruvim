@@ -790,6 +790,24 @@ module RuVim
       end
     end
 
+    def file_write_to_shell(ctx, command:, kwargs: {})
+      raise RuVim::CommandError, "Usage: :w !<command>" if command.empty?
+
+      r_start = kwargs[:range_start] || 0
+      r_end = kwargs[:range_end] || (ctx.buffer.line_count - 1)
+      lines = (r_start..r_end).map { |i| ctx.buffer.lines[i] }
+      input = lines.join("\n") + "\n"
+
+      shell = ENV["SHELL"].to_s
+      shell = "/bin/sh" if shell.empty?
+      _stdout, stderr_text, status = Open3.capture3(shell, "-c", command, stdin_data: input)
+      unless stderr_text.empty?
+        ctx.editor.echo_error(stderr_text.lines(chomp: true).first)
+        return
+      end
+      ctx.editor.echo("#{lines.length} line(s) written to !#{command}, exit #{status.exitstatus}")
+    end
+
     def app_quit(ctx, bang:, **)
       if ctx.buffer.kind == :filter
         saved_y = ctx.buffer.options["filter_source_cursor_y"]
