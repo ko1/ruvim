@@ -481,8 +481,15 @@ module RuVim
             pending_text << Buffer.decode_text(chunk)
             next if pending_text.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
 
-            @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
-            pending_text = +""
+            # Split at last newline to avoid sending partial lines
+            last_nl = pending_text.rindex("\n")
+            if last_nl
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text[0..last_nl] }
+              pending_text = pending_text[(last_nl + 1)..] || +""
+            else
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
+              pending_text = +""
+            end
             notify_signal_wakeup
           end
         rescue EOFError
