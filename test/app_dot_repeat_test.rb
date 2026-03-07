@@ -65,4 +65,27 @@ class AppDotRepeatTest < Minitest::Test
 
     assert_equal "XbXd", @buffer.line_at(0)
   end
+
+  def test_dot_repeats_counted_x
+    @buffer.replace_all_lines!(["abcdefgh"])
+    @win.cursor_x = 0
+
+    @key_handler.handle("3")
+    press("x")
+    assert_equal "defgh", @buffer.line_at(0)
+
+    press(".")
+    assert_equal "gh", @buffer.line_at(0)
+  end
+
+  def test_dot_repeats_counted_dd
+    @buffer.replace_all_lines!(["a", "b", "c", "d", "e", "f"])
+
+    @key_handler.handle("2")
+    press("d", "d")
+    assert_equal ["c", "d", "e", "f"], @buffer.lines
+
+    press(".")
+    assert_equal ["e", "f"], @buffer.lines
+  end
 end
