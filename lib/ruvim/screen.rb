@@ -105,6 +105,8 @@ module RuVim
           lines[status_row + 1] = truncate("#{cmd.prefix}#{cmd.text}", cols)
         elsif editor.message_error?
           lines[status_row + 1] = error_message_line(editor.message.to_s, cols)
+        elsif !editor.message.to_s.empty?
+          lines[status_row + 1] = truncate(editor.message.to_s, cols)
         end
       end
 
@@ -977,11 +979,10 @@ module RuVim
       stream = buffer.stream_status ? " [#{buffer.stream_status}]" : ""
       loading = file_loading_status_token(buffer)
       tab = tab_status_token(editor)
-      msg = editor.message_error? ? "" : editor.message.to_s
       left = "#{mode} #{path}#{mod}#{stream}#{loading}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1}#{tab} "
       body_width = [width - right.length, 0].max
-      "#{compose_status_body(left, msg, body_width)}#{right}"
+      "#{left.ljust(body_width)[0, body_width]}#{right}"
     end
 
     def file_loading_status_token(buffer)
@@ -999,20 +1000,6 @@ module RuVim
       return "" if editor.tabpage_count <= 1
 
       " tab:#{editor.current_tabpage_number}/#{editor.tabpage_count}"
-    end
-
-    def compose_status_body(left, msg, width)
-      w = [width, 0].max
-      return "" if w.zero?
-      return left.ljust(w)[0, w] if msg.to_s.empty?
-
-      msg_part = " | #{msg}"
-      if msg_part.length >= w
-        return msg_part[0, w]
-      end
-
-      left_budget = w - msg_part.length
-      "#{left.ljust(left_budget)[0, left_budget]}#{msg_part}"
     end
 
     def truncate(str, width)
