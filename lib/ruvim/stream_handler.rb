@@ -143,7 +143,7 @@ module RuVim
               changed = true
             end
           when :file_data
-            changed = apply_async_file_chunk!(event[:buffer_id], event[:data]) || changed
+            changed = apply_async_file_chunk!(event[:buffer_id], event[:data], loaded_bytes: event[:loaded_bytes], file_size: event[:file_size]) || changed
           when :file_eof
             changed = finish_async_file_load!(event[:buffer_id], ended_with_newline: event[:ended_with_newline]) || changed
           when :file_error
@@ -295,7 +295,7 @@ module RuVim
         true
       end
 
-      def apply_async_file_chunk!(buffer_id, text)
+      def apply_async_file_chunk!(buffer_id, text, loaded_bytes: nil, file_size: nil)
         return false if text.to_s.empty?
 
         buf = @editor.buffers[buffer_id]
@@ -315,6 +315,11 @@ module RuVim
         following_win_ids&.each do |win_id|
           win = @editor.windows[win_id]
           move_window_to_stream_end!(win, buf) if win
+        end
+
+        if loaded_bytes && file_size && file_size > 0
+          pct = (loaded_bytes * 100.0 / file_size).clamp(0, 100)
+          @editor.echo(format("\"%s\" loading... %d%%", buf.display_name, pct))
         end
 
         true
@@ -468,8 +473,9 @@ module RuVim
           return buf
         end
 
+        state[:file_size] = file_size
         @async_file_loads[buf.id] = state
-        state[:thread] = start_async_file_loader_thread(buf.id, io)
+        state[:thread] = start_async_file_loader_thread(buf.id, io, file_size: file_size)
 
         size_mb = file_size.fdiv(1024 * 1024)
         if staged_mode
@@ -491,14 +497,16 @@ module RuVim
         LARGE_FILE_STAGED_PREFIX_BYTES
       end
 
-      def start_async_file_loader_thread(buffer_id, io)
+      def start_async_file_loader_thread(buffer_id, io, file_size: nil)
         Thread.new do
           ended_with_newline = false
           pending_text = +""
+          loaded_bytes = io.pos
           loop do
             chunk = io.readpartial(ASYNC_FILE_READ_CHUNK_BYTES)
             next if chunk.nil? || chunk.empty?
 
+            loaded_bytes += chunk.bytesize
             ended_with_newline = chunk.end_with?("\n")
             pending_text << Buffer.decode_text(chunk)
             next if pending_text.bytesize < ASYNC_FILE_EVENT_FLUSH_BYTES
@@ -506,10 +514,10 @@ module RuVim
             # Split at last newline to avoid sending partial lines
             last_nl = pending_text.rindex("\n")
             if last_nl
-              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text[0..last_nl] }
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text[0..last_nl], loaded_bytes: loaded_bytes, file_size: file_size }
               pending_text = pending_text[(last_nl + 1)..] || +""
             else
-              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text }
+              @stream_event_queue << { type: :file_data, buffer_id: buffer_id, data: pending_text, loaded_bytes: loaded_bytes, file_size: file_size }
               pending_text = +""
             end
             notify_signal_wakeup
