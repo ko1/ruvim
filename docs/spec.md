@@ -863,7 +863,7 @@ Blame バッファ内のバッファローカルバインディング:
 - ファイルがリモートと異なる場合、URL の後に `(remote may differ)` を注記
 - GitHub リモートが見つからない場合はエラー
 
-実装: `lib/ruvim/git/link.rb`
+実装: `lib/ruvim/gh/link.rb`
 
 ## テスト（現状）
 

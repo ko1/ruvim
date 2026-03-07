@@ -13,56 +13,56 @@ class GhLinkTest < Minitest::Test
   # --- URL parsing ---
 
   def test_parse_ssh_remote
-    url = RuVim::Git::Link.github_url_from_remote("git@github.com:user/repo.git")
+    url = RuVim::Gh::Link.github_url_from_remote("git@github.com:user/repo.git")
     assert_equal "https://github.com/user/repo", url
   end
 
   def test_parse_ssh_remote_without_dot_git
-    url = RuVim::Git::Link.github_url_from_remote("git@github.com:user/repo")
+    url = RuVim::Gh::Link.github_url_from_remote("git@github.com:user/repo")
     assert_equal "https://github.com/user/repo", url
   end
 
   def test_parse_https_remote
-    url = RuVim::Git::Link.github_url_from_remote("https://github.com/user/repo.git")
+    url = RuVim::Gh::Link.github_url_from_remote("https://github.com/user/repo.git")
     assert_equal "https://github.com/user/repo", url
   end
 
   def test_parse_https_remote_without_dot_git
-    url = RuVim::Git::Link.github_url_from_remote("https://github.com/user/repo")
+    url = RuVim::Gh::Link.github_url_from_remote("https://github.com/user/repo")
     assert_equal "https://github.com/user/repo", url
   end
 
   def test_parse_non_github_remote_returns_nil
-    url = RuVim::Git::Link.github_url_from_remote("git@gitlab.com:user/repo.git")
+    url = RuVim::Gh::Link.github_url_from_remote("git@gitlab.com:user/repo.git")
     assert_nil url
   end
 
   def test_parse_empty_remote_returns_nil
-    url = RuVim::Git::Link.github_url_from_remote("")
+    url = RuVim::Gh::Link.github_url_from_remote("")
     assert_nil url
   end
 
   # --- Link building ---
 
   def test_build_link_single_line
-    link = RuVim::Git::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 10)
+    link = RuVim::Gh::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 10)
     assert_equal "https://github.com/user/repo/blob/main/lib/foo.rb#L10", link
   end
 
   def test_build_link_line_range
-    link = RuVim::Git::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 10, 20)
+    link = RuVim::Gh::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 10, 20)
     assert_equal "https://github.com/user/repo/blob/main/lib/foo.rb#L10-L20", link
   end
 
   def test_build_link_same_start_end
-    link = RuVim::Git::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 5, 5)
+    link = RuVim::Gh::Link.build_url("https://github.com/user/repo", "main", "lib/foo.rb", 5, 5)
     assert_equal "https://github.com/user/repo/blob/main/lib/foo.rb#L5", link
   end
 
   # --- OSC 52 ---
 
   def test_osc52_escape_sequence
-    seq = RuVim::Git::Link.osc52_copy_sequence("hello")
+    seq = RuVim::Gh::Link.osc52_copy_sequence("hello")
     expected = "\e]52;c;#{["hello"].pack("m0")}\a"
     assert_equal expected, seq
   end
@@ -71,7 +71,7 @@ class GhLinkTest < Minitest::Test
 
   def test_find_github_remote_with_specific_name
     # This test runs in the actual ruvim repo
-    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd, "origin")
+    name, url = RuVim::Gh::Link.find_github_remote(Dir.pwd, "origin")
     if url
       assert_equal "origin", name
       assert_match(%r{\Ahttps://github\.com/}, url)
@@ -81,7 +81,7 @@ class GhLinkTest < Minitest::Test
   end
 
   def test_find_github_remote_auto_detect
-    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd)
+    name, url = RuVim::Gh::Link.find_github_remote(Dir.pwd)
     if url
       assert_kind_of String, name
       assert_match(%r{\Ahttps://github\.com/}, url)
@@ -91,7 +91,7 @@ class GhLinkTest < Minitest::Test
   end
 
   def test_find_github_remote_nonexistent_returns_nil
-    name, url = RuVim::Git::Link.find_github_remote(Dir.pwd, "nonexistent_remote_xyz")
+    name, url = RuVim::Gh::Link.find_github_remote(Dir.pwd, "nonexistent_remote_xyz")
     assert_nil name
     assert_nil url
   end
@@ -100,7 +100,7 @@ class GhLinkTest < Minitest::Test
 
   def test_resolve_returns_warning_when_file_differs
     # file_differs_from_remote? returns true for non-existent remote ref
-    assert RuVim::Git::Link.file_differs_from_remote?(Dir.pwd, "nonexistent_remote_xyz", "main", __FILE__)
+    assert RuVim::Gh::Link.file_differs_from_remote?(Dir.pwd, "nonexistent_remote_xyz", "main", __FILE__)
   end
 
   # --- Ex command integration ---

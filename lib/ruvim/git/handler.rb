@@ -36,7 +36,7 @@ module RuVim
       include Log::HandlerMethods
       include Branch::HandlerMethods
       include Commit::HandlerMethods
-      include Link::HandlerMethods
+      include Gh::Link::HandlerMethods
 
       GH_SUBCOMMANDS = {
         "link" => :gh_link,

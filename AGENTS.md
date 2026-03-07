@@ -64,8 +64,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `git/log.rb` | Git log: runner, command handlers |
 | `git/branch.rb` | Git branch: listing, checkout, command handlers |
 | `git/commit.rb` | Git commit: message buffer, execute, command handlers |
-| `git/link.rb` | GitHub link: URL generation, OSC 52 clipboard, command handlers |
 | `git/handler.rb` | Git/GitHub module (repo_root), dispatcher, close, shared helpers |
+| `gh/link.rb` | GitHub link: URL generation, OSC 52 clipboard, command handlers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |

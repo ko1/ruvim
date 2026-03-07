@@ -4,7 +4,7 @@ require "open3"
 require "base64"
 
 module RuVim
-  module Git
+  module Gh
     module Link
       module_function
 
@@ -84,7 +84,7 @@ module RuVim
       # Resolve GitHub link for a file path at given line(s).
       # Returns [url, warning, error_message].
       def resolve(file_path, line_start, line_end = nil, remote_name: nil)
-        root, err = Git.repo_root(file_path)
+        root, err = RuVim::Git.repo_root(file_path)
         return [nil, nil, err] unless root
 
         found_remote, base_url = find_github_remote(root, remote_name)
