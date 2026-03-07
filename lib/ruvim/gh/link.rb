@@ -110,6 +110,26 @@ module RuVim
         [url, warning, nil]
       end
 
+      # Build a GitHub PR search URL for a branch.
+      def pr_search_url(base_url, branch)
+        "#{base_url}/pulls?q=head:#{branch}"
+      end
+
+      # Resolve GitHub PR URL for the current repo.
+      # Returns [url, error_message].
+      def resolve_pr(file_path)
+        root, err = RuVim::Git.repo_root(file_path)
+        return [nil, err] unless root
+
+        _, base_url = find_github_remote(root)
+        return [nil, "No GitHub remote found"] unless base_url
+
+        branch, _, status = Open3.capture3("git", "rev-parse", "--abbrev-ref", "HEAD", chdir: root)
+        return [nil, "Cannot determine branch"] unless status.success?
+
+        [pr_search_url(base_url, branch.strip), nil]
+      end
+
       module HandlerMethods
         def gh_link(ctx, argv: [], kwargs: {}, **)
           url, warning = gh_resolve_url(ctx, argv: argv, kwargs: kwargs, command: "gh link")
@@ -134,6 +154,22 @@ module RuVim
 
           msg = warning ? "Opened #{url} #{warning}" : "Opened #{url}"
           ctx.editor.echo(msg)
+        end
+
+        def gh_pr(ctx, **)
+          path = ctx.buffer.path || Dir.pwd
+          url, err = Link.resolve_pr(path)
+          unless url
+            ctx.editor.echo_error("gh pr: #{err}")
+            return
+          end
+
+          unless Browser.open_url(url)
+            ctx.editor.echo_error("gh pr: could not open browser")
+            return
+          end
+
+          ctx.editor.echo("Opened #{url}")
         end
 
         private

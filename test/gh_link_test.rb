@@ -105,9 +105,23 @@ class GhLinkTest < Minitest::Test
 
   # --- Ex command integration ---
 
+  # --- PR URL ---
+
+  def test_pr_search_url
+    url = RuVim::Gh::Link.pr_search_url("https://github.com/user/repo", "feature-branch")
+    assert_equal "https://github.com/user/repo/pulls?q=head:feature-branch", url
+  end
+
+  # --- Ex command integration ---
+
   def test_gh_browse_listed_in_subcommands
     @dispatcher.dispatch_ex(@editor, "gh")
     assert_match(/browse/, @editor.message)
+  end
+
+  def test_gh_pr_listed_in_subcommands
+    @dispatcher.dispatch_ex(@editor, "gh")
+    assert_match(/pr/, @editor.message)
   end
 
   def test_gh_no_subcommand_shows_help

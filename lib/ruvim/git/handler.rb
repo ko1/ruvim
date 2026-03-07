@@ -41,6 +41,7 @@ module RuVim
       GH_SUBCOMMANDS = {
         "link"   => :gh_link,
         "browse" => :gh_browse,
+        "pr"     => :gh_pr,
       }.freeze
 
       def enter_git_command_mode(ctx, **)

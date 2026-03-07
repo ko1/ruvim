@@ -872,6 +872,13 @@ Blame バッファ内のバッファローカルバインディング:
 - 開いた URL を message line に表示
 - ファイルがリモートと異なる場合、`(remote may differ)` を注記
 
+### gh pr
+
+`:gh pr` で現在のブランチの PR ページをブラウザで開く。
+
+- `https://github.com/user/repo/pulls?q=head:<branch>` を生成して開く
+- ファイルパスがなくても動作（カレントディレクトリから git リポジトリを検出）
+
 実装: `lib/ruvim/gh/link.rb`, `lib/ruvim/browser.rb`
 
 ## テスト（現状）
