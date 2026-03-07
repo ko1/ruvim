@@ -185,6 +185,26 @@ class AppStartupTest < Minitest::Test
     assert_match(/Restricted mode/, editor.message)
   end
 
+  def test_restricted_mode_disables_ex_grep
+    app = RuVim::App.new(clean: true, restricted: true)
+    editor = app.instance_variable_get(:@editor)
+    dispatcher = app.instance_variable_get(:@dispatcher)
+
+    dispatcher.dispatch_ex(editor, "grep pattern file.txt")
+
+    assert_match(/Restricted mode/, editor.message)
+  end
+
+  def test_restricted_mode_disables_ex_lgrep
+    app = RuVim::App.new(clean: true, restricted: true)
+    editor = app.instance_variable_get(:@editor)
+    dispatcher = app.instance_variable_get(:@dispatcher)
+
+    dispatcher.dispatch_ex(editor, "lgrep pattern file.txt")
+
+    assert_match(/Restricted mode/, editor.message)
+  end
+
   def test_verbose_logs_startup_and_startup_ex_actions
     log = StringIO.new
     app = RuVim::App.new(

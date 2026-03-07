@@ -1496,13 +1496,18 @@ module RuVim
     end
 
     def run_external_grep(ctx, argv:, target:)
-      args = Array(argv).join(" ").strip
+      if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+        raise RuVim::CommandError, "Restricted mode: :grep is disabled"
+      end
+
+      args = Array(argv)
       raise RuVim::CommandError, "Usage: :grep pattern [files...]" if args.empty?
 
       grepprg = ctx.editor.effective_option("grepprg", window: ctx.window, buffer: ctx.buffer) || "grep -n"
-      cmd = "#{grepprg} #{args}"
+      cmd_parts = Shellwords.shellsplit(grepprg)
+      expanded_args = args.flat_map { |a| (g = Dir.glob(a)).empty? ? [a] : g }
 
-      stdout, stderr, status = Open3.capture3(cmd)
+      stdout, stderr, status = Open3.capture3(*cmd_parts, *expanded_args)
       if stdout.strip.empty? && !status.success?
         msg = stderr.strip.empty? ? "No matches found" : stderr.strip
         ctx.editor.echo_error(msg)

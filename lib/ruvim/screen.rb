@@ -455,7 +455,7 @@ module RuVim
         raw_lines << (row < buffer.line_count ? buffer.line_at(row) : nil)
       end
 
-      non_nil = raw_lines.compact
+      non_nil = raw_lines.compact.map { |l| RuVim::TextMetrics.terminal_safe_text(l) }
       context = rich_view_context(editor, window, buffer)
       formatted = RuVim::RichView.render_visible_lines(editor, non_nil, context: context)
       fmt_idx = 0
@@ -486,7 +486,7 @@ module RuVim
       # Collect lines before the visible area for state tracking (e.g., code fences)
       pre_lines = []
       (0...window.row_offset).each do |row|
-        pre_lines << buffer.line_at(row) if row < buffer.line_count
+        pre_lines << RuVim::TextMetrics.terminal_safe_text(buffer.line_at(row)) if row < buffer.line_count
       end
       { pre_context_lines: pre_lines }
     end
