@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "open3"
-require "base64"
 
 module RuVim
   module Gh
@@ -34,7 +33,7 @@ module RuVim
 
       # Generate OSC 52 escape sequence for clipboard copy.
       def osc52_copy_sequence(text)
-        encoded = Base64.strict_encode64(text)
+        encoded = [text].pack("m0")
         "\e]52;c;#{encoded}\a"
       end
 
