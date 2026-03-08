@@ -139,6 +139,14 @@
 - 非同期ファイルローダーの OOM 対策（`bulk_once` モード廃止、チャンク読み込み）
 - 特殊ファイル（FIFO/デバイス/ソケット）の読み込み拒否（`Buffer.ensure_regular_file!` で統一ガード）
 
+## Stream クラス階層化 / StreamMixer リネーム
+
+- `@loading_state` を Stream に統合し、非同期ファイルロード状態を `Stream::FileLoad` で管理
+- Stream を基底クラス + 5 サブクラス（`Stdin`, `Run`, `Follow`, `FileLoad`, `Git`）に分離
+- fire-on-new パターン: `new` 時点でスレッド/ウォッチャーを即時起動
+- `stop_handler` をコンストラクタで渡す（`attr_reader`）
+- `StreamHandler` を `StreamMixer` にリネーム（責務を明確化: イベントキューの合流・分配）
+
 ## ドキュメント整理 / 仕様整備
 
 - `docs/spec.md`, `docs/tutorial.md`, `docs/binding.md`, `docs/command.md`, `docs/config.md`, `docs/vim_diff.md` の継続更新

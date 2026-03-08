@@ -300,7 +300,7 @@ class AppStartupTest < Minitest::Test
     )
     editor = app.instance_variable_get(:@editor)
 
-    sh = app.instance_variable_get(:@stream_handler)
+    sh = app.instance_variable_get(:@stream_mixer)
     buf = editor.current_buffer
     20.times do
       sh.drain_events!
@@ -317,7 +317,7 @@ class AppStartupTest < Minitest::Test
     assert_equal ["line1", "line2"], buf.lines
     assert_match(/\[stdin\] (follow|EOF)/, editor.message)
   ensure
-    app&.instance_variable_get(:@stream_handler)&.shutdown!
+    app&.instance_variable_get(:@stream_mixer)&.shutdown!
   end
 
   def test_large_file_threshold_uses_async_loader
@@ -331,7 +331,7 @@ class AppStartupTest < Minitest::Test
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = "1"
         app = RuVim::App.new(clean: true)
         editor = app.instance_variable_get(:@editor)
-        sh = app.instance_variable_get(:@stream_handler)
+        sh = app.instance_variable_get(:@stream_mixer)
 
         buf = editor.open_path(f.path)
         assert_match(/loading/i, editor.message)
@@ -352,7 +352,7 @@ class AppStartupTest < Minitest::Test
         assert_match(/#{Regexp.escape(f.path)}/, editor.message)
       ensure
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev
-        app&.instance_variable_get(:@stream_handler)&.shutdown!
+        app&.instance_variable_get(:@stream_mixer)&.shutdown!
       end
     end
   end
@@ -370,7 +370,7 @@ class AppStartupTest < Minitest::Test
         ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = "4"
         app = RuVim::App.new(clean: true)
         editor = app.instance_variable_get(:@editor)
-        sh = app.instance_variable_get(:@stream_handler)
+        sh = app.instance_variable_get(:@stream_mixer)
 
         buf = editor.open_path(f.path)
         assert_equal :live, buf.stream&.state
@@ -389,7 +389,7 @@ class AppStartupTest < Minitest::Test
       ensure
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev_async
         ENV["RUVIM_ASYNC_FILE_PREFIX_BYTES"] = prev_prefix
-        app&.instance_variable_get(:@stream_handler)&.shutdown!
+        app&.instance_variable_get(:@stream_mixer)&.shutdown!
       end
     end
   end

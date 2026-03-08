@@ -30,7 +30,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `app.rb` | Main application: initialization, run loop, config, startup |
 | `key_handler.rb` | Key input dispatch, mode handling, pending states, insert editing |
 | `completion_manager.rb` | Command-line/insert completion, history, incsearch preview |
-| `stream_handler.rb` | Stream coordinator: event queue, drain, editor integration |
+| `stream_mixer.rb` | Stream coordinator: event queue, drain, editor integration |
 | `stream.rb` | Stream base class (state, live?, status, stop!) |
 | `stream/stdin.rb` | Stream::Stdin — reads from stdin pipe |
 | `stream/run.rb` | Stream::Run — PTY command execution |

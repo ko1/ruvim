@@ -374,7 +374,7 @@ class AppScenarioTest < Minitest::Test
 
   def test_normal_ctrl_c_stops_stdin_stream_via_default_binding
     stream = StringIO.new("hello\n")
-    sh = @app.instance_variable_get(:@stream_handler)
+    sh = @app.instance_variable_get(:@stream_mixer)
     sh.prepare_stdin_stream_buffer!(stream)
     sh.start_pending_stdin!
 

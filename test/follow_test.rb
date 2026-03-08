@@ -14,7 +14,7 @@ class FollowTest < Minitest::Test
     @editor = @app.instance_variable_get(:@editor)
     @dispatcher = @app.instance_variable_get(:@dispatcher)
     @key_handler = @app.instance_variable_get(:@key_handler)
-    @stream_handler = @app.instance_variable_get(:@stream_handler)
+    @stream_mixer = @app.instance_variable_get(:@stream_mixer)
   end
 
   def cleanup_follow_app
@@ -130,7 +130,7 @@ class FollowTest < Minitest::Test
     File.open(@path, "a") { |f| f.write("line3\nline4\n") }
 
     assert_eventually(timeout: 3) do
-      @stream_handler.drain_events!
+      @stream_mixer.drain_events!
       buf.line_count > 3
     end
 
@@ -154,7 +154,7 @@ class FollowTest < Minitest::Test
     File.open(@path, "a") { |f| f.write("line3\n") }
 
     assert_eventually(timeout: 3) do
-      @stream_handler.drain_events!
+      @stream_mixer.drain_events!
       buf.line_count > 2
     end
 

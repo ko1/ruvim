@@ -203,7 +203,7 @@ class RunCommandTest < Minitest::Test
   # --- streaming output arrives incrementally ---
 
   def test_run_streams_output_incrementally
-    sh = @app.instance_variable_get(:@stream_handler)
+    sh = @app.instance_variable_get(:@stream_mixer)
     # Run a command that prints lines with small delays
     cmd = "ruby -e 'STDOUT.sync=true; 3.times{puts _1; sleep 0.1}'"
     feed(*":run #{cmd}".chars, :enter)
@@ -230,7 +230,7 @@ class RunCommandTest < Minitest::Test
   # --- status line shows run command ---
 
   def test_ctrl_c_key_stops_running_stream
-    sh = @app.instance_variable_get(:@stream_handler)
+    sh = @app.instance_variable_get(:@stream_mixer)
     feed(*":run sleep 10".chars, :enter)
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf, "Expected [Shell Output] buffer"
@@ -259,7 +259,7 @@ class RunCommandTest < Minitest::Test
   def test_run_output_stream_status_exit
     feed(*":run echo done".chars, :enter)
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
-    sh = @app.instance_variable_get(:@stream_handler)
+    sh = @app.instance_variable_get(:@stream_mixer)
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
     loop do
       sh.drain_events!

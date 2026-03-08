@@ -10,7 +10,7 @@ class GitBlameTest < Minitest::Test
     @editor = @app.instance_variable_get(:@editor)
     @dispatcher = @app.instance_variable_get(:@dispatcher)
     @key_handler = @app.instance_variable_get(:@key_handler)
-    @stream_handler = @app.instance_variable_get(:@stream_handler)
+    @stream_mixer = @app.instance_variable_get(:@stream_mixer)
     @editor.materialize_intro_buffer!
   end
 
@@ -22,7 +22,7 @@ class GitBlameTest < Minitest::Test
     @editor.buffers.each_value do |buf|
       buf.stream&.thread&.join
     end
-    @stream_handler.drain_events!
+    @stream_mixer.drain_events!
   end
 
   # --- Parsing ---

@@ -3,7 +3,7 @@
 require "json"
 require "fileutils"
 require_relative "file_watcher"
-require_relative "stream_handler"
+require_relative "stream_mixer"
 require_relative "completion_manager"
 require_relative "key_handler"
 
@@ -47,7 +47,7 @@ module RuVim
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
 
-      @stream_handler = StreamHandler.new(editor: @editor, signal_w: @signal_w)
+      @stream_mixer = StreamMixer.new(editor: @editor, signal_w: @signal_w)
       @completion = CompletionManager.new(
         editor: @editor,
         terminal: @terminal,
@@ -60,16 +60,16 @@ module RuVim
         terminal: @terminal,
         screen: @screen,
         completion: @completion,
-        stream_handler: @stream_handler
+        stream_mixer: @stream_mixer
       )
 
       @editor.restricted_mode = @restricted_mode
-      @editor.open_path_handler = @stream_handler.method(:open_path_with_large_file_support)
+      @editor.open_path_handler = @stream_mixer.method(:open_path_with_large_file_support)
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
-      @editor.git_stream_handler = @stream_handler.method(:start_git_stream_command)
-      @editor.git_stream_stop_handler = @stream_handler.method(:stop_git_stream!)
-      @editor.run_stream_handler = @stream_handler.method(:start_command_stream!)
+      @editor.git_stream_handler = @stream_mixer.method(:start_git_stream_command)
+      @editor.git_stream_stop_handler = @stream_mixer.method(:stop_git_stream!)
+      @editor.run_stream_handler = @stream_mixer.method(:start_command_stream!)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)
         @screen.invalidate_cache!
@@ -94,7 +94,7 @@ module RuVim
 
       if @stdin_stream_mode && startup_paths.empty?
         verbose_log(1, "startup: stdin stream buffer")
-        @stdin_stream_buf = @stream_handler.prepare_stdin_stream_buffer!(stdin)
+        @stdin_stream_buf = @stream_mixer.prepare_stdin_stream_buffer!(stdin)
       elsif startup_paths.empty?
         verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
@@ -110,7 +110,7 @@ module RuVim
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
-      @stream_handler.start_pending_stdin! if @stdin_stream_buf
+      @stream_mixer.start_pending_stdin! if @stdin_stream_buf
       write_startuptime_log!
       @startup = nil
     end
@@ -118,7 +118,7 @@ module RuVim
     def run
       @terminal.with_ui do
         loop do
-          @needs_redraw = true if @stream_handler.drain_events!
+          @needs_redraw = true if @stream_mixer.drain_events!
           if @needs_redraw
             @screen.render(@editor)
             @needs_redraw = false
@@ -158,7 +158,7 @@ module RuVim
         end
       end
     ensure
-      @stream_handler.shutdown!
+      @stream_mixer.shutdown!
       @completion.save_history!
     end
 
@@ -574,12 +574,12 @@ module RuVim
     def apply_startup_follow!
       buf = @editor.current_buffer
       return unless buf&.file_buffer?
-      return if @stream_handler.follow_active?(buf)
+      return if @stream_mixer.follow_active?(buf)
 
       win = @editor.current_window
       win.cursor_y = buf.line_count - 1
       win.clamp_to_buffer(buf)
-      @stream_handler.start_follow!(buf)
+      @stream_mixer.start_follow!(buf)
     end
 
     def apply_startup_nomodifiable!
@@ -634,7 +634,7 @@ module RuVim
       else
         rest.each do |p|
           buf = @editor.add_buffer_from_file(p)
-          @stream_handler.start_follow!(buf) if @startup.follow
+          @stream_mixer.start_follow!(buf) if @startup.follow
         end
       end
     end

@@ -15,14 +15,14 @@ module RuVim
 
       attr_accessor :paste_batch
 
-      def initialize(editor:, dispatcher:, keymaps:, terminal:, screen:, completion:, stream_handler:)
+      def initialize(editor:, dispatcher:, keymaps:, terminal:, screen:, completion:, stream_mixer:)
         @editor = editor
         @dispatcher = dispatcher
         @keymaps = keymaps
         @terminal = terminal
         @screen = screen
         @completion = completion
-        @stream_handler = stream_handler
+        @stream_mixer = stream_mixer
 
         @pending_key_deadline = nil
         @pending_ambiguous_invocation = nil
@@ -165,7 +165,7 @@ module RuVim
             repeat_token: (kwargs[:repeat_token] || kwargs["repeat_token"]).to_s
           )
         when :follow_toggle
-          @stream_handler.ex_follow_toggle
+          @stream_mixer.ex_follow_toggle
         when :normal_ctrl_c
           handle_normal_ctrl_c
         else
@@ -185,8 +185,8 @@ module RuVim
         @macro_record_pending = false
         @macro_play_pending = false
         buf = @editor.current_buffer
-        if buf && @stream_handler.follow_active?(buf)
-          @stream_handler.stop_follow!(buf)
+        if buf && @stream_mixer.follow_active?(buf)
+          @stream_mixer.stop_follow!(buf)
         else
           @editor.clear_message
         end
