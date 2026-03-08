@@ -110,7 +110,7 @@ module RuVim
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
-      @stream_handler.start_stdin_stream_reader!(@stdin_stream_buf) if @stdin_stream_buf
+      @stream_handler.start_pending_stdin! if @stdin_stream_buf
       write_startuptime_log!
       @startup = nil
     end

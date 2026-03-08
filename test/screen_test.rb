@@ -104,8 +104,9 @@ class ScreenTest < Minitest::Test
   def test_status_line_shows_stream_state_for_stdin_buffer
     editor = RuVim::Editor.new
     buf = editor.add_virtual_buffer(kind: :stream, name: "[stdin]", lines: [""], readonly: true, modifiable: false)
-    buf.stream = RuVim::Stream::Stdin.new(io: $stdin)
-    buf.stream.state = :closed
+    r, w = IO.pipe
+    buf.stream = RuVim::Stream::Stdin.new(io: r, buffer_id: buf.id, queue: Queue.new) {}
+    buf.stream.stop!
     editor.add_window(buffer_id: buf.id)
 
     term = TerminalStub.new([6, 60])
@@ -113,6 +114,8 @@ class ScreenTest < Minitest::Test
     line = screen.send(:status_line, editor, 60)
 
     assert_includes line, "[stdin/EOF]"
+  ensure
+    w&.close rescue nil
   end
 
   def test_render_uses_dim_and_brighter_line_number_gutter_colors

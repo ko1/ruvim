@@ -152,13 +152,10 @@ class RunCommandTest < Minitest::Test
     feed(*":run echo hello".chars, :enter)
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf
-
-    # Set a stop handler on the buffer and verify it's called
-    stop_called = false
-    output_buf.stream.stop_handler = -> { stop_called = true }
+    assert output_buf.stream.stop_handler, "Expected stream to have a stop_handler"
 
     @editor.stream_stop_or_cancel!
-    assert stop_called, "Expected buffer's stream_stop_handler to be called"
+    assert_includes @editor.message.to_s, "stopped"
   end
 
   # --- auto-save before :run ---
@@ -227,7 +224,7 @@ class RunCommandTest < Minitest::Test
     # Should have received at least the first line while command is still running
     assert_includes output_buf.lines, "0"
   ensure
-    output_buf&.stream.stop_handler&.call
+    output_buf&.stream&.stop!
   end
 
   # --- status line shows run command ---
@@ -246,7 +243,7 @@ class RunCommandTest < Minitest::Test
 
     assert_equal :closed, output_buf.stream.state, "Stream should be stopped after Ctrl-C"
   ensure
-    output_buf&.stream.stop_handler&.call rescue nil
+    output_buf&.stream&.stop! rescue nil
   end
 
   # --- stream_status shows correct label ---
@@ -256,7 +253,7 @@ class RunCommandTest < Minitest::Test
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert_equal "run", output_buf.stream_status
   ensure
-    output_buf&.stream.stop_handler&.call rescue nil
+    output_buf&.stream&.stop! rescue nil
   end
 
   def test_run_output_stream_status_exit
@@ -274,17 +271,23 @@ class RunCommandTest < Minitest::Test
   end
 
   def test_stdin_stream_status_live
+    r, w = IO.pipe
     buf = @editor.current_buffer
-    buf.stream = RuVim::Stream::Stdin.new(io: $stdin)
-    buf.stream.state = :live
+    buf.stream = RuVim::Stream::Stdin.new(io: r, buffer_id: buf.id, queue: Queue.new) {}
     assert_equal "stdin", buf.stream_status
+  ensure
+    buf&.stream&.stop!
+    w&.close rescue nil
   end
 
   def test_stdin_stream_status_closed
+    r, w = IO.pipe
     buf = @editor.current_buffer
-    buf.stream = RuVim::Stream::Stdin.new(io: $stdin)
-    buf.stream.state = :closed
+    buf.stream = RuVim::Stream::Stdin.new(io: r, buffer_id: buf.id, queue: Queue.new) {}
+    buf.stream.stop!
     assert_equal "stdin/EOF", buf.stream_status
+  ensure
+    w&.close rescue nil
   end
 
   def test_run_stores_command_on_output_buffer

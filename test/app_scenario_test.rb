@@ -376,6 +376,7 @@ class AppScenarioTest < Minitest::Test
     stream = StringIO.new("hello\n")
     sh = @app.instance_variable_get(:@stream_handler)
     sh.prepare_stdin_stream_buffer!(stream)
+    sh.start_pending_stdin!
 
     @key_handler.handle(:ctrl_c)
 

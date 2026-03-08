@@ -7,22 +7,10 @@ module RuVim
 
     attr_accessor :thread, :io
 
-    def initialize
-      super()
-      @thread = nil
-      @io = nil
-    end
-
-    def status
-      case @state
-      when :live then "load"
-      when :error then "load/error"
-      end
-    end
-
-    def start!(buffer_id:, io:, file_size:, queue:, &notify)
-      @state = :live
+    def initialize(io:, file_size:, buffer_id:, queue:, stop_handler: nil, &notify)
+      super(stop_handler: stop_handler)
       @io = io
+      @state = :live
       @thread = Thread.new do
         pending_bytes = "".b
         ended_with_newline = false
@@ -69,6 +57,13 @@ module RuVim
         rescue StandardError
           nil
         end
+      end
+    end
+
+    def status
+      case @state
+      when :live then "load"
+      when :error then "load/error"
       end
     end
 

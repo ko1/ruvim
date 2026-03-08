@@ -6,32 +6,18 @@ module RuVim
   class Stream::Run < Stream
     attr_accessor :io, :pid, :thread, :command, :exit_status
 
-    def initialize(command:)
-      super()
+    def initialize(command:, buffer_id:, queue:, stop_handler: nil, &notify)
+      super(stop_handler: stop_handler)
       @command = command
       @io = nil
       @pid = nil
-      @thread = nil
       @exit_status = nil
-    end
-
-    def status
-      case @state
-      when :live then "run"
-      when :closed
-        code = @exit_status&.exitstatus
-        code ? "run/exit #{code}" : "run/EOF"
-      when :error then "run/error"
-      end
-    end
-
-    def start!(buffer_id:, queue:, &notify)
       @state = :live
-      shell = ENV["SHELL"].to_s
-      shell = "/bin/sh" if shell.empty?
       stream = self
       @thread = Thread.new do
-        PTY.spawn(shell, "-c", stream.command) do |r, _w, pid|
+        shell = ENV["SHELL"].to_s
+        shell = "/bin/sh" if shell.empty?
+        PTY.spawn(shell, "-c", command) do |r, _w, pid|
           stream.io = r
           stream.pid = pid
           begin
@@ -52,6 +38,16 @@ module RuVim
         stream.io = nil
         queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
         notify.call
+      end
+    end
+
+    def status
+      case @state
+      when :live then "run"
+      when :closed
+        code = @exit_status&.exitstatus
+        code ? "run/exit #{code}" : "run/EOF"
+      when :error then "run/error"
       end
     end
 

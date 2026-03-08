@@ -21,34 +21,33 @@ module RuVim
         buf.replace_all_lines!([""])
         buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
         buf.modified = false
-
-        stream = Stream::Stdin.new(io: io)
-        stream.state = :live
-        stream.stop_handler = -> { stop_buffer_stream!(buf) }
-        buf.stream = stream
         buf.options["filetype"] = "text"
         ensure_event_queue!
         move_window_to_stream_end!(@editor.current_window, buf)
         @editor.echo("[stdin] follow")
+        @pending_stdin = { buf: buf, io: io }
         buf
       end
 
-      def start_stdin_stream_reader!(buf)
-        stream = buf.stream
-        return unless stream.is_a?(Stream::Stdin) && stream.io
-        ensure_event_queue!
-        return if stream.thread&.alive?
+      def start_pending_stdin!
+        return unless @pending_stdin
 
-        stream.start!(buffer_id: buf.id, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        ps = @pending_stdin
+        @pending_stdin = nil
+        buf = ps[:buf]
+        ensure_event_queue!
+        buf.stream = Stream::Stdin.new(
+          io: ps[:io], buffer_id: buf.id, queue: @stream_event_queue,
+          stop_handler: -> { stop_buffer_stream!(buf) }, &method(:notify_signal_wakeup)
+        )
       end
 
       def start_command_stream!(buf, command)
         ensure_event_queue!
-
-        stream = Stream::Run.new(command: command)
-        stream.stop_handler = -> { stop_buffer_stream!(buf) }
-        buf.stream = stream
-        stream.start!(buffer_id: buf.id, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        buf.stream = Stream::Run.new(
+          command: command, buffer_id: buf.id, queue: @stream_event_queue,
+          stop_handler: -> { stop_buffer_stream!(buf) }, &method(:notify_signal_wakeup)
+        )
       end
 
       def start_git_stream_command(buffer_id, cmd, root)
@@ -56,9 +55,7 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return unless buf
 
-        stream = Stream::Git.new
-        buf.stream = stream
-        stream.start!(buffer_id: buffer_id, cmd: cmd, root: root, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        buf.stream = Stream::Git.new(cmd: cmd, root: root, buffer_id: buffer_id, queue: @stream_event_queue, &method(:notify_signal_wakeup))
       end
 
       def stop_buffer_stream!(buf)
@@ -139,10 +136,10 @@ module RuVim
           end
         end
 
-        stream = Stream::Follow.new
-        stream.stop_handler = -> { stop_follow!(buf) }
-        buf.stream = stream
-        stream.start!(buffer_id: buf.id, path: buf.path, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        buf.stream = Stream::Follow.new(
+          path: buf.path, buffer_id: buf.id, queue: @stream_event_queue,
+          stop_handler: -> { stop_follow!(buf) }, &method(:notify_signal_wakeup)
+        )
         @editor.echo("[follow] #{buf.display_name}")
       end
 
@@ -256,7 +253,6 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return false unless buf
 
-        # If follow mode is active, track windows at the end before appending
         following_win_ids = if buf.stream.is_a?(Stream::Follow)
           @editor.windows.values.filter_map do |win|
             next unless win.buffer_id == buffer_id
@@ -341,9 +337,6 @@ module RuVim
         file_size = File.size(path)
         buf = @editor.add_empty_buffer(path: path)
         @editor.switch_to_buffer(buf.id)
-
-        stream = Stream::FileLoad.new
-        buf.stream = stream
         buf.modified = false
 
         ensure_event_queue!
@@ -353,7 +346,6 @@ module RuVim
         if staged_mode
           prefix = io.read(staged_prefix_bytes) || "".b
           unless prefix.empty?
-            # Split at last newline to avoid displaying a partial line
             last_nl = prefix.rindex("\n".b)
             if last_nl && last_nl < prefix.bytesize - 1
               remainder = prefix.bytesize - last_nl - 1
@@ -366,12 +358,12 @@ module RuVim
 
         if io.eof?
           buf.finalize_async_file_load!(ended_with_newline: prefix&.end_with?("\n") || false)
-          stream.state = :closed
           io.close unless io.closed?
           return buf
         end
 
-        stream.start!(buffer_id: buf.id, io: io, file_size: file_size, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        # Create FileLoad stream after prefix reading; starts background thread immediately
+        buf.stream = Stream::FileLoad.new(io: io, file_size: file_size, buffer_id: buf.id, queue: @stream_event_queue, &method(:notify_signal_wakeup))
 
         size_mb = file_size.fdiv(1024 * 1024)
         if staged_mode

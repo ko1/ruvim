@@ -4,21 +4,8 @@ module RuVim
   class Stream::Follow < Stream
     attr_accessor :watcher, :backend
 
-    def initialize
-      super()
-      @watcher = nil
-      @backend = nil
-    end
-
-    def status
-      case @state
-      when :live
-        @backend == :inotify ? "follow/i" : "follow"
-      when :error then "follow/error"
-      end
-    end
-
-    def start!(buffer_id:, path:, queue:, &notify)
+    def initialize(path:, buffer_id:, queue:, stop_handler: nil, &notify)
+      super(stop_handler: stop_handler)
       @state = :live
       @watcher = FileWatcher.create(path) do |type, data|
         case type
@@ -33,6 +20,14 @@ module RuVim
       end
       @backend = @watcher.backend
       @watcher.start
+    end
+
+    def status
+      case @state
+      when :live
+        @backend == :inotify ? "follow/i" : "follow"
+      when :error then "follow/error"
+      end
     end
 
     def stop!

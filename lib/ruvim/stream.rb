@@ -2,11 +2,12 @@
 
 module RuVim
   class Stream
-    attr_accessor :state, :stop_handler
+    attr_accessor :state
+    attr_reader :stop_handler
 
-    def initialize
+    def initialize(stop_handler: nil)
       @state = nil
-      @stop_handler = nil
+      @stop_handler = stop_handler
     end
 
     def live?

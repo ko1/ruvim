@@ -4,13 +4,9 @@ module RuVim
   class Stream::Git < Stream
     attr_accessor :io, :thread
 
-    def initialize
-      super()
+    def initialize(cmd:, root:, buffer_id:, queue:, stop_handler: nil, &notify)
+      super(stop_handler: stop_handler)
       @io = nil
-      @thread = nil
-    end
-
-    def start!(buffer_id:, cmd:, root:, queue:, &notify)
       stream = self
       @thread = Thread.new do
         IO.popen(cmd, chdir: root, err: [:child, :out]) do |io|

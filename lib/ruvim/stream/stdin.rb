@@ -4,26 +4,10 @@ module RuVim
   class Stream::Stdin < Stream
     attr_accessor :io, :thread
 
-    def initialize(io:)
-      super()
+    def initialize(io:, buffer_id:, queue:, stop_handler: nil, &notify)
+      super(stop_handler: stop_handler)
       @io = io
-      @thread = nil
-    end
-
-    def status
-      case @state
-      when :live then "stdin"
-      when :closed then "stdin/EOF"
-      when :error then "stdin/error"
-      end
-    end
-
-    def start!(buffer_id:, queue:, &notify)
-      return if @thread&.alive?
-
       @state = :live
-      io = @io
-      stream = self
       @thread = Thread.new do
         loop do
           chunk = io.readpartial(4096)
@@ -33,15 +17,23 @@ module RuVim
           notify.call
         end
       rescue EOFError
-        unless stream.state == :closed
+        unless @state == :closed
           queue << { type: :stream_eof, buffer_id: buffer_id }
           notify.call
         end
       rescue IOError, StandardError => e
-        unless stream.state == :closed
+        unless @state == :closed
           queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
           notify.call
         end
+      end
+    end
+
+    def status
+      case @state
+      when :live then "stdin"
+      when :closed then "stdin/EOF"
+      when :error then "stdin/error"
       end
     end
 
