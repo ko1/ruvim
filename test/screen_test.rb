@@ -384,7 +384,7 @@ class ScreenTest < Minitest::Test
     # Create rows where raw lines differ in length but formatted lines are aligned
     buf.replace_all_lines!(["Short\tSecond\tThird", "LongerField\tB\tC"])
     buf.options["filetype"] = "tsv"
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
 
     # Move cursor to end of line (like pressing $)
     win.cursor_y = 0
@@ -424,7 +424,7 @@ class ScreenTest < Minitest::Test
       "緑\tキウイフルーツジャム\t静岡"
     ])
     buf.options["filetype"] = "tsv"
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
 
     # Move to end of line to trigger horizontal scroll
     win.cursor_y = 2
@@ -507,7 +507,7 @@ class ScreenTest < Minitest::Test
     win = editor.add_window(buffer_id: buf.id)
     buf.replace_all_lines!(["A\tB\tC", "DD\tEE\tFF"])
     buf.options["filetype"] = "tsv"
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
 
     # Move cursor to end of raw line
     win.cursor_y = 0

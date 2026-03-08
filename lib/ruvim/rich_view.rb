@@ -13,12 +13,12 @@ module RuVim
     module_function
 
     def register(filetype, renderer, detector: nil)
-      @renderers[filetype.to_s] = renderer
-      @detectors << { filetype: filetype.to_s, detector: detector } if detector
+      @renderers[filetype.to_sym] = renderer
+      @detectors << { filetype: filetype.to_sym, detector: detector } if detector
     end
 
     def renderer_for(filetype)
-      @renderers[filetype.to_s]
+      @renderers[filetype.to_sym]
     end
 
     def registered_filetypes
@@ -26,9 +26,9 @@ module RuVim
     end
 
     # Detect format from filetype or buffer content.
-    # Returns a filetype string ("tsv", "csv", "markdown") or nil.
+    # Returns a filetype symbol (:tsv, :csv, :markdown) or nil.
     def detect_format(buffer)
-      ft = buffer.options["filetype"].to_s
+      ft = buffer.options["filetype"].to_s.to_sym
       return ft if @renderers.key?(ft)
 
       # Ask registered detectors
@@ -42,7 +42,7 @@ module RuVim
     # Enter rich mode on the current buffer (same buffer, no virtual buffer).
     def open!(editor, format: nil)
       buffer = editor.current_buffer
-      format ||= detect_format(buffer)
+      format = format ? format.to_sym : detect_format(buffer)
       raise RuVim::CommandError, "Cannot detect format for rich view" unless format
 
       renderer = @renderers[format]
@@ -106,8 +106,8 @@ module RuVim
       km.bind_buffer(buffer_id, "<C-c>", "rich.close_buffer")
     end
 
-    register("markdown", MarkdownRenderer)
-    register("json", JsonRenderer)
-    register("jsonl", JsonlRenderer)
+    register(:markdown, MarkdownRenderer)
+    register(:json, JsonRenderer)
+    register(:jsonl, JsonlRenderer)
   end
 end

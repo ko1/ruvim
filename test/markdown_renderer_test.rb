@@ -8,11 +8,11 @@ class MarkdownRendererTest < Minitest::Test
   # --- Registration ---
 
   def test_renderer_registered_for_markdown
-    assert_equal renderer, RuVim::RichView.renderer_for("markdown")
+    assert_equal renderer, RuVim::RichView.renderer_for(:markdown)
   end
 
   def test_delimiter_for_markdown
-    assert_nil renderer.delimiter_for("markdown")
+    assert_nil renderer.delimiter_for(:markdown)
   end
 
   # --- Headings ---
@@ -240,10 +240,10 @@ class MarkdownRendererTest < Minitest::Test
     buf.replace_all_lines!(["# Title", "", "Some **bold** text"])
     buf.options["filetype"] = "markdown"
 
-    RuVim::RichView.open!(editor, format: "markdown")
+    RuVim::RichView.open!(editor, format: :markdown)
     assert_equal :rich, editor.mode
     state = editor.rich_state
-    assert_equal "markdown", state[:format]
+    assert_equal :markdown, state[:format]
 
     # Render visible lines
     lines = (0...buf.line_count).map { |i| buf.line_at(i) }
@@ -260,7 +260,7 @@ class MarkdownRendererTest < Minitest::Test
     editor = fresh_editor
     buf = editor.current_buffer
     buf.options["filetype"] = "markdown"
-    assert_equal "markdown", RuVim::RichView.detect_format(buf)
+    assert_equal :markdown, RuVim::RichView.detect_format(buf)
   end
 
   private

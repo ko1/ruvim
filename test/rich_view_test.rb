@@ -4,36 +4,36 @@ class RichViewTest < Minitest::Test
   # --- Framework tests ---
 
   def test_register_and_renderer_for
-    assert RuVim::RichView.renderer_for("tsv")
-    assert RuVim::RichView.renderer_for("csv")
-    assert_nil RuVim::RichView.renderer_for("unknown")
+    assert RuVim::RichView.renderer_for(:tsv)
+    assert RuVim::RichView.renderer_for(:csv)
+    assert_nil RuVim::RichView.renderer_for(:unknown)
   end
 
   def test_registered_filetypes
     fts = RuVim::RichView.registered_filetypes
-    assert_includes fts, "tsv"
-    assert_includes fts, "csv"
+    assert_includes fts, :tsv
+    assert_includes fts, :csv
   end
 
   def test_detect_format_from_filetype
     editor = fresh_editor
     buf = editor.current_buffer
     buf.options["filetype"] = "csv"
-    assert_equal "csv", RuVim::RichView.detect_format(buf)
+    assert_equal :csv, RuVim::RichView.detect_format(buf)
   end
 
   def test_detect_format_auto_tsv
     editor = fresh_editor
     buf = editor.current_buffer
     buf.replace_all_lines!(["a\tb\tc", "d\te\tf"])
-    assert_equal "tsv", RuVim::RichView.detect_format(buf)
+    assert_equal :tsv, RuVim::RichView.detect_format(buf)
   end
 
   def test_detect_format_auto_csv
     editor = fresh_editor
     buf = editor.current_buffer
     buf.replace_all_lines!(["a,b,c", "d,e,f"])
-    assert_equal "csv", RuVim::RichView.detect_format(buf)
+    assert_equal :csv, RuVim::RichView.detect_format(buf)
   end
 
   def test_detect_format_returns_nil_for_plain_text
@@ -63,7 +63,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb", "c\td"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     assert_equal :rich, editor.mode
     assert RuVim::RichView.active?(editor)
   end
@@ -75,7 +75,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "tsv"
     original_id = buf.id
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     assert_equal original_id, editor.current_buffer.id
   end
 
@@ -85,7 +85,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["x\ty"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     assert_equal :rich, editor.mode
 
     RuVim::RichView.close!(editor)
@@ -100,7 +100,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "tsv"
     original_id = buf.id
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     RuVim::RichView.close!(editor)
     assert_equal original_id, editor.current_buffer.id
   end
@@ -124,9 +124,9 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     state = editor.rich_state
-    assert_equal "tsv", state[:format]
+    assert_equal :tsv, state[:format]
     assert_equal "\t", state[:delimiter]
   end
 
@@ -136,9 +136,9 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a,b"])
     buf.options["filetype"] = "csv"
 
-    RuVim::RichView.open!(editor, format: "csv")
+    RuVim::RichView.open!(editor, format: :csv)
     state = editor.rich_state
-    assert_equal "csv", state[:format]
+    assert_equal :csv, state[:format]
     assert_equal ",", state[:delimiter]
   end
 
@@ -148,7 +148,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     RuVim::RichView.close!(editor)
     assert_nil editor.rich_state
   end
@@ -159,7 +159,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     editor.enter_command_line_mode(":")
     assert_equal :command_line, editor.mode
     assert RuVim::RichView.active?(editor)
@@ -171,7 +171,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     assert_equal :rich, editor.mode
 
     editor.enter_command_line_mode(":")
@@ -189,7 +189,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     editor.enter_command_line_mode(":")
     editor.leave_command_line
     assert_equal :rich, editor.mode
@@ -210,7 +210,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tb"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     editor.enter_normal_mode
     assert_nil editor.rich_state
     assert_equal :normal, editor.mode
@@ -222,7 +222,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(["a\tbb", "ccc\td"])
     buf.options["filetype"] = "tsv"
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     lines = [buf.line_at(0), buf.line_at(1)]
     rendered = RuVim::RichView.render_visible_lines(editor, lines)
     assert_equal 2, rendered.length
@@ -236,7 +236,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "tsv"
     count_before = editor.buffers.length
 
-    RuVim::RichView.open!(editor, format: "tsv")
+    RuVim::RichView.open!(editor, format: :tsv)
     assert_equal count_before, editor.buffers.length
   end
 
@@ -462,7 +462,7 @@ class RichViewTest < Minitest::Test
   # --- JSON Rich View tests ---
 
   def test_json_registered
-    assert RuVim::RichView.renderer_for("json")
+    assert RuVim::RichView.renderer_for(:json)
   end
 
   def test_json_open_creates_virtual_buffer
@@ -472,7 +472,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "json"
     count_before = editor.buffers.length
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     assert_equal count_before + 1, editor.buffers.length
     new_buf = editor.current_buffer
     refute_equal buf.id, new_buf.id
@@ -487,7 +487,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1}'])
     buf.options["filetype"] = "json"
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     result = editor.keymap_manager.resolve_with_context(:normal, ["\e"], editor: editor)
     assert_equal "rich.close_buffer", result.invocation.id
   end
@@ -498,7 +498,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1,"b":[2,3]}'])
     buf.options["filetype"] = "json"
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     new_buf = editor.current_buffer
     lines = new_buf.lines
     assert lines.length > 1, "Minified JSON should be expanded to multiple lines"
@@ -512,7 +512,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{', '"key": "value"', '}'])
     buf.options["filetype"] = "json"
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     new_buf = editor.current_buffer
     lines = new_buf.lines
     assert lines.length >= 3
@@ -524,7 +524,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"invalid json'])
     buf.options["filetype"] = "json"
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     # Should stay on original buffer
     assert_equal buf.id, editor.current_buffer.id
     assert_match(/JSON/, editor.message.to_s)
@@ -536,7 +536,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1}'])
     buf.options["filetype"] = "json"
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     # Virtual buffer approach — no rich mode
     assert_equal :normal, editor.mode
     assert_nil editor.rich_state
@@ -554,7 +554,7 @@ class RichViewTest < Minitest::Test
     idx = line.index('"c"')
     editor.current_window.cursor_x = idx
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     new_buf = editor.current_buffer
     # Cursor should be on the line containing "c"
     cursor_line = new_buf.line_at(editor.current_window.cursor_y)
@@ -571,7 +571,7 @@ class RichViewTest < Minitest::Test
     editor.current_window.cursor_y = 1
     editor.current_window.cursor_x = 2
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     new_buf = editor.current_buffer
     cursor_line = new_buf.line_at(editor.current_window.cursor_y)
     assert_match(/"x"/, cursor_line, "Cursor should be on the line with \"x\" key")
@@ -584,7 +584,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "json"
     editor.current_window.cursor_x = 0
 
-    RuVim::RichView.open!(editor, format: "json")
+    RuVim::RichView.open!(editor, format: :json)
     assert_equal 0, editor.current_window.cursor_y
   end
 
@@ -611,7 +611,7 @@ class RichViewTest < Minitest::Test
     editor = fresh_editor
     buf = editor.current_buffer
     buf.options["filetype"] = "json"
-    assert_equal "json", RuVim::RichView.detect_format(buf)
+    assert_equal :json, RuVim::RichView.detect_format(buf)
   end
 
   # --- Filetype detection tests ---
@@ -639,7 +639,7 @@ class RichViewTest < Minitest::Test
   # --- JSONL Rich View tests ---
 
   def test_jsonl_registered
-    assert RuVim::RichView.renderer_for("jsonl")
+    assert RuVim::RichView.renderer_for(:jsonl)
   end
 
   def test_jsonl_open_creates_virtual_buffer
@@ -649,7 +649,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "jsonl"
     count_before = editor.buffers.length
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     assert_equal count_before + 1, editor.buffers.length
     new_buf = editor.current_buffer
     refute_equal buf.id, new_buf.id
@@ -664,7 +664,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1}', '{"b":2}'])
     buf.options["filetype"] = "jsonl"
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     result = editor.keymap_manager.resolve_with_context(:normal, ["\e"], editor: editor)
     assert_equal "rich.close_buffer", result.invocation.id
   end
@@ -675,7 +675,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1,"b":[2,3]}', '{"c":4}'])
     buf.options["filetype"] = "jsonl"
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     new_buf = editor.current_buffer
     lines = new_buf.lines
     # Each JSON object should be expanded; separated by "---"
@@ -690,7 +690,7 @@ class RichViewTest < Minitest::Test
     buf.options["filetype"] = "jsonl"
     editor.current_window.cursor_y = 1  # on second entry
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     new_buf = editor.current_buffer
     cy = editor.current_window.cursor_y
     # Cursor should be within the second entry's formatted block
@@ -704,7 +704,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1}', '', '{"b":2}'])
     buf.options["filetype"] = "jsonl"
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     new_buf = editor.current_buffer
     lines = new_buf.lines
     # Should contain both entries
@@ -718,7 +718,7 @@ class RichViewTest < Minitest::Test
     buf.replace_all_lines!(['{"a":1}', 'bad json', '{"b":2}'])
     buf.options["filetype"] = "jsonl"
 
-    RuVim::RichView.open!(editor, format: "jsonl")
+    RuVim::RichView.open!(editor, format: :jsonl)
     new_buf = editor.current_buffer
     lines = new_buf.lines
     # Invalid line should show an error marker
@@ -729,6 +729,6 @@ class RichViewTest < Minitest::Test
     editor = fresh_editor
     buf = editor.current_buffer
     buf.options["filetype"] = "jsonl"
-    assert_equal "jsonl", RuVim::RichView.detect_format(buf)
+    assert_equal :jsonl, RuVim::RichView.detect_format(buf)
   end
 end
