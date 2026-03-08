@@ -2,6 +2,7 @@
 
 require "json"
 require "fileutils"
+require "open3"
 
 module RuVim
   class CompletionManager
@@ -576,13 +577,53 @@ module RuVim
         end
 
         if command_name == "git"
-          return Git::Handler::GIT_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
+          return git_subcommand_candidates(prefix)
         end
 
         if command_name == "gh"
-          return Git::Handler::GH_SUBCOMMANDS.keys.sort.select { |s| s.start_with?(prefix) }
+          return gh_subcommand_candidates(prefix)
         end
 
+        []
+      end
+
+      def git_subcommand_candidates(prefix)
+        @git_subcommands ||= begin
+          builtin = Git::Handler::GIT_SUBCOMMANDS.keys
+          external = parse_git_help_subcommands
+          (builtin + external).uniq.sort
+        end
+        @git_subcommands.select { |s| s.start_with?(prefix) }
+      end
+
+      def gh_subcommand_candidates(prefix)
+        @gh_subcommands ||= begin
+          builtin = Git::Handler::GH_SUBCOMMANDS.keys
+          external = parse_gh_help_subcommands
+          (builtin + external).uniq.sort
+        end
+        @gh_subcommands.select { |s| s.start_with?(prefix) }
+      end
+
+      def parse_git_help_subcommands
+        out, _, status = Open3.capture3("git", "help", "-a")
+        return [] unless status.success?
+
+        out.each_line.filter_map { |line|
+          line.match(/\A   (\S+)\s/)&.captures&.first
+        }
+      rescue StandardError
+        []
+      end
+
+      def parse_gh_help_subcommands
+        out, _, status = Open3.capture3("gh", "help")
+        return [] unless status.success?
+
+        out.each_line.filter_map { |line|
+          line.match(/\A  (\w+):/)&.captures&.first
+        }
+      rescue StandardError
         []
       end
 

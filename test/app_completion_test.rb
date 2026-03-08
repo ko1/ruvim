@@ -231,10 +231,32 @@ class AppCompletionTest < Minitest::Test
     @editor.materialize_intro_buffer!
     @editor.enter_command_line_mode(":")
     cmd = @editor.command_line
-    cmd.replace_text("git co")
+    cmd.replace_text("git commi")
 
     @completion.command_line_complete
 
     assert_equal "git commit", cmd.text
+  end
+
+  def test_git_subcommand_completion_includes_external
+    @editor.materialize_intro_buffer!
+    @editor.enter_command_line_mode(":")
+    cmd = @editor.command_line
+    cmd.replace_text("git stas")
+
+    @completion.command_line_complete
+
+    assert_equal "git stash", cmd.text
+  end
+
+  def test_gh_subcommand_completion_includes_external
+    @editor.materialize_intro_buffer!
+    @editor.enter_command_line_mode(":")
+    cmd = @editor.command_line
+    cmd.replace_text("gh issu")
+
+    @completion.command_line_complete
+
+    assert_equal "gh issue", cmd.text
   end
 end
