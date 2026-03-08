@@ -80,10 +80,6 @@ module RuVim
 
       module_function
 
-      def heading?(line)
-        line.to_s.match?(HEADING_RE)
-      end
-
       def heading_level(line)
         m = line.to_s.match(HEADING_RE)
         m ? m[2].length : 0
