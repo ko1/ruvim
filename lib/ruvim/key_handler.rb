@@ -166,6 +166,8 @@ module RuVim
           )
         when :follow_toggle
           @stream_handler.ex_follow_toggle
+        when :normal_ctrl_c
+          handle_normal_ctrl_c
         else
           raise RuVim::CommandError, "Unknown app action: #{name}"
         end

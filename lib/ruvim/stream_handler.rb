@@ -42,6 +42,7 @@ module RuVim
         buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
         buf.modified = false
         buf.stream_state = :live
+        buf.stream_stop_handler = -> { stop_stdin_stream! }
         buf.options["filetype"] = "text"
         @stream_stop_requested = false
         ensure_event_queue!
@@ -81,18 +82,6 @@ module RuVim
             notify_signal_wakeup
           end
         end
-      end
-
-      def stop_stream!(editor)
-        # Try run stream first if on [Shell Output] buffer
-        if editor.current_buffer&.kind == :run_output
-          return true if stop_run_stream!
-        end
-
-        # Try stdin stream
-        return true if stop_stdin_stream!
-
-        false
       end
 
       def stop_stdin_stream!
@@ -249,6 +238,8 @@ module RuVim
 
       def start_run_stream_command(buffer_id, command)
         ensure_event_queue!
+        buf = @editor.buffers[buffer_id]
+        buf.stream_stop_handler = -> { stop_run_stream! } if buf
         shell = ENV["SHELL"].to_s
         shell = "/bin/sh" if shell.empty?
         queue = @stream_event_queue

@@ -130,12 +130,12 @@ class RunCommandTest < Minitest::Test
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf
 
-    # Verify stream_stop_handler is called on Ctrl-C
+    # Set a stop handler on the buffer and verify it's called
     stop_called = false
-    @editor.stream_stop_handler = -> { stop_called = true }
+    output_buf.stream_stop_handler = -> { stop_called = true }
 
     @editor.stream_stop_or_cancel!
-    assert stop_called, "Expected stream_stop_handler to be called"
+    assert stop_called, "Expected buffer's stream_stop_handler to be called"
   end
 
   # --- status line shows run command ---

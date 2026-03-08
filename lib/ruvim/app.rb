@@ -56,7 +56,6 @@ module RuVim
       )
 
       @editor.restricted_mode = @restricted_mode
-      @editor.stream_stop_handler = method(:stream_stop_command)
       @editor.open_path_handler = @stream_handler.method(:open_path_with_large_file_support)
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
@@ -168,11 +167,6 @@ module RuVim
       @needs_redraw = true if @key_handler.handle_idle_timeout
     end
 
-    def stream_stop_command
-      return if @stream_handler.stop_stream!(@editor)
-
-      @key_handler.handle_normal_ctrl_c
-    end
 
     def register_builtins!
       cmd = CommandRegistry.instance
@@ -284,8 +278,11 @@ module RuVim
       register_internal_unless(
         cmd,
         "stdin.stream_stop",
-        call: ->(ctx, **) { ctx.editor.stream_stop_or_cancel! },
-        desc: "Stop stdin follow stream (or cancel pending state)"
+        call: ->(ctx, **) {
+          return if ctx.editor.stream_stop_or_cancel!
+          ctx.editor.invoke_app_action(:normal_ctrl_c)
+        },
+        desc: "Stop stream (or cancel pending state)"
       )
 
       register_ex_unless(ex, "w", call: :file_write, aliases: %w[write], desc: "Write current buffer", nargs: :any, bang: true)
