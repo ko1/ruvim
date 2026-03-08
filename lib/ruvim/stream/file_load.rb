@@ -3,7 +3,7 @@
 module RuVim
   class Stream::FileLoad < Stream
     CHUNK_BYTES = 1 * 1024 * 1024
-    FLUSH_BYTES = 4 * 1024 * 1024
+    FLUSH_BYTES = 32 * 1024 * 1024
 
     attr_accessor :thread, :io
 

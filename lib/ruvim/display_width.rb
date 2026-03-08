@@ -1,25 +1,102 @@
 # frozen_string_literal: true
 
+# Try loading the C extension (built by rake compile)
+begin
+  require_relative "ruvim_ext"
+rescue LoadError
+  # C extension not available — pure Ruby fallback below
+end
+
 module RuVim
   module DisplayWidth
     module_function
 
-    def cell_width(ch, col: 0, tabstop: 2)
-      return 1 if ch.nil? || ch.empty?
+    if defined?(RuVim::DisplayWidthExt)
+      # ---- C extension paths ----
 
-      if ch == "\t"
-        width = tabstop - (col % tabstop)
-        return width.zero? ? tabstop : width
+      def cell_width(ch, col: 0, tabstop: 2)
+        sync_ambiguous_width
+        DisplayWidthExt.cell_width(ch, col:, tabstop:)
       end
 
-      # Fast path: byte length 1 means ASCII — always width 1
-      return 1 if ch.bytesize == 1
+      def display_width(str, tabstop: 2, start_col: 0)
+        sync_ambiguous_width
+        DisplayWidthExt.display_width(str, tabstop:, start_col:)
+      end
 
-      code = ch.ord
-      return cached_codepoint_width(code) if codepoint_cacheable?(code)
+      def expand_tabs(str, tabstop: 2, start_col: 0)
+        sync_ambiguous_width
+        DisplayWidthExt.expand_tabs(str, tabstop:, start_col:)
+      end
 
-      uncached_codepoint_width(code)
+      def ambiguous_width
+        sync_ambiguous_width
+      end
+
+      def sync_ambiguous_width
+        env = ::ENV["RUVIM_AMBIGUOUS_WIDTH"]
+        if !defined?(@ambiguous_width_cached) || @ambiguous_width_env != env
+          @ambiguous_width_env = env
+          @ambiguous_width_cached = (env == "2" ? 2 : 1)
+          DisplayWidthExt.set_ambiguous_width(@ambiguous_width_cached)
+        end
+        @ambiguous_width_cached
+      end
+    else
+      # ---- Pure Ruby fallback ----
+
+      def cell_width(ch, col: 0, tabstop: 2)
+        return 1 if ch.nil? || ch.empty?
+
+        if ch == "\t"
+          width = tabstop - (col % tabstop)
+          return width.zero? ? tabstop : width
+        end
+
+        # Fast path: byte length 1 means ASCII — always width 1
+        return 1 if ch.bytesize == 1
+
+        code = ch.ord
+        return cached_codepoint_width(code) if codepoint_cacheable?(code)
+
+        uncached_codepoint_width(code)
+      end
+
+      def display_width(str, tabstop: 2, start_col: 0)
+        col = start_col
+        str.to_s.each_char { |ch| col += cell_width(ch, col:, tabstop:) }
+        col - start_col
+      end
+
+      def expand_tabs(str, tabstop: 2, start_col: 0)
+        col = start_col
+        out = +""
+        str.to_s.each_char do |ch|
+          if ch == "\t"
+            n = cell_width(ch, col:, tabstop:)
+            out << (" " * n)
+            col += n
+          else
+            out << ch
+            col += cell_width(ch, col:, tabstop:)
+          end
+        end
+        out
+      end
+
+      def ambiguous_width
+        env = ::ENV["RUVIM_AMBIGUOUS_WIDTH"]
+        if !defined?(@ambiguous_width_cached) || @ambiguous_width_env != env
+          @ambiguous_width_env = env
+          @ambiguous_width_cached = (env == "2" ? 2 : 1)
+          @codepoint_width_cache = {}
+        end
+
+        @ambiguous_width_cached
+      end
     end
+
+    # Shared helpers (used by pure Ruby path; kept available for tests)
 
     def codepoint_cacheable?(code)
       !code.nil? && !code.zero?
@@ -45,28 +122,6 @@ module RuVim
       1
     end
 
-    def display_width(str, tabstop: 2, start_col: 0)
-      col = start_col
-      str.to_s.each_char { |ch| col += cell_width(ch, col:, tabstop:) }
-      col - start_col
-    end
-
-    def expand_tabs(str, tabstop: 2, start_col: 0)
-      col = start_col
-      out = +""
-      str.to_s.each_char do |ch|
-        if ch == "\t"
-          n = cell_width(ch, col:, tabstop:)
-          out << (" " * n)
-          col += n
-        else
-          out << ch
-          col += cell_width(ch, col:, tabstop:)
-        end
-      end
-      out
-    end
-
     def combining_mark?(code)
       (0x0300..0x036F).cover?(code) ||
         (0x1AB0..0x1AFF).cover?(code) ||
@@ -76,9 +131,9 @@ module RuVim
     end
 
     def zero_width_codepoint?(code)
-      (0x200D..0x200D).cover?(code) || # ZWJ
-        (0xFE00..0xFE0F).cover?(code) || # variation selectors
-        (0xE0100..0xE01EF).cover?(code)  # variation selectors supplement
+      (0x200D..0x200D).cover?(code) ||
+        (0xFE00..0xFE0F).cover?(code) ||
+        (0xE0100..0xE01EF).cover?(code)
     end
 
     def wide_codepoint?(code)
@@ -122,17 +177,6 @@ module RuVim
         (0x203E..0x203E).cover?(code) ||
         (0x2460..0x24E9).cover?(code) ||
         (0x2500..0x257F).cover?(code)
-    end
-
-    def ambiguous_width
-      env = ::ENV["RUVIM_AMBIGUOUS_WIDTH"]
-      if !defined?(@ambiguous_width_cached) || @ambiguous_width_env != env
-        @ambiguous_width_env = env
-        @ambiguous_width_cached = (env == "2" ? 2 : 1)
-        @codepoint_width_cache = {}
-      end
-
-      @ambiguous_width_cached
     end
   end
 end

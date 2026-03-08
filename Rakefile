@@ -2,11 +2,18 @@
 
 require "bundler/gem_tasks"
 require "rake/testtask"
+require "rake/extensiontask"
+
+Rake::ExtensionTask.new("ruvim_ext") do |ext|
+  ext.lib_dir = "lib/ruvim"
+  ext.ext_dir = "ext/ruvim"
+end
 
 Rake::TestTask.new(:test) do |t|
   t.libs << "lib" << "test"
   t.test_files = FileList["test/*_test.rb"]
 end
+task test: :compile
 
 namespace :docs do
   task :check do
