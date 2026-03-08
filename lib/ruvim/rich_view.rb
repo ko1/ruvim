@@ -28,8 +28,11 @@ module RuVim
     # Detect format from filetype or buffer content.
     # Returns a filetype symbol (:tsv, :csv, :markdown) or nil.
     def detect_format(buffer)
-      ft = buffer.options["filetype"].to_s.to_sym
-      return ft if @renderers.key?(ft)
+      raw = buffer.options["filetype"]
+      if raw && !raw.to_s.empty?
+        ft = raw.to_sym
+        return ft if @renderers.key?(ft)
+      end
 
       # Ask registered detectors
       @detectors.each do |entry|
