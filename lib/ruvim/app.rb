@@ -56,14 +56,13 @@ module RuVim
       )
 
       @editor.restricted_mode = @restricted_mode
-      @editor.stdin_stream_stop_handler = method(:stdin_stream_stop_command)
+      @editor.stream_stop_handler = method(:stream_stop_command)
       @editor.open_path_handler = @stream_handler.method(:open_path_with_large_file_support)
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
       @editor.git_stream_handler = @stream_handler.method(:start_git_stream_command)
       @editor.git_stream_stop_handler = @stream_handler.method(:stop_git_stream!)
       @editor.run_stream_handler = @stream_handler.method(:start_run_stream_command)
-      @editor.run_stream_stop_handler = @stream_handler.method(:stop_run_stream!)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)
         @screen.invalidate_cache!
@@ -169,9 +168,16 @@ module RuVim
       @needs_redraw = true if @key_handler.handle_idle_timeout
     end
 
-    def stdin_stream_stop_command
+    def stream_stop_command
+      # Try run stream first (if on [Shell Output] buffer)
+      if @editor.current_buffer&.kind == :run_output
+        return if @stream_handler.stop_run_stream!
+      end
+
+      # Try stdin stream
       return if @stream_handler.stop_stdin_stream!
 
+      # Fallback: normal Ctrl-C behavior
       @key_handler.handle_normal_ctrl_c
     end
 

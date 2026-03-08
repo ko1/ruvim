@@ -72,7 +72,7 @@ module RuVim
     ].freeze
 
     attr_reader :buffers, :windows, :layout_tree
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler, :run_stream_stop_handler
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler
 
     def initialize
       @buffers = {}
@@ -94,7 +94,7 @@ module RuVim
       @restricted_mode = false
       @current_window_view_height_hint = 1
       @running = true
-      @stdin_stream_stop_handler = nil
+      @stream_stop_handler = nil
       @open_path_handler = nil
       @keymap_manager = nil
       @app_action_handler = nil
@@ -192,18 +192,9 @@ module RuVim
     end
 
     def stream_stop_or_cancel!
-      # Stop run stream if current buffer is [Shell Output]
-      if current_buffer&.kind == :run_output && @run_stream_stop_handler
-        return @run_stream_stop_handler.call
-      end
+      return false unless @stream_stop_handler
 
-      # Stop stdin stream
-      if @stdin_stream_stop_handler
-        @stdin_stream_stop_handler.call
-        return true
-      end
-
-      false
+      @stream_stop_handler.call
     end
 
     def invoke_app_action(name, **kwargs)

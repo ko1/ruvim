@@ -130,16 +130,12 @@ class RunCommandTest < Minitest::Test
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf
 
-    # Simulate that we're on the output buffer and stream is active
-    # In test mode (no stream handler wired), stream_state is already :closed
-    # So we test the wiring: Ctrl-C on run_output buffer calls run_stream_stop_handler
+    # Verify stream_stop_handler is called on Ctrl-C
     stop_called = false
-    @editor.run_stream_stop_handler = -> { stop_called = true; true }
-    output_buf.stream_state = :live
-    output_buf.instance_variable_set(:@kind, :run_output)
+    @editor.stream_stop_handler = -> { stop_called = true }
 
     @editor.stream_stop_or_cancel!
-    assert stop_called, "Expected run_stream_stop_handler to be called"
+    assert stop_called, "Expected stream_stop_handler to be called"
   end
 
   # --- status line shows run command ---
