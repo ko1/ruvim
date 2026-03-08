@@ -82,8 +82,8 @@ module RuVim
                 queue << { type: :stream_data, buffer_id: buffer_id, data: text }
                 notify_signal_wakeup
               end
-            rescue EOFError
-              # expected
+            rescue EOFError, Errno::EIO
+              # expected: PTY raises EIO when child process exits
             end
             _status = Process.waitpid2(pid)[1] rescue nil
             buf.stream_io = nil
