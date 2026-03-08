@@ -54,7 +54,8 @@ module RuVim
       "filetype" => { default_scope: :buffer, type: :string, default: nil },
       "onsavehook" => { default_scope: :buffer, type: :bool, default: true },
       "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
-      "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" }
+      "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
+      "runprg" => { default_scope: :buffer, type: :string, default: nil }
     }.freeze
     SHEBANG_FILETYPE_RULES = [
       [/\Aruby(?:\d+(?:\.\d+)*)?\z/, "ruby"],
@@ -71,7 +72,7 @@ module RuVim
     ].freeze
 
     attr_reader :buffers, :windows, :layout_tree
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :stdin_stream_stop_handler, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler, :run_stream_stop_handler
 
     def initialize
       @buffers = {}
@@ -117,6 +118,8 @@ module RuVim
       @arglist = []
       @arglist_index = 0
       @hit_enter_lines = nil
+      @run_history = {}  # buffer_id => last run command (unexpanded)
+      @run_output_buffer_id = nil
     end
 
     def running?
@@ -129,6 +132,18 @@ module RuVim
 
     def request_quit!
       @running = false
+    end
+
+    def run_history
+      @run_history
+    end
+
+    def run_output_buffer_id
+      @run_output_buffer_id
+    end
+
+    def run_output_buffer_id=(id)
+      @run_output_buffer_id = id
     end
 
     def command_line
@@ -177,6 +192,11 @@ module RuVim
     end
 
     def stdin_stream_stop_or_cancel!
+      # If current buffer is [Shell Output] and run stream is active, stop it
+      if current_buffer&.kind == :run_output && @run_stream_stop_handler
+        return @run_stream_stop_handler.call
+      end
+
       handler = @stdin_stream_stop_handler
       return false unless handler
 
@@ -1169,6 +1189,27 @@ module RuVim
     def assign_filetype(buffer, ft)
       buffer.options["filetype"] = ft
       buffer.lang_module = resolve_lang_module(ft)
+      apply_filetype_defaults(buffer, ft)
+    end
+
+    def apply_filetype_defaults(buffer, ft)
+      unless buffer.options.key?("runprg")
+        runprg = filetype_default_runprg(ft)
+        buffer.options["runprg"] = runprg if runprg
+      end
+    end
+
+    FILETYPE_RUNPRG = {
+      "ruby" => "ruby -w %",
+      "python" => "python3 %",
+      "c" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out",
+      "cpp" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out",
+      "scheme" => "gosh %",
+      "javascript" => "node %"
+    }.freeze
+
+    def filetype_default_runprg(ft)
+      FILETYPE_RUNPRG[ft]
     end
 
     private

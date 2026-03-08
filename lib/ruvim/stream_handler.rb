@@ -154,6 +154,12 @@ module RuVim
             changed = finish_git_stream!(event[:buffer_id]) || changed
           when :git_cmd_error
             changed = fail_git_stream!(event[:buffer_id], event[:error]) || changed
+          when :run_cmd_data
+            changed = apply_run_stream_chunk!(event[:buffer_id], event[:data]) || changed
+          when :run_cmd_eof
+            changed = finish_run_stream!(event[:buffer_id], event[:status]) || changed
+          when :run_cmd_error
+            changed = fail_run_stream!(event[:buffer_id], event[:error]) || changed
           end
         end
       rescue ThreadError
@@ -227,6 +233,59 @@ module RuVim
         return @editor.open_path_sync(path) unless can_start_async_file_load?
 
         open_path_asynchronously!(path)
+      end
+
+      def start_run_stream_command(buffer_id, command)
+        ensure_event_queue!
+        shell = ENV["SHELL"].to_s
+        shell = "/bin/sh" if shell.empty?
+        queue = @stream_event_queue
+        @run_stream_thread = Thread.new do
+          IO.popen([shell, "-c", command], err: [:child, :out]) do |io|
+            @run_stream_io = io
+            while (chunk = io.read(4096))
+              queue << { type: :run_cmd_data, buffer_id: buffer_id, data: Buffer.decode_text(chunk) }
+              notify_signal_wakeup
+            end
+          end
+          @run_stream_io = nil
+          queue << { type: :run_cmd_eof, buffer_id: buffer_id, status: $? }
+          notify_signal_wakeup
+        rescue StandardError => e
+          @run_stream_io = nil
+          queue << { type: :run_cmd_error, buffer_id: buffer_id, error: e.message.to_s }
+          notify_signal_wakeup
+        end
+      end
+
+      def stop_run_stream!
+        io = @run_stream_io
+        @run_stream_io = nil
+        if io
+          begin
+            io.close unless io.closed?
+          rescue IOError
+            nil
+          end
+        end
+        thread = @run_stream_thread
+        @run_stream_thread = nil
+        if thread&.alive?
+          thread.kill
+          thread.join(0.05)
+        end
+        buf_id = @editor.run_output_buffer_id
+        buf = @editor.buffers[buf_id] if buf_id
+        if buf && buf.stream_state == :live
+          buf.stream_state = :closed
+          @editor.echo("[Shell Output] stopped")
+          return true
+        end
+        false
+      end
+
+      def run_stream_active?
+        @run_stream_thread&.alive? || false
       end
 
       def start_git_stream_command(buffer_id, cmd, root)
@@ -364,6 +423,53 @@ module RuVim
           move_window_to_stream_end!(win, buf) if win
         end
 
+        true
+      end
+
+      def apply_run_stream_chunk!(buffer_id, text)
+        return false if text.to_s.empty?
+
+        buf = @editor.buffers[buffer_id]
+        return false unless buf
+
+        following_win_ids = @editor.windows.values.filter_map do |win|
+          next unless win.buffer_id == buf.id
+          next unless stream_window_following_end?(win, buf)
+          win.id
+        end
+
+        buf.append_stream_text!(text)
+
+        following_win_ids.each do |win_id|
+          win = @editor.windows[win_id]
+          move_window_to_stream_end!(win, buf) if win
+        end
+
+        true
+      end
+
+      def finish_run_stream!(buffer_id, status)
+        @run_stream_thread = nil
+        @run_stream_io = nil
+        buf = @editor.buffers[buffer_id]
+        return false unless buf
+
+        # Remove trailing empty line if present
+        if buf.lines.length > 1 && buf.lines[-1] == ""
+          buf.lines.pop
+        end
+        buf.stream_state = :closed
+        exitstatus = status&.exitstatus
+        @editor.echo("[Shell Output] exit #{exitstatus}")
+        true
+      end
+
+      def fail_run_stream!(buffer_id, error)
+        @run_stream_thread = nil
+        @run_stream_io = nil
+        buf = @editor.buffers[buffer_id]
+        @editor.echo_error("[Shell Output] error: #{error}") if buf
+        buf&.stream_state = :closed if buf
         true
       end
 

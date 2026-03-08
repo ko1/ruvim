@@ -1158,6 +1158,71 @@ module RuVim
       $stderr = (defined?(original_g_stderr) && original_g_stderr) ? original_g_stderr : STDERR
     end
 
+    def ex_run(ctx, argv:, **)
+      editor = ctx.editor
+      source_buffer = ctx.buffer
+
+      if argv.empty?
+        # No args: use last command for this buffer, or runprg
+        command = editor.run_history[source_buffer.id]
+        if command.nil?
+          runprg = editor.get_option("runprg", buffer: source_buffer)
+          raise RuVim::CommandError, "No runprg set and no previous :run command" unless runprg
+          command = runprg
+        end
+      else
+        command = argv.join(" ")
+      end
+
+      expanded = expand_run_command(command, source_buffer)
+      editor.run_history[source_buffer.id] = command
+
+      # Find or create [Shell Output] buffer
+      output_buf = if editor.run_output_buffer_id
+                     editor.buffers[editor.run_output_buffer_id]
+                   end
+
+      if output_buf
+        # Reuse: clear content
+        output_buf.replace_all_lines!([""])
+        output_buf.stream_state = :live
+      else
+        output_buf = editor.add_virtual_buffer(
+          kind: :run_output,
+          name: "[Shell Output]",
+          lines: [""],
+          readonly: true,
+          modifiable: false
+        )
+        editor.run_output_buffer_id = output_buf.id
+      end
+
+      editor.switch_to_buffer(output_buf.id)
+      editor.echo(":run #{expanded}")
+
+      # Start streaming
+      handler = editor.run_stream_handler
+      if handler
+        handler.call(output_buf.id, expanded)
+      else
+        # Fallback for tests without stream handler: synchronous execution
+        shell = ENV["SHELL"].to_s
+        shell = "/bin/sh" if shell.empty?
+        output, _status = Open3.capture2e(shell, "-c", expanded)
+        output_buf.replace_all_lines!(output.lines(chomp: true))
+        output_buf.stream_state = :closed
+      end
+    end
+
+    def expand_run_command(command, buffer)
+      return command unless command.include?("%")
+
+      path = buffer.path
+      raise RuVim::CommandError, "No file name (use % in :run requires a file)" unless path
+
+      command.gsub("%", path)
+    end
+
     def ex_shell(ctx, command:, **)
       raise RuVim::CommandError, "Restricted mode: :! is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 

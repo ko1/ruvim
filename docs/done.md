@@ -47,6 +47,7 @@
 - `docs/plugin.md`（拡張 / plugin 的な書き方）
 - block-based keymap DSL（`nmap/imap/map_global ... do |ctx, ...| end`）
 - plugin 向け `ctx.editor / ctx.buffer / ctx.window` API リファレンス（未確定 API 注記つき）
+- `:run` コマンド（シェル実行＋結果バッファ、ストリーム表示、`runprg` オプション、バッファごと実行履歴、`%` ファイル名展開）
 
 ## Rich mode / 構造化データ表示
 

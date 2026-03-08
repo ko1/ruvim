@@ -236,6 +236,26 @@
 - 完了後は `shell exit N` をステータス表示
 - `-Z`（restricted mode）では無効
 
+### `:run`（コマンド実行＋結果バッファ）
+
+- 形式: `:run [command]`
+- シェルコマンドを実行し、出力を `[Shell Output]` バッファにストリーム表示
+- `[Shell Output]` バッファは read-only で、最大1つ（再利用される）
+- stdout / stderr はマージされて表示
+- コマンド中の `%` は現在のファイル名に展開される
+- 引数なしの場合:
+  - そのバッファで直前に実行したコマンドがあればそれを再実行
+  - なければ `runprg` オプションの値を使用
+- バッファごとに実行履歴（直前のコマンド）を保持
+- 実行中のコマンドはステータスラインに表示
+- `runprg` オプション: ファイルタイプごとのデフォルト実行コマンド
+  - Ruby: `ruby -w %`
+  - Python: `python3 %`
+  - C: `gcc -Wall -o /tmp/a.out % && /tmp/a.out`
+  - C++: `g++ -Wall -o /tmp/a.out % && /tmp/a.out`
+  - Scheme: `gosh %`
+  - JavaScript: `node %`
+
 ### `:ls` / `:buffers`
 
 - 形式: `:ls`
