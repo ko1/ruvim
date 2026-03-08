@@ -29,5 +29,8 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("make", mod: Makefile,
+      basenames: %w[Makefile GNUmakefile makefile Justfile])
   end
 end

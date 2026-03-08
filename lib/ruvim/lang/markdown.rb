@@ -162,5 +162,8 @@ module RuVim
         text.length.times { |i| cols[i] = color }
       end
     end
+
+    Registry.register("markdown", mod: Markdown,
+      extensions: %w[.md])
   end
 end

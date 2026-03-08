@@ -55,5 +55,8 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("yaml", mod: Yaml,
+      extensions: %w[.yml .yaml])
   end
 end

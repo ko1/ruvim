@@ -87,5 +87,9 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("rust", mod: Rust,
+      extensions: %w[.rs],
+      runprg: "rustc -o /tmp/a.out % && /tmp/a.out")
   end
 end

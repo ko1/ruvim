@@ -2,6 +2,9 @@
 
 module RuVim
   module Lang
+    Registry.register("csv", mod: Base,
+      extensions: %w[.csv])
+
     module Csv
       module_function
 

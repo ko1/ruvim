@@ -40,5 +40,10 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("scheme", mod: Scheme,
+      extensions: %w[.scm .ss .sld],
+      shebangs: %w[gosh],
+      runprg: "gosh %")
   end
 end

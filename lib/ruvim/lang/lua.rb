@@ -67,5 +67,10 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("lua", mod: Lua,
+      extensions: %w[.lua],
+      shebangs: ["lua", /\Alua\d*\z/],
+      runprg: "lua %")
   end
 end

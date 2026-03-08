@@ -68,5 +68,10 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("ocaml", mod: Ocaml,
+      extensions: %w[.ml .mli],
+      shebangs: %w[ocaml],
+      runprg: "ocaml %")
   end
 end

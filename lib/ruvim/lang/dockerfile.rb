@@ -28,5 +28,9 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("dockerfile", mod: Dockerfile,
+      basenames: %w[Dockerfile],
+      basename_prefix: "Dockerfile")
   end
 end

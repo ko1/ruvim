@@ -29,5 +29,8 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("toml", mod: Toml,
+      extensions: %w[.toml])
   end
 end

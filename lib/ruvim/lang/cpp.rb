@@ -99,5 +99,9 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("cpp", mod: Cpp,
+      extensions: %w[.cpp .cc .cxx .hpp],
+      runprg: "g++ -Wall -o /tmp/a.out % && /tmp/a.out")
   end
 end

@@ -15,53 +15,9 @@ module RuVim
       ft = filetype.to_s
       return {} if line.empty?
 
-      case ft
-      when "ruby"
-        Lang::Ruby.color_columns(line)
-      when "json", "jsonl"
-        Lang::Json.color_columns(line)
-      when "markdown"
-        Lang::Markdown.color_columns(line)
-      when "scheme"
-        Lang::Scheme.color_columns(line)
-      when "diff"
-        Lang::Diff.color_columns(line)
-      when "c"
-        Lang::C.color_columns(line)
-      when "cpp"
-        Lang::Cpp.color_columns(line)
-      when "yaml"
-        Lang::Yaml.color_columns(line)
-      when "sh"
-        Lang::Sh.color_columns(line)
-      when "python"
-        Lang::Python.color_columns(line)
-      when "javascript", "javascriptreact"
-        Lang::Javascript.color_columns(line)
-      when "typescript", "typescriptreact"
-        Lang::Typescript.color_columns(line)
-      when "html"
-        Lang::Html.color_columns(line)
-      when "toml"
-        Lang::Toml.color_columns(line)
-      when "go"
-        Lang::Go.color_columns(line)
-      when "rust"
-        Lang::Rust.color_columns(line)
-      when "make"
-        Lang::Makefile.color_columns(line)
-      when "dockerfile"
-        Lang::Dockerfile.color_columns(line)
-      when "sql"
-        Lang::Sql.color_columns(line)
-      when "elixir"
-        Lang::Elixir.color_columns(line)
-      when "perl"
-        Lang::Perl.color_columns(line)
-      when "lua"
-        Lang::Lua.color_columns(line)
-      when "ocaml"
-        Lang::Ocaml.color_columns(line)
+      entry = Lang::Registry[ft]
+      if entry && entry[:mod].respond_to?(:color_columns)
+        entry[:mod].color_columns(line)
       else
         {}
       end

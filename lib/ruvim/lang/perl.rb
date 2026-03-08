@@ -82,5 +82,10 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("perl", mod: Perl,
+      extensions: %w[.pl .pm .t],
+      shebangs: [/\Aperl(?:\d+(?:\.\d+)*)?\z/],
+      runprg: "perl %")
   end
 end

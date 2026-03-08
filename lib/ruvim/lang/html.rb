@@ -27,5 +27,8 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("html", mod: Html,
+      extensions: %w[.html .htm .xml])
   end
 end

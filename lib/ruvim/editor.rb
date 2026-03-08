@@ -57,25 +57,6 @@ module RuVim
       "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
       "runprg" => { default_scope: :buffer, type: :string, default: nil }
     }.freeze
-    SHEBANG_FILETYPE_RULES = [
-      [/\Aruby(?:\d+(?:\.\d+)*)?\z/, "ruby"],
-      [/\Apython(?:\d+(?:\.\d+)*)?\z/, "python"],
-      ["node", "javascript"],
-      ["nodejs", "javascript"],
-      ["deno", "javascript"],
-      ["bash", "sh"],
-      ["sh", "sh"],
-      ["zsh", "sh"],
-      ["ksh", "sh"],
-      ["dash", "sh"],
-      [/\Aperl(?:\d+(?:\.\d+)*)?\z/, "perl"],
-      ["lua", "lua"],
-      [/\Alua\d*\z/, "lua"],
-      ["elixir", "elixir"],
-      ["iex", "elixir"],
-      ["ocaml", "ocaml"],
-      ["gosh", "scheme"]
-    ].freeze
 
     attr_reader :buffers, :windows, :layout_tree
     attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler
@@ -281,71 +262,14 @@ module RuVim
       return nil if p.empty?
 
       base = File.basename(p)
-      return "ruby" if %w[Gemfile Rakefile Guardfile].include?(base)
 
-      ext_ft = {
-        ".rb" => "ruby",
-        ".rake" => "ruby",
-        ".ru" => "ruby",
-        ".py" => "python",
-        ".js" => "javascript",
-        ".mjs" => "javascript",
-        ".cjs" => "javascript",
-        ".ts" => "typescript",
-        ".tsx" => "typescriptreact",
-        ".jsx" => "javascriptreact",
-        ".json" => "json",
-        ".jsonl" => "jsonl",
-        ".yml" => "yaml",
-        ".yaml" => "yaml",
-        ".md" => "markdown",
-        ".txt" => "text",
-        ".html" => "html",
-        ".css" => "css",
-        ".sh" => "sh",
-        ".tsv" => "tsv",
-        ".csv" => "csv",
-        ".scm" => "scheme",
-        ".ss" => "scheme",
-        ".sld" => "scheme",
-        ".c" => "c",
-        ".h" => "c",
-        ".cpp" => "cpp",
-        ".cc" => "cpp",
-        ".cxx" => "cpp",
-        ".hpp" => "cpp",
-        ".go" => "go",
-        ".rs" => "rust",
-        ".toml" => "toml",
-        ".lua" => "lua",
-        ".pl" => "perl",
-        ".pm" => "perl",
-        ".t" => "perl",
-        ".ex" => "elixir",
-        ".exs" => "elixir",
-        ".erl" => "erlang",
-        ".sql" => "sql",
-        ".ml" => "ocaml",
-        ".mli" => "ocaml",
-        ".htm" => "html",
-        ".xml" => "html",
-        ".bash" => "sh",
-        ".zsh" => "sh"
-      }[File.extname(base).downcase]
-      return ext_ft if ext_ft
-
-      # Basename-based detection (no extension)
-      base_ft = {
-        "Makefile" => "make",
-        "GNUmakefile" => "make",
-        "makefile" => "make",
-        "Dockerfile" => "dockerfile",
-        "Justfile" => "make",
-        "Vagrantfile" => "ruby"
-      }[base]
+      # Basename-based detection (exact match, then prefix)
+      base_ft = Lang::Registry.detect_by_basename(base)
       return base_ft if base_ft
 
-      return "dockerfile" if base.start_with?("Dockerfile")
+      # Extension-based detection
+      ext_ft = Lang::Registry.detect_by_extension(File.extname(base))
+      return ext_ft if ext_ft
 
       detect_filetype_from_shebang(p)
     end
@@ -1228,49 +1152,14 @@ module RuVim
       end
     end
 
-    FILETYPE_RUNPRG = {
-      "ruby" => "ruby -w %",
-      "python" => "python3 %",
-      "c" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out",
-      "cpp" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out",
-      "scheme" => "gosh %",
-      "javascript" => "node %",
-      "typescript" => "npx tsx %",
-      "go" => "go run %",
-      "rust" => "rustc -o /tmp/a.out % && /tmp/a.out",
-      "lua" => "lua %",
-      "perl" => "perl %",
-      "elixir" => "elixir %",
-      "ocaml" => "ocaml %",
-      "sh" => "bash %"
-    }.freeze
-
     def filetype_default_runprg(ft)
-      FILETYPE_RUNPRG[ft]
+      Lang::Registry.runprg_for(ft)
     end
 
     private
 
     def resolve_lang_module(ft)
-      case ft
-      when "ruby" then Lang::Ruby
-      when "c" then Lang::C
-      when "cpp" then Lang::Cpp
-      when "python" then Lang::Python
-      when "javascript", "javascriptreact" then Lang::Javascript
-      when "typescript", "typescriptreact" then Lang::Typescript
-      when "go" then Lang::Go
-      when "rust" then Lang::Rust
-      when "sh" then Lang::Sh
-      when "yaml" then Lang::Yaml
-      when "json", "jsonl" then Lang::Json
-      when "lua" then Lang::Lua
-      when "perl" then Lang::Perl
-      when "elixir" then Lang::Elixir
-      when "ocaml" then Lang::Ocaml
-      when "scheme" then Lang::Scheme
-      else Lang::Base
-      end
+      Lang::Registry.resolve_module(ft)
     end
 
     def detect_filetype_from_shebang(path)
@@ -1280,10 +1169,7 @@ module RuVim
       cmd = shebang_command_name(line)
       return nil if cmd.nil? || cmd.empty?
 
-      rule = SHEBANG_FILETYPE_RULES.find do |matcher, _filetype|
-        matcher.is_a?(Regexp) ? matcher.match?(cmd) : matcher.to_s == cmd
-      end
-      rule && rule[1]
+      Lang::Registry.detect_by_shebang(cmd)
     rescue StandardError
       nil
     end

@@ -108,5 +108,9 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("c", mod: C,
+      extensions: %w[.c .h],
+      runprg: "gcc -Wall -o /tmp/a.out % && /tmp/a.out")
   end
 end

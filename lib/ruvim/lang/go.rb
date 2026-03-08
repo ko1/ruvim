@@ -75,5 +75,9 @@ module RuVim
         cols
       end
     end
+
+    Registry.register("go", mod: Go,
+      extensions: %w[.go],
+      runprg: "go run %")
   end
 end

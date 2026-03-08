@@ -2,6 +2,9 @@
 
 module RuVim
   module Lang
+    Registry.register("tsv", mod: Base,
+      extensions: %w[.tsv])
+
     module Tsv
       module_function
 
