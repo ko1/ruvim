@@ -28,6 +28,8 @@ module RuVim
         Lang::Diff.color_columns(line)
       when "c"
         Lang::C.color_columns(line)
+      when "cpp"
+        Lang::Cpp.color_columns(line)
       else
         {}
       end

@@ -259,4 +259,48 @@ class HighlighterTest < Minitest::Test
     cols = RuVim::Highlighter.color_columns("c", "")
     assert_empty cols
   end
+
+  # --- C++ ---
+
+  def test_cpp_keyword_class
+    cols = RuVim::Highlighter.color_columns("cpp", "class Foo {")
+    assert_equal "\e[36m", cols[0]  # "class"
+    assert_equal "\e[36m", cols[4]
+  end
+
+  def test_cpp_keyword_namespace
+    cols = RuVim::Highlighter.color_columns("cpp", "namespace std {")
+    assert_equal "\e[36m", cols[0]  # "namespace"
+  end
+
+  def test_cpp_keyword_template
+    cols = RuVim::Highlighter.color_columns("cpp", "template <typename T>")
+    assert_equal "\e[36m", cols[0]  # "template"
+    assert_equal "\e[36m", cols[10] # "typename"
+  end
+
+  def test_cpp_keyword_nullptr
+    cols = RuVim::Highlighter.color_columns("cpp", "int* p = nullptr;")
+    assert_equal "\e[36m", cols[9]  # "nullptr"
+  end
+
+  def test_cpp_keyword_auto
+    cols = RuVim::Highlighter.color_columns("cpp", "auto x = 42;")
+    assert_equal "\e[36m", cols[0]  # "auto"
+  end
+
+  def test_cpp_inherits_c_string
+    cols = RuVim::Highlighter.color_columns("cpp", 'std::cout << "hello";')
+    assert_equal "\e[32m", cols[13] # opening quote
+  end
+
+  def test_cpp_inherits_c_comment
+    cols = RuVim::Highlighter.color_columns("cpp", "x = 1; // comment")
+    assert_equal "\e[90m", cols[7]  # "//"
+  end
+
+  def test_cpp_empty_line
+    cols = RuVim::Highlighter.color_columns("cpp", "")
+    assert_empty cols
+  end
 end

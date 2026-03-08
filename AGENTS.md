@@ -55,7 +55,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex; auto-indent |
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
-| `lang/c.rb` | C/C++ syntax highlighting, smart indent, on_save gcc check |
+| `lang/c.rb` | C syntax highlighting, smart indent, on_save gcc check |
+| `lang/cpp.rb` | C++ syntax highlighting (extends C), access specifier indent, on_save g++ check |
 | `lang/diff.rb` | Diff syntax highlighting (add/delete/hunk/header colors) |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |

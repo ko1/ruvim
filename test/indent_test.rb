@@ -366,3 +366,59 @@ class CIndentTest < Minitest::Test
     assert_nil RuVim::Lang::C.dedent_trigger("a")
   end
 end
+
+class CppIndentTest < Minitest::Test
+  def calc(lines, target_row, sw = 2)
+    RuVim::Lang::Cpp.calculate_indent(lines, target_row, sw)
+  end
+
+  def test_class_body
+    lines = [
+      "class Foo {",
+      "  int x;",
+      "};"
+    ]
+    assert_equal 2, calc(lines, 1)
+    assert_equal 0, calc(lines, 2)
+  end
+
+  def test_namespace_body
+    lines = [
+      "namespace ns {",
+      "  class Bar {",
+      "    void f();",
+      "  };",
+      "}"
+    ]
+    assert_equal 2, calc(lines, 1)
+    assert_equal 4, calc(lines, 2)
+    assert_equal 2, calc(lines, 3)
+    assert_equal 0, calc(lines, 4)
+  end
+
+  def test_access_specifier_dedent
+    lines = [
+      "class Foo {",
+      "public:",
+      "  int x;",
+      "private:",
+      "  int y;",
+      "};"
+    ]
+    assert_equal 0, calc(lines, 1)  # public:
+    assert_equal 2, calc(lines, 2)  # int x
+    assert_equal 0, calc(lines, 3)  # private:
+    assert_equal 2, calc(lines, 4)  # int y
+    assert_equal 0, calc(lines, 5)  # };
+  end
+
+  def test_indent_trigger
+    assert RuVim::Lang::Cpp.indent_trigger?("class Foo {")
+    assert RuVim::Lang::Cpp.indent_trigger?("namespace ns {")
+  end
+
+  def test_dedent_trigger
+    assert_kind_of Regexp, RuVim::Lang::Cpp.dedent_trigger("}")
+    assert_nil RuVim::Lang::Cpp.dedent_trigger("x")
+  end
+end

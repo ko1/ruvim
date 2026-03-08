@@ -291,10 +291,10 @@ module RuVim
         ".sld" => "scheme",
         ".c" => "c",
         ".h" => "c",
-        ".cpp" => "c",
-        ".cc" => "c",
-        ".cxx" => "c",
-        ".hpp" => "c"
+        ".cpp" => "cpp",
+        ".cc" => "cpp",
+        ".cxx" => "cpp",
+        ".hpp" => "cpp"
       }[File.extname(base).downcase]
       return ext_ft if ext_ft
 
@@ -1177,6 +1177,7 @@ module RuVim
       case ft
       when "ruby" then Lang::Ruby
       when "c" then Lang::C
+      when "cpp" then Lang::Cpp
       else Lang::Base
       end
     end
