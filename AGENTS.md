@@ -104,6 +104,22 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `rich_view/json_renderer.rb` | JSON pretty-print into virtual buffer |
 | `rich_view/jsonl_renderer.rb` | JSONL per-line pretty-print into virtual buffer |
 
+### C Extension (ext/ruvim/)
+
+| File | Description |
+|------|-------------|
+| `extconf.rb` | Build configuration for C extension |
+| `ruvim_ext.c` | C implementation of DisplayWidth and TextMetrics hot paths |
+
+### Benchmarks (benchmark/)
+
+| File | Description |
+|------|-------------|
+| `hotspots.rb` | Profile individual function hotspots (pure Ruby) |
+| `cext_compare.rb` | Compare Ruby vs C extension performance |
+| `chunked_load.rb` | Compare file loading strategies |
+| `file_load.rb` | Profile large file loading bottlenecks |
+
 ### Tests (test/)
 
 - Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`
