@@ -184,6 +184,31 @@ class RunCommandTest < Minitest::Test
     output_buf&.stream_stop_handler&.call rescue nil
   end
 
+  # --- stream_status shows correct label ---
+
+  def test_run_output_buffer_stream_status_shows_running
+    feed(*":run sleep 10".chars, :enter)
+    output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
+    assert_equal "running", output_buf.stream_status
+  ensure
+    output_buf&.stream_stop_handler&.call rescue nil
+  end
+
+  def test_run_output_buffer_stream_status_shows_closed
+    feed(*":run echo done".chars, :enter)
+    output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
+    sh = @app.instance_variable_get(:@stream_handler)
+    # Wait for completion
+    deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
+    loop do
+      sh.drain_events!
+      break if output_buf.stream_state == :closed
+      flunk "Timed out" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+      sleep 0.02
+    end
+    assert_equal "closed", output_buf.stream_status
+  end
+
   def test_run_shows_command_in_message
     feed(*":run echo hello".chars, :enter)
     # The echo message should contain the command

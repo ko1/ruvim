@@ -12,12 +12,13 @@ module RuVim
     def stream_status
       return nil unless @stream_state
 
-      if @kind == :stream
+      case @kind
+      when :stream
         "stdin/#{@stream_state}"
-      elsif @follow_backend == :inotify
-        "follow/i"
+      when :run_output
+        @stream_state == :live ? "running" : @stream_state.to_s
       else
-        "follow"
+        @follow_backend == :inotify ? "follow/i" : "follow"
       end
     end
     attr_accessor :lang_module
