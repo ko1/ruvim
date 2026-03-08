@@ -6,19 +6,31 @@ module RuVim
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
-    attr_accessor :stream_state, :loading_state, :follow_backend, :stream_stop_handler,
+    attr_accessor :stream_state, :stream_exit_status, :loading_state, :follow_backend, :stream_stop_handler,
                   :stream_thread, :stream_io, :stream_pid, :stream_watcher
 
     def stream_status
       return nil unless @stream_state
 
-      case @kind
-      when :stream
-        "stdin/#{@stream_state}"
-      when :run_output
-        @stream_state == :live ? "running" : @stream_state.to_s
-      else
-        @follow_backend == :inotify ? "follow/i" : "follow"
+      source = case @kind
+               when :stream then "stdin"
+               when :run_output then "run"
+               else @follow_backend == :inotify ? "follow/i" : "follow"
+               end
+
+      case @stream_state
+      when :live
+        source
+      when :closed
+        suffix = case @kind
+                 when :stream then "EOF"
+                 when :run_output
+                   code = @stream_exit_status&.exitstatus
+                   code ? "exit #{code}" : "EOF"
+                 end
+        suffix ? "#{source}/#{suffix}" : nil
+      when :error
+        "#{source}/error"
       end
     end
     attr_accessor :lang_module

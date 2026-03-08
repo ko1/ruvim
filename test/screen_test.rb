@@ -111,7 +111,7 @@ class ScreenTest < Minitest::Test
     screen = RuVim::Screen.new(terminal: term)
     line = screen.send(:status_line, editor, 60)
 
-    assert_includes line, "[stdin/closed]"
+    assert_includes line, "[stdin/EOF]"
   end
 
   def test_render_uses_dim_and_brighter_line_number_gutter_colors

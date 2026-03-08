@@ -321,6 +321,7 @@ module RuVim
           buf.lines.pop
         end
         buf.stream_state = :closed
+        buf.stream_exit_status = status
 
         if status
           @editor.echo("#{buf.display_name} exit #{status.exitstatus}")
