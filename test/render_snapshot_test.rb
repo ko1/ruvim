@@ -108,14 +108,14 @@ class RenderSanitizeTest < Minitest::Test
 
   def test_rich_view_sanitizes_escape_sequences_in_tsv
     lines = ["col1\tcol2", "val1\t\x1b]52;c;dGVzdA==\x07evil"]
-    snapshot = build_raw_frame(lines: lines, winsize: [6, 40], rich_format: :tsv)
+    snapshot = build_raw_frame(lines: lines, winsize: [6, 40], rich_format: "tsv")
     refute_includes snapshot, "\x1b]52"
     refute_includes snapshot, "\x07"
   end
 
   def test_rich_view_sanitizes_escape_sequences_in_markdown
     lines = ["# heading", "\x1b]52;c;dGVzdA==\x07evil text"]
-    snapshot = build_raw_frame(lines: lines, winsize: [6, 40], rich_format: :markdown)
+    snapshot = build_raw_frame(lines: lines, winsize: [6, 40], rich_format: "markdown")
     refute_includes snapshot, "\x1b]52"
     refute_includes snapshot, "\x07"
   end
