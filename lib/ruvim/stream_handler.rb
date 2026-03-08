@@ -26,6 +26,7 @@ module RuVim
         buf.replace_all_lines!([""])
         buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
         buf.modified = false
+        buf.ensure_stream!
         buf.stream.source = :stdin
         buf.stream.state = :live
         buf.stream.io = io
@@ -38,9 +39,9 @@ module RuVim
       end
 
       def start_stdin_stream_reader!(buf)
-        return unless buf.stream.io
+        return unless buf.stream&.io
         ensure_event_queue!
-        return if buf.stream.thread&.alive?
+        return if buf.stream&.thread&.alive?
 
         io = buf.stream.io
         buffer_id = buf.id
@@ -72,6 +73,7 @@ module RuVim
         shell = "/bin/sh" if shell.empty?
         buffer_id = buf.id
         queue = @stream_event_queue
+        buf.ensure_stream!
         buf.stream.source = :run
         buf.stream.stop_handler = -> { stop_buffer_stream!(buf) }
         buf.stream.thread = Thread.new do
@@ -104,6 +106,7 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return unless buf
 
+        buf.ensure_stream!
         queue = @stream_event_queue
         buf.stream.thread = Thread.new do
           IO.popen(cmd, chdir: root, err: [:child, :out]) do |io|
@@ -124,8 +127,7 @@ module RuVim
       end
 
       def stop_buffer_stream!(buf)
-        return false unless buf
-        return false unless buf.stream.state == :live
+        return false unless buf&.stream&.state == :live
 
         pid = buf.stream.pid
         buf.stream.pid = nil
@@ -157,7 +159,7 @@ module RuVim
 
       def stop_git_stream!(buffer_id)
         buf = @editor.buffers[buffer_id]
-        return unless buf
+        return unless buf&.stream
 
         io = buf.stream.io
         buf.stream.io = nil
@@ -207,7 +209,7 @@ module RuVim
         buf = @editor.current_buffer
         raise RuVim::CommandError, "No file associated with buffer" unless buf.path
 
-        if buf.stream.watcher
+        if buf.stream&.watcher
           stop_follow!(buf)
         else
           raise RuVim::CommandError, "Buffer has unsaved changes" if buf.modified?
@@ -242,6 +244,7 @@ module RuVim
           notify_signal_wakeup
         end
         watcher.start
+        buf.ensure_stream!
         buf.stream.watcher = watcher
         buf.stream.source = :follow
         buf.stream.state = :live
@@ -268,7 +271,7 @@ module RuVim
       end
 
       def follow_active?(buf)
-        !!buf.stream.watcher
+        !!buf.stream&.watcher
       end
 
       def open_path_with_large_file_support(path)
@@ -314,7 +317,7 @@ module RuVim
 
       def finish_stream!(buffer_id, status: nil)
         buf = @editor.buffers[buffer_id]
-        return false unless buf
+        return false unless buf&.stream
 
         buf.stream.thread = nil
         buf.stream.io = nil
@@ -338,7 +341,7 @@ module RuVim
 
       def fail_stream!(buffer_id, error)
         buf = @editor.buffers[buffer_id]
-        return false unless buf
+        return false unless buf&.stream
 
         # Ignore errors from intentionally closed streams
         if buf.stream.state == :closed
@@ -358,7 +361,7 @@ module RuVim
         return false unless buf
 
         # If follow mode is active, track windows at the end before appending
-        following_win_ids = if buf.stream.watcher
+        following_win_ids = if buf.stream&.watcher
           @editor.windows.values.filter_map do |win|
             next unless win.buffer_id == buffer_id
             next unless stream_window_following_end?(win, buf)
@@ -552,6 +555,7 @@ module RuVim
 
       def shutdown_buffer_streams!
         @editor.buffers.each_value do |buf|
+          next unless buf.stream
           thread = buf.stream.thread
           buf.stream.thread = nil
           io = buf.stream.io
@@ -571,7 +575,7 @@ module RuVim
 
       def shutdown_follow_watchers!
         @editor.buffers.each_value do |buf|
-          watcher = buf.stream.watcher
+          watcher = buf.stream&.watcher
           next unless watcher
           buf.stream.watcher = nil
           watcher.stop

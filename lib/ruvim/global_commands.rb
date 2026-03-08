@@ -1200,6 +1200,7 @@ module RuVim
         )
         editor.run_output_buffer_id = output_buf.id
       end
+      output_buf.ensure_stream!
       output_buf.stream.source = :run
       output_buf.stream.state = :live
       output_buf.stream.command = expanded

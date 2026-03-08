@@ -275,6 +275,7 @@ class RunCommandTest < Minitest::Test
 
   def test_stdin_stream_status_live
     buf = @editor.current_buffer
+    buf.ensure_stream!
     buf.stream.source = :stdin
     buf.stream.state = :live
     assert_equal "stdin", buf.stream_status
@@ -282,6 +283,7 @@ class RunCommandTest < Minitest::Test
 
   def test_stdin_stream_status_closed
     buf = @editor.current_buffer
+    buf.ensure_stream!
     buf.stream.source = :stdin
     buf.stream.state = :closed
     assert_equal "stdin/EOF", buf.stream_status

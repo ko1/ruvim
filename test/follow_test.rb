@@ -23,7 +23,7 @@ class FollowTest < Minitest::Test
     editor = @app&.instance_variable_get(:@editor)
     return unless editor
     editor.buffers.each_value do |buf|
-      w = buf.stream.watcher
+      w = buf.stream&.watcher
       next unless w
       w.stop rescue nil
       buf.stream.watcher = nil
@@ -106,7 +106,7 @@ class FollowTest < Minitest::Test
 
     @dispatcher.dispatch_ex(@editor, "follow")
     assert_includes @editor.message.to_s, "unsaved changes"
-    assert_nil buf.stream.state
+    assert_nil buf.stream
   ensure
     cleanup_follow_app
   end
