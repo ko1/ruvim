@@ -1203,7 +1203,7 @@ module RuVim
       # Start streaming
       handler = editor.run_stream_handler
       if handler
-        handler.call(output_buf.id, expanded)
+        handler.call(output_buf, expanded)
       else
         # Fallback for tests without stream handler: synchronous execution
         shell = ENV["SHELL"].to_s

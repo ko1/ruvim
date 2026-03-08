@@ -19,8 +19,9 @@ class GitBlameTest < Minitest::Test
   end
 
   def drain_git_stream!
-    threads = @stream_handler.instance_variable_get(:@git_stream_threads)
-    threads&.each_value(&:join)
+    @editor.buffers.each_value do |buf|
+      buf.stream_thread&.join
+    end
     @stream_handler.drain_events!
   end
 

@@ -375,15 +375,14 @@ class AppScenarioTest < Minitest::Test
   def test_normal_ctrl_c_stops_stdin_stream_via_default_binding
     stream = StringIO.new("hello\n")
     sh = @app.instance_variable_get(:@stream_handler)
-    sh.stdin_stream_source = stream
-    @app.instance_variable_get(:@stream_handler).prepare_stdin_stream_buffer!
+    sh.prepare_stdin_stream_buffer!(stream)
 
     @key_handler.handle(:ctrl_c)
 
     assert_equal :closed, @editor.current_buffer.stream_state
     assert_equal :normal, @editor.mode
     assert_equal true, stream.closed?
-    assert_match(/\[stdin\] closed/, @editor.message)
+    assert_match(/stopped/, @editor.message)
   end
 
   def test_ctrl_z_calls_terminal_suspend

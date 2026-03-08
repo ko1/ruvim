@@ -185,7 +185,7 @@ module RuVim
         @macro_record_pending = false
         @macro_play_pending = false
         buf = @editor.current_buffer
-        if buf && @stream_handler.follow_watchers[buf.id]
+        if buf && @stream_handler.follow_active?(buf)
           @stream_handler.stop_follow!(buf)
         else
           @editor.clear_message

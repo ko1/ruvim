@@ -69,7 +69,7 @@ module RuVim
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
       @editor.git_stream_handler = @stream_handler.method(:start_git_stream_command)
       @editor.git_stream_stop_handler = @stream_handler.method(:stop_git_stream!)
-      @editor.run_stream_handler = @stream_handler.method(:start_run_stream_command)
+      @editor.run_stream_handler = @stream_handler.method(:start_command_stream!)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)
         @screen.invalidate_cache!
@@ -94,8 +94,7 @@ module RuVim
 
       if @stdin_stream_mode && startup_paths.empty?
         verbose_log(1, "startup: stdin stream buffer")
-        @stream_handler.stdin_stream_source = stdin
-        @stream_handler.prepare_stdin_stream_buffer!
+        @stdin_stream_buf = @stream_handler.prepare_stdin_stream_buffer!(stdin)
       elsif startup_paths.empty?
         verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
@@ -111,7 +110,7 @@ module RuVim
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
-      @stream_handler.start_stdin_stream_reader! if @stream_handler.stream_buffer_id
+      @stream_handler.start_stdin_stream_reader!(@stdin_stream_buf) if @stdin_stream_buf
       write_startuptime_log!
       @startup = nil
     end
@@ -575,7 +574,7 @@ module RuVim
     def apply_startup_follow!
       buf = @editor.current_buffer
       return unless buf&.file_buffer?
-      return if @stream_handler.follow_watchers[buf.id]
+      return if @stream_handler.follow_active?(buf)
 
       win = @editor.current_window
       win.cursor_y = buf.line_count - 1

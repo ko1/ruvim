@@ -301,10 +301,10 @@ class AppStartupTest < Minitest::Test
     editor = app.instance_variable_get(:@editor)
 
     sh = app.instance_variable_get(:@stream_handler)
+    buf = editor.current_buffer
     20.times do
       sh.drain_events!
-      thread = sh.instance_variable_get(:@stream_reader_thread)
-      break unless thread&.alive?
+      break unless buf.stream_thread&.alive?
       sleep 0.005
     end
 
@@ -314,7 +314,7 @@ class AppStartupTest < Minitest::Test
     assert_equal true, buf.readonly?
     assert_equal false, buf.modifiable?
     assert_includes [:live, :closed], buf.stream_state
-    assert_equal ["line1", "line2", ""], buf.lines
+    assert_equal ["line1", "line2"], buf.lines
     assert_match(/\[stdin\] (follow|EOF)/, editor.message)
   ensure
     app&.instance_variable_get(:@stream_handler)&.shutdown!
