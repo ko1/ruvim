@@ -167,6 +167,23 @@ class RunCommandTest < Minitest::Test
 
   # --- status line shows run command ---
 
+  def test_ctrl_c_key_stops_running_stream
+    sh = @app.instance_variable_get(:@stream_handler)
+    feed(*":run sleep 10".chars, :enter)
+    output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
+    assert output_buf, "Expected [Shell Output] buffer"
+    assert_equal :live, output_buf.stream_state, "Buffer should be streaming"
+    assert output_buf.stream_stop_handler, "Buffer should have stop handler"
+
+    # Simulate Ctrl-C key press
+    feed(:ctrl_c)
+    sh.drain_events!
+
+    assert_equal :closed, output_buf.stream_state, "Stream should be stopped after Ctrl-C"
+  ensure
+    output_buf&.stream_stop_handler&.call rescue nil
+  end
+
   def test_run_shows_command_in_message
     feed(*":run echo hello".chars, :enter)
     # The echo message should contain the command

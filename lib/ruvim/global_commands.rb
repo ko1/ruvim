@@ -1185,7 +1185,6 @@ module RuVim
       if output_buf
         # Reuse: clear content
         output_buf.replace_all_lines!([""])
-        output_buf.stream_state = :live
       else
         output_buf = editor.add_virtual_buffer(
           kind: :run_output,
@@ -1196,6 +1195,7 @@ module RuVim
         )
         editor.run_output_buffer_id = output_buf.id
       end
+      output_buf.stream_state = :live
 
       editor.switch_to_buffer(output_buf.id)
       editor.echo(":run #{expanded}")
