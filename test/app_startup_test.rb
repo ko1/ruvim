@@ -304,7 +304,7 @@ class AppStartupTest < Minitest::Test
     buf = editor.current_buffer
     20.times do
       sh.drain_events!
-      break unless buf.stream_thread&.alive?
+      break unless buf.stream.thread&.alive?
       sleep 0.005
     end
 
@@ -313,7 +313,7 @@ class AppStartupTest < Minitest::Test
     assert_equal "[stdin]", buf.display_name
     assert_equal true, buf.readonly?
     assert_equal false, buf.modifiable?
-    assert_includes [:live, :closed], buf.stream_state
+    assert_includes [:live, :closed], buf.stream.state
     assert_equal ["line1", "line2"], buf.lines
     assert_match(/\[stdin\] (follow|EOF)/, editor.message)
   ensure

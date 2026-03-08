@@ -1,37 +1,22 @@
 # frozen_string_literal: true
 
+require_relative "stream"
+
 module RuVim
   class Buffer
     attr_reader :id, :kind, :name
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
-    attr_accessor :stream_state, :stream_exit_status, :stream_command, :loading_state, :follow_backend, :stream_stop_handler,
-                  :stream_thread, :stream_io, :stream_pid, :stream_watcher
+    attr_accessor :loading_state
+    attr_reader :stream
 
     def stream_status
-      return nil unless @stream_state
+      @stream.status(@kind)
+    end
 
-      source = case @kind
-               when :stream then "stdin"
-               when :run_output then "run"
-               else @follow_backend == :inotify ? "follow/i" : "follow"
-               end
-
-      case @stream_state
-      when :live
-        source
-      when :closed
-        suffix = case @kind
-                 when :stream then "EOF"
-                 when :run_output
-                   code = @stream_exit_status&.exitstatus
-                   code ? "exit #{code}" : "EOF"
-                 end
-        suffix ? "#{source}/#{suffix}" : nil
-      when :error
-        "#{source}/error"
-      end
+    def stream_command
+      @stream.command
     end
     attr_accessor :lang_module
 
@@ -89,7 +74,7 @@ module RuVim
       @modified = false
       @readonly = !!readonly
       @modifiable = !!modifiable
-      @stream_state = nil
+      @stream = Stream.new
       @loading_state = nil
       @undo_stack = []
       @redo_stack = []
@@ -118,7 +103,7 @@ module RuVim
     end
 
     def modifiable?
-      @modifiable && @loading_state != :live && @stream_state != :live
+      @modifiable && @loading_state != :live && !@stream.live?
     end
 
     def modifiable=(value)
@@ -146,7 +131,7 @@ module RuVim
       @name = name
       @readonly = !!readonly
       @modifiable = !!modifiable
-      @stream_state = nil unless @kind == :stream
+      @stream.reset! unless @kind == :stream
       @loading_state = nil
       self
     end
@@ -157,7 +142,7 @@ module RuVim
       @path = nil
       @readonly = false
       @modifiable = true
-      @stream_state = nil
+      @stream.reset!
       @loading_state = nil
       @lines = [""]
       @modified = false

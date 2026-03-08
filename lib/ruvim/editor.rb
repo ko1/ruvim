@@ -191,7 +191,7 @@ module RuVim
     end
 
     def stream_stop_or_cancel!
-      handler = current_buffer&.stream_stop_handler
+      handler = current_buffer&.stream&.stop_handler
       return false unless handler
 
       handler.call

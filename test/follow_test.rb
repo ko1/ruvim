@@ -23,10 +23,10 @@ class FollowTest < Minitest::Test
     editor = @app&.instance_variable_get(:@editor)
     return unless editor
     editor.buffers.each_value do |buf|
-      w = buf.stream_watcher
+      w = buf.stream.watcher
       next unless w
       w.stop rescue nil
-      buf.stream_watcher = nil
+      buf.stream.watcher = nil
     end
     @tmpfile&.close!
   end
@@ -37,8 +37,8 @@ class FollowTest < Minitest::Test
     buf = @editor.current_buffer
 
     assert !@editor.message_error?, "Unexpected error: #{@editor.message}"
-    assert_equal :live, buf.stream_state
-    assert buf.stream_watcher
+    assert_equal :live, buf.stream.state
+    assert buf.stream.watcher
     assert_includes @editor.message.to_s, "[follow]"
   ensure
     cleanup_follow_app
@@ -48,10 +48,10 @@ class FollowTest < Minitest::Test
     create_follow_app
     @dispatcher.dispatch_ex(@editor, "follow")
     buf = @editor.current_buffer
-    assert_equal :live, buf.stream_state
+    assert_equal :live, buf.stream.state
 
     @key_handler.handle(:ctrl_c)
-    assert_nil buf.stream_state
+    assert_nil buf.stream.state
     assert_includes @editor.message.to_s, "stopped"
   ensure
     cleanup_follow_app
@@ -61,11 +61,11 @@ class FollowTest < Minitest::Test
     create_follow_app
     @dispatcher.dispatch_ex(@editor, "follow")
     buf = @editor.current_buffer
-    assert_equal :live, buf.stream_state
+    assert_equal :live, buf.stream.state
 
     @dispatcher.dispatch_ex(@editor, "follow")
-    assert_nil buf.stream_state
-    refute buf.stream_watcher
+    assert_nil buf.stream.state
+    refute buf.stream.watcher
     assert_includes @editor.message.to_s, "stopped"
   ensure
     cleanup_follow_app
@@ -106,7 +106,7 @@ class FollowTest < Minitest::Test
 
     @dispatcher.dispatch_ex(@editor, "follow")
     assert_includes @editor.message.to_s, "unsaved changes"
-    assert_nil buf.stream_state
+    assert_nil buf.stream.state
   ensure
     cleanup_follow_app
   end
@@ -178,11 +178,11 @@ class FollowTest < Minitest::Test
     bufs = editor.buffers.values.select(&:file_buffer?)
     assert_equal 2, bufs.size
     bufs.each do |buf|
-      assert_equal :live, buf.stream_state, "#{buf.display_name} should be in follow mode"
-      assert buf.stream_watcher, "#{buf.display_name} should have a watcher"
+      assert_equal :live, buf.stream.state, "#{buf.display_name} should be in follow mode"
+      assert buf.stream.watcher, "#{buf.display_name} should have a watcher"
     end
   ensure
-    bufs&.each { |b| b.stream_watcher&.stop rescue nil }
+    bufs&.each { |b| b.stream.watcher&.stop rescue nil }
     tmp1&.close!
     tmp2&.close!
   end

@@ -26,9 +26,9 @@ module RuVim
         buf.replace_all_lines!([""])
         buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
         buf.modified = false
-        buf.stream_state = :live
-        buf.stream_io = io
-        buf.stream_stop_handler = -> { stop_buffer_stream!(buf) }
+        buf.stream.state = :live
+        buf.stream.io = io
+        buf.stream.stop_handler = -> { stop_buffer_stream!(buf) }
         buf.options["filetype"] = "text"
         ensure_event_queue!
         move_window_to_stream_end!(@editor.current_window, buf)
@@ -37,14 +37,14 @@ module RuVim
       end
 
       def start_stdin_stream_reader!(buf)
-        return unless buf.stream_io
+        return unless buf.stream.io
         ensure_event_queue!
-        return if buf.stream_thread&.alive?
+        return if buf.stream.thread&.alive?
 
-        io = buf.stream_io
+        io = buf.stream.io
         buffer_id = buf.id
         queue = @stream_event_queue
-        buf.stream_thread = Thread.new do
+        buf.stream.thread = Thread.new do
           loop do
             chunk = io.readpartial(4096)
             next if chunk.nil? || chunk.empty?
@@ -53,12 +53,12 @@ module RuVim
             notify_signal_wakeup
           end
         rescue EOFError
-          unless buf.stream_state == :closed
+          unless buf.stream.state == :closed
             queue << { type: :stream_eof, buffer_id: buffer_id }
             notify_signal_wakeup
           end
         rescue IOError, StandardError => e
-          unless buf.stream_state == :closed
+          unless buf.stream.state == :closed
             queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
             notify_signal_wakeup
           end
@@ -71,11 +71,11 @@ module RuVim
         shell = "/bin/sh" if shell.empty?
         buffer_id = buf.id
         queue = @stream_event_queue
-        buf.stream_stop_handler = -> { stop_buffer_stream!(buf) }
-        buf.stream_thread = Thread.new do
+        buf.stream.stop_handler = -> { stop_buffer_stream!(buf) }
+        buf.stream.thread = Thread.new do
           PTY.spawn(shell, "-c", command) do |r, _w, pid|
-            buf.stream_io = r
-            buf.stream_pid = pid
+            buf.stream.io = r
+            buf.stream.pid = pid
             begin
               while (chunk = r.readpartial(4096))
                 text = Buffer.decode_text(chunk).delete("\r")
@@ -86,12 +86,12 @@ module RuVim
               # expected: PTY raises EIO when child process exits
             end
             _status = Process.waitpid2(pid)[1] rescue nil
-            buf.stream_io = nil
+            buf.stream.io = nil
             queue << { type: :stream_eof, buffer_id: buffer_id, status: _status }
             notify_signal_wakeup
           end
         rescue StandardError => e
-          buf.stream_io = nil
+          buf.stream.io = nil
           queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
           notify_signal_wakeup
         end
@@ -103,19 +103,19 @@ module RuVim
         return unless buf
 
         queue = @stream_event_queue
-        buf.stream_thread = Thread.new do
+        buf.stream.thread = Thread.new do
           IO.popen(cmd, chdir: root, err: [:child, :out]) do |io|
-            buf.stream_io = io
+            buf.stream.io = io
             while (chunk = io.read(4096))
               queue << { type: :stream_data, buffer_id: buffer_id, data: Buffer.decode_text(chunk) }
               notify_signal_wakeup
             end
           end
-          buf.stream_io = nil
+          buf.stream.io = nil
           queue << { type: :stream_eof, buffer_id: buffer_id }
           notify_signal_wakeup
         rescue StandardError => e
-          buf.stream_io = nil
+          buf.stream.io = nil
           queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
           notify_signal_wakeup
         end
@@ -123,16 +123,16 @@ module RuVim
 
       def stop_buffer_stream!(buf)
         return false unless buf
-        return false unless buf.stream_state == :live
+        return false unless buf.stream.state == :live
 
-        pid = buf.stream_pid
-        buf.stream_pid = nil
+        pid = buf.stream.pid
+        buf.stream.pid = nil
         if pid
           Process.kill(:TERM, pid) rescue nil
           Process.waitpid(pid) rescue nil
         end
-        io = buf.stream_io
-        buf.stream_io = nil
+        io = buf.stream.io
+        buf.stream.io = nil
         if io
           begin
             io.close unless io.closed?
@@ -140,14 +140,14 @@ module RuVim
             nil
           end
         end
-        thread = buf.stream_thread
-        buf.stream_thread = nil
+        thread = buf.stream.thread
+        buf.stream.thread = nil
         if thread&.alive?
           thread.kill
           thread.join(0.05)
         end
 
-        buf.stream_state = :closed
+        buf.stream.state = :closed
         @editor.echo("#{buf.display_name} stopped")
         notify_signal_wakeup
         true
@@ -157,8 +157,8 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return unless buf
 
-        io = buf.stream_io
-        buf.stream_io = nil
+        io = buf.stream.io
+        buf.stream.io = nil
         io&.close
       rescue IOError
         # already closed
@@ -205,7 +205,7 @@ module RuVim
         buf = @editor.current_buffer
         raise RuVim::CommandError, "No file associated with buffer" unless buf.path
 
-        if buf.stream_watcher
+        if buf.stream.watcher
           stop_follow!(buf)
         else
           raise RuVim::CommandError, "Buffer has unsaved changes" if buf.modified?
@@ -240,15 +240,15 @@ module RuVim
           notify_signal_wakeup
         end
         watcher.start
-        buf.stream_watcher = watcher
-        buf.stream_state = :live
-        buf.follow_backend = watcher.backend
+        buf.stream.watcher = watcher
+        buf.stream.state = :live
+        buf.stream.follow_backend = watcher.backend
         @editor.echo("[follow] #{buf.display_name}")
       end
 
       def stop_follow!(buf)
-        watcher = buf.stream_watcher
-        buf.stream_watcher = nil
+        watcher = buf.stream.watcher
+        buf.stream.watcher = nil
         watcher&.stop
         # Remove trailing empty line added as sentinel by start_follow!
         if buf.line_count > 1 && buf.lines.last.to_s == ""
@@ -259,13 +259,13 @@ module RuVim
             win.cursor_y = last if win.cursor_y > last
           end
         end
-        buf.stream_state = nil
-        buf.follow_backend = nil
+        buf.stream.state = nil
+        buf.stream.follow_backend = nil
         @editor.echo("[follow] stopped")
       end
 
       def follow_active?(buf)
-        !!buf.stream_watcher
+        !!buf.stream.watcher
       end
 
       def open_path_with_large_file_support(path)
@@ -313,15 +313,15 @@ module RuVim
         buf = @editor.buffers[buffer_id]
         return false unless buf
 
-        buf.stream_thread = nil
-        buf.stream_io = nil
+        buf.stream.thread = nil
+        buf.stream.io = nil
 
         # Remove trailing empty line if present
         if buf.lines.length > 1 && buf.lines[-1] == ""
           buf.lines.pop
         end
-        buf.stream_state = :closed
-        buf.stream_exit_status = status
+        buf.stream.state = :closed
+        buf.stream.exit_status = status
 
         if status
           @editor.echo("#{buf.display_name} exit #{status.exitstatus}")
@@ -338,14 +338,14 @@ module RuVim
         return false unless buf
 
         # Ignore errors from intentionally closed streams
-        if buf.stream_state == :closed
+        if buf.stream.state == :closed
           msg = error.to_s.downcase
           return false if msg.include?("stream closed") || msg.include?("closed in another thread")
         end
 
-        buf.stream_thread = nil
-        buf.stream_io = nil
-        buf.stream_state = :error
+        buf.stream.thread = nil
+        buf.stream.io = nil
+        buf.stream.state = :error
         @editor.echo_error("#{buf.display_name} stream error: #{error}")
         true
       end
@@ -355,7 +355,7 @@ module RuVim
         return false unless buf
 
         # If follow mode is active, track windows at the end before appending
-        following_win_ids = if buf.stream_watcher
+        following_win_ids = if buf.stream.watcher
           @editor.windows.values.filter_map do |win|
             next unless win.buffer_id == buffer_id
             next unless stream_window_following_end?(win, buf)
@@ -549,10 +549,10 @@ module RuVim
 
       def shutdown_buffer_streams!
         @editor.buffers.each_value do |buf|
-          thread = buf.stream_thread
-          buf.stream_thread = nil
-          io = buf.stream_io
-          buf.stream_io = nil
+          thread = buf.stream.thread
+          buf.stream.thread = nil
+          io = buf.stream.io
+          buf.stream.io = nil
           begin
             io.close if io && !io.closed?
           rescue StandardError
@@ -568,9 +568,9 @@ module RuVim
 
       def shutdown_follow_watchers!
         @editor.buffers.each_value do |buf|
-          watcher = buf.stream_watcher
+          watcher = buf.stream.watcher
           next unless watcher
-          buf.stream_watcher = nil
+          buf.stream.watcher = nil
           watcher.stop
         rescue StandardError
           nil

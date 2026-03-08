@@ -31,6 +31,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `key_handler.rb` | Key input dispatch, mode handling, pending states, insert editing |
 | `completion_manager.rb` | Command-line/insert completion, history, incsearch preview |
 | `stream_handler.rb` | Stdin stream, async file loading, follow mode, git stream |
+| `stream.rb` | Stream state object (state, io, thread, pid, watcher, command, exit status) |
 | `editor.rb` | Editor state: buffers, windows, options, registers, marks, modes |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |

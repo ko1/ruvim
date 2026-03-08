@@ -20,7 +20,7 @@ class GitBlameTest < Minitest::Test
 
   def drain_git_stream!
     @editor.buffers.each_value do |buf|
-      buf.stream_thread&.join
+      buf.stream.thread&.join
     end
     @stream_handler.drain_events!
   end

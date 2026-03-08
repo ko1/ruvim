@@ -1200,8 +1200,8 @@ module RuVim
         )
         editor.run_output_buffer_id = output_buf.id
       end
-      output_buf.stream_state = :live
-      output_buf.stream_command = expanded
+      output_buf.stream.state = :live
+      output_buf.stream.command = expanded
 
       # Open output buffer in a split (reuse existing window if present)
       existing_win = editor.windows.values.find { |w| w.buffer_id == output_buf.id }
@@ -1225,7 +1225,7 @@ module RuVim
         shell = "/bin/sh" if shell.empty?
         output, _status = Open3.capture2e(shell, "-c", expanded)
         output_buf.replace_all_lines!(output.lines(chomp: true))
-        output_buf.stream_state = :closed
+        output_buf.stream.state = :closed
       end
     end
 

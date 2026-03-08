@@ -155,7 +155,7 @@ class RunCommandTest < Minitest::Test
 
     # Set a stop handler on the buffer and verify it's called
     stop_called = false
-    output_buf.stream_stop_handler = -> { stop_called = true }
+    output_buf.stream.stop_handler = -> { stop_called = true }
 
     @editor.stream_stop_or_cancel!
     assert stop_called, "Expected buffer's stream_stop_handler to be called"
@@ -227,7 +227,7 @@ class RunCommandTest < Minitest::Test
     # Should have received at least the first line while command is still running
     assert_includes output_buf.lines, "0"
   ensure
-    output_buf&.stream_stop_handler&.call
+    output_buf&.stream.stop_handler&.call
   end
 
   # --- status line shows run command ---
@@ -237,16 +237,16 @@ class RunCommandTest < Minitest::Test
     feed(*":run sleep 10".chars, :enter)
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf, "Expected [Shell Output] buffer"
-    assert_equal :live, output_buf.stream_state, "Buffer should be streaming"
-    assert output_buf.stream_stop_handler, "Buffer should have stop handler"
+    assert_equal :live, output_buf.stream.state, "Buffer should be streaming"
+    assert output_buf.stream.stop_handler, "Buffer should have stop handler"
 
     # Simulate Ctrl-C key press
     feed(:ctrl_c)
     sh.drain_events!
 
-    assert_equal :closed, output_buf.stream_state, "Stream should be stopped after Ctrl-C"
+    assert_equal :closed, output_buf.stream.state, "Stream should be stopped after Ctrl-C"
   ensure
-    output_buf&.stream_stop_handler&.call rescue nil
+    output_buf&.stream.stop_handler&.call rescue nil
   end
 
   # --- stream_status shows correct label ---
@@ -256,7 +256,7 @@ class RunCommandTest < Minitest::Test
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert_equal "run", output_buf.stream_status
   ensure
-    output_buf&.stream_stop_handler&.call rescue nil
+    output_buf&.stream.stop_handler&.call rescue nil
   end
 
   def test_run_output_stream_status_exit
@@ -266,7 +266,7 @@ class RunCommandTest < Minitest::Test
     deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 5
     loop do
       sh.drain_events!
-      break if output_buf.stream_state == :closed
+      break if output_buf.stream.state == :closed
       flunk "Timed out" if Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
       sleep 0.02
     end
@@ -276,14 +276,14 @@ class RunCommandTest < Minitest::Test
   def test_stdin_stream_status_live
     buf = @editor.current_buffer
     buf.instance_variable_set(:@kind, :stream)
-    buf.stream_state = :live
+    buf.stream.state = :live
     assert_equal "stdin", buf.stream_status
   end
 
   def test_stdin_stream_status_closed
     buf = @editor.current_buffer
     buf.instance_variable_set(:@kind, :stream)
-    buf.stream_state = :closed
+    buf.stream.state = :closed
     assert_equal "stdin/EOF", buf.stream_status
   end
 

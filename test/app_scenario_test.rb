@@ -379,7 +379,7 @@ class AppScenarioTest < Minitest::Test
 
     @key_handler.handle(:ctrl_c)
 
-    assert_equal :closed, @editor.current_buffer.stream_state
+    assert_equal :closed, @editor.current_buffer.stream.state
     assert_equal :normal, @editor.mode
     assert_equal true, stream.closed?
     assert_match(/stopped/, @editor.message)
