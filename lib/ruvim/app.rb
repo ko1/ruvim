@@ -62,7 +62,11 @@ module RuVim
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
       @editor.git_stream_handler = @stream_handler.method(:start_git_stream_command)
       @editor.git_stream_stop_handler = @stream_handler.method(:stop_git_stream!)
-      @editor.shell_executor = @terminal.method(:suspend_for_shell)
+      @editor.shell_executor = ->(command) {
+        result = @terminal.suspend_for_shell(command)
+        @screen.invalidate_cache!
+        result
+      }
 
       @completion.load_history!
 
