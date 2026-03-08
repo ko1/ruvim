@@ -138,7 +138,7 @@ class RunCommandTest < Minitest::Test
     output_buf.stream_state = :live
     output_buf.instance_variable_set(:@kind, :run_output)
 
-    @editor.stdin_stream_stop_or_cancel!
+    @editor.stream_stop_or_cancel!
     assert stop_called, "Expected run_stream_stop_handler to be called"
   end
 

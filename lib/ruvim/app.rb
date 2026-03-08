@@ -285,7 +285,7 @@ module RuVim
       register_internal_unless(
         cmd,
         "stdin.stream_stop",
-        call: ->(ctx, **) { ctx.editor.stdin_stream_stop_or_cancel! },
+        call: ->(ctx, **) { ctx.editor.stream_stop_or_cancel! },
         desc: "Stop stdin follow stream (or cancel pending state)"
       )
 

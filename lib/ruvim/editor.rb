@@ -191,17 +191,19 @@ module RuVim
       @buffers.fetch(current_window.buffer_id)
     end
 
-    def stdin_stream_stop_or_cancel!
-      # If current buffer is [Shell Output] and run stream is active, stop it
+    def stream_stop_or_cancel!
+      # Stop run stream if current buffer is [Shell Output]
       if current_buffer&.kind == :run_output && @run_stream_stop_handler
         return @run_stream_stop_handler.call
       end
 
-      handler = @stdin_stream_stop_handler
-      return false unless handler
+      # Stop stdin stream
+      if @stdin_stream_stop_handler
+        @stdin_stream_stop_handler.call
+        return true
+      end
 
-      handler.call
-      true
+      false
     end
 
     def invoke_app_action(name, **kwargs)
