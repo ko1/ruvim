@@ -12,7 +12,7 @@ module RuVim
     attr_reader :stream
 
     def stream_status
-      @stream.status(@kind)
+      @stream.status
     end
 
     def stream_command

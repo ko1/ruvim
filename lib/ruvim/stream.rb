@@ -2,35 +2,38 @@
 
 module RuVim
   class Stream
-    attr_accessor :state, :exit_status, :command, :stop_handler,
+    attr_accessor :source, :state, :exit_status, :command, :stop_handler,
                   :thread, :io, :pid, :watcher, :follow_backend
 
     def initialize
+      @source = nil
       @state = nil
     end
 
-    def status(kind)
+    def status
       return nil unless @state
 
-      source = case kind
-               when :stream then "stdin"
-               when :run_output then "run"
-               else @follow_backend == :inotify ? "follow/i" : "follow"
-               end
+      label = case @source
+              when :stdin then "stdin"
+              when :run then "run"
+              when :follow
+                @follow_backend == :inotify ? "follow/i" : "follow"
+              end
+      return nil unless label
 
       case @state
       when :live
-        source
+        label
       when :closed
-        suffix = case kind
-                 when :stream then "EOF"
-                 when :run_output
+        suffix = case @source
+                 when :stdin then "EOF"
+                 when :run
                    code = @exit_status&.exitstatus
                    code ? "exit #{code}" : "EOF"
                  end
-        suffix ? "#{source}/#{suffix}" : nil
+        suffix ? "#{label}/#{suffix}" : nil
       when :error
-        "#{source}/error"
+        "#{label}/error"
       end
     end
 
@@ -39,6 +42,7 @@ module RuVim
     end
 
     def reset!
+      @source = nil
       @state = nil
       @exit_status = nil
       @command = nil

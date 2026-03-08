@@ -26,6 +26,7 @@ module RuVim
         buf.replace_all_lines!([""])
         buf.configure_special!(kind: :stream, name: "[stdin]", readonly: true, modifiable: false)
         buf.modified = false
+        buf.stream.source = :stdin
         buf.stream.state = :live
         buf.stream.io = io
         buf.stream.stop_handler = -> { stop_buffer_stream!(buf) }
@@ -71,6 +72,7 @@ module RuVim
         shell = "/bin/sh" if shell.empty?
         buffer_id = buf.id
         queue = @stream_event_queue
+        buf.stream.source = :run
         buf.stream.stop_handler = -> { stop_buffer_stream!(buf) }
         buf.stream.thread = Thread.new do
           PTY.spawn(shell, "-c", command) do |r, _w, pid|
@@ -241,6 +243,7 @@ module RuVim
         end
         watcher.start
         buf.stream.watcher = watcher
+        buf.stream.source = :follow
         buf.stream.state = :live
         buf.stream.follow_backend = watcher.backend
         @editor.echo("[follow] #{buf.display_name}")
