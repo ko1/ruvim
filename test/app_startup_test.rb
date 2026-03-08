@@ -341,8 +341,7 @@ class AppStartupTest < Minitest::Test
         100.times do
           sh.drain_events!
           break if buf.stream&.state != :live
-          state = sh.instance_variable_get(:@async_file_loads)[buf.id]
-          break unless state && state[:thread]&.alive?
+          break unless buf.stream.is_a?(RuVim::Stream::FileLoad) && buf.stream.thread&.alive?
           sleep 0.005
         end
         sh.drain_events!

@@ -30,8 +30,13 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `app.rb` | Main application: initialization, run loop, config, startup |
 | `key_handler.rb` | Key input dispatch, mode handling, pending states, insert editing |
 | `completion_manager.rb` | Command-line/insert completion, history, incsearch preview |
-| `stream_handler.rb` | Stdin stream, async file loading, follow mode, git stream |
-| `stream.rb` | Stream state object (state, io, thread, pid, watcher, command, exit status) |
+| `stream_handler.rb` | Stream coordinator: event queue, drain, editor integration |
+| `stream.rb` | Stream base class (state, live?, status, stop!) |
+| `stream/stdin.rb` | Stream::Stdin — reads from stdin pipe |
+| `stream/run.rb` | Stream::Run — PTY command execution |
+| `stream/follow.rb` | Stream::Follow — file watcher (inotify/polling) |
+| `stream/file_load.rb` | Stream::FileLoad — async large file loading |
+| `stream/git.rb` | Stream::Git — git command output via IO.popen |
 | `editor.rb` | Editor state: buffers, windows, options, registers, marks, modes |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
@@ -84,7 +89,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 ### Tests (test/)
 
 - Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`
-- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`, `git_grep_test`, `gh_link_test`, `run_command_test`
+- Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`, `git_grep_test`, `gh_link_test`, `run_command_test`, `stream_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
 
 ### Docs (docs/)

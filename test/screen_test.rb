@@ -104,8 +104,7 @@ class ScreenTest < Minitest::Test
   def test_status_line_shows_stream_state_for_stdin_buffer
     editor = RuVim::Editor.new
     buf = editor.add_virtual_buffer(kind: :stream, name: "[stdin]", lines: [""], readonly: true, modifiable: false)
-    buf.ensure_stream!
-    buf.stream.source = :stdin
+    buf.stream = RuVim::Stream::Stdin.new(io: $stdin)
     buf.stream.state = :closed
     editor.add_window(buffer_id: buf.id)
 

@@ -23,10 +23,7 @@ class FollowTest < Minitest::Test
     editor = @app&.instance_variable_get(:@editor)
     return unless editor
     editor.buffers.each_value do |buf|
-      w = buf.stream&.watcher
-      next unless w
-      w.stop rescue nil
-      buf.stream.watcher = nil
+      buf.stream&.stop! rescue nil
     end
     @tmpfile&.close!
   end
@@ -51,7 +48,7 @@ class FollowTest < Minitest::Test
     assert_equal :live, buf.stream.state
 
     @key_handler.handle(:ctrl_c)
-    assert_nil buf.stream.state
+    assert_nil buf.stream
     assert_includes @editor.message.to_s, "stopped"
   ensure
     cleanup_follow_app
@@ -64,8 +61,7 @@ class FollowTest < Minitest::Test
     assert_equal :live, buf.stream.state
 
     @dispatcher.dispatch_ex(@editor, "follow")
-    assert_nil buf.stream.state
-    refute buf.stream.watcher
+    assert_nil buf.stream
     assert_includes @editor.message.to_s, "stopped"
   ensure
     cleanup_follow_app
@@ -182,7 +178,7 @@ class FollowTest < Minitest::Test
       assert buf.stream.watcher, "#{buf.display_name} should have a watcher"
     end
   ensure
-    bufs&.each { |b| b.stream.watcher&.stop rescue nil }
+    bufs&.each { |b| b.stream&.stop! rescue nil }
     tmp1&.close!
     tmp2&.close!
   end

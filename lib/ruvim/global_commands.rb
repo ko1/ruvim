@@ -1200,10 +1200,8 @@ module RuVim
         )
         editor.run_output_buffer_id = output_buf.id
       end
-      output_buf.ensure_stream!
-      output_buf.stream.source = :run
+      output_buf.stream = Stream::Run.new(command: expanded)
       output_buf.stream.state = :live
-      output_buf.stream.command = expanded
 
       # Open output buffer in a split (reuse existing window if present)
       existing_win = editor.windows.values.find { |w| w.buffer_id == output_buf.id }

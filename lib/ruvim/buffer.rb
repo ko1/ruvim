@@ -18,9 +18,6 @@ module RuVim
       @stream&.command
     end
 
-    def ensure_stream!
-      @stream ||= Stream.new
-    end
     attr_accessor :lang_module
 
     def self.ensure_regular_file!(path)

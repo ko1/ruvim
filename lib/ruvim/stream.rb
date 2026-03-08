@@ -2,57 +2,33 @@
 
 module RuVim
   class Stream
-    attr_accessor :source, :state, :exit_status, :command, :stop_handler,
-                  :thread, :io, :pid, :watcher, :follow_backend
+    attr_accessor :state, :stop_handler
 
     def initialize
-      @source = nil
       @state = nil
-    end
-
-    def status
-      return nil unless @state
-
-      label = case @source
-              when :stdin then "stdin"
-              when :run then "run"
-              when :follow
-                @follow_backend == :inotify ? "follow/i" : "follow"
-              when :file_load then "load"
-              end
-      return nil unless label
-
-      case @state
-      when :live
-        label
-      when :closed
-        suffix = case @source
-                 when :stdin then "EOF"
-                 when :run
-                   code = @exit_status&.exitstatus
-                   code ? "exit #{code}" : "EOF"
-                 end
-        suffix ? "#{label}/#{suffix}" : nil
-      when :error
-        "#{label}/error"
-      end
+      @stop_handler = nil
     end
 
     def live?
       @state == :live
     end
 
-    def reset!
-      @source = nil
-      @state = nil
-      @exit_status = nil
-      @command = nil
-      @stop_handler = nil
-      @thread = nil
-      @io = nil
-      @pid = nil
-      @watcher = nil
-      @follow_backend = nil
+    def status
+      nil
+    end
+
+    def command
+      nil
+    end
+
+    def stop!
+      # subclasses override
     end
   end
 end
+
+require_relative "stream/stdin"
+require_relative "stream/run"
+require_relative "stream/follow"
+require_relative "stream/file_load"
+require_relative "stream/git"
