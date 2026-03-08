@@ -596,4 +596,39 @@ class LangTest < Minitest::Test
   def test_yaml_indent_after_key_colon
     assert RuVim::Lang::Yaml.indent_trigger?("services:")
   end
+
+  # --- ERB ---
+
+  def test_erb_html_tag_highlighted
+    cols = RuVim::Highlighter.color_columns("erb", "<div>hello</div>")
+    assert_equal "\e[36m", cols[0] # "<div"
+  end
+
+  def test_erb_ruby_tag_highlighted
+    cols = RuVim::Highlighter.color_columns("erb", '<%= link_to "home", root_path %>')
+    # <%= and %> delimiters should be highlighted
+    assert_equal "\e[35m", cols[0] # "<%="
+  end
+
+  def test_erb_ruby_comment_tag
+    cols = RuVim::Highlighter.color_columns("erb", "<%# this is a comment %>")
+    assert_equal "\e[90m", cols[0]
+  end
+
+  def test_erb_mixed_html_and_ruby
+    cols = RuVim::Highlighter.color_columns("erb", '<p><%= "hi" %></p>')
+    assert_equal "\e[36m", cols[0] # "<p"
+    assert_equal "\e[35m", cols[3] # "<%="
+  end
+
+  def test_erb_empty
+    cols = RuVim::Highlighter.color_columns("erb", "")
+    assert_empty cols
+  end
+
+  def test_detect_filetype_erb
+    editor = fresh_editor
+    assert_equal "erb", editor.detect_filetype("index.html.erb")
+    assert_equal "erb", editor.detect_filetype("show.erb")
+  end
 end

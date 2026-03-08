@@ -81,6 +81,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/perl.rb` | Perl syntax highlighting (sigils, POD), auto-indent |
 | `lang/lua.rb` | Lua syntax highlighting (builtins), auto-indent |
 | `lang/ocaml.rb` | OCaml syntax highlighting (type vars, block comments), auto-indent |
+| `lang/erb.rb` | ERB syntax highlighting (HTML + Ruby delimiters/comments) |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
 | `git/blame.rb` | Git blame: parser, runner, command handlers |
