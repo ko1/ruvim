@@ -68,7 +68,13 @@ module RuVim
       ["zsh", "sh"],
       ["ksh", "sh"],
       ["dash", "sh"],
-      [/\Aperl(?:\d+(?:\.\d+)*)?\z/, "perl"]
+      [/\Aperl(?:\d+(?:\.\d+)*)?\z/, "perl"],
+      ["lua", "lua"],
+      [/\Alua\d*\z/, "lua"],
+      ["elixir", "elixir"],
+      ["iex", "elixir"],
+      ["ocaml", "ocaml"],
+      ["gosh", "scheme"]
     ].freeze
 
     attr_reader :buffers, :windows, :layout_tree
@@ -307,9 +313,39 @@ module RuVim
         ".cpp" => "cpp",
         ".cc" => "cpp",
         ".cxx" => "cpp",
-        ".hpp" => "cpp"
+        ".hpp" => "cpp",
+        ".go" => "go",
+        ".rs" => "rust",
+        ".toml" => "toml",
+        ".lua" => "lua",
+        ".pl" => "perl",
+        ".pm" => "perl",
+        ".t" => "perl",
+        ".ex" => "elixir",
+        ".exs" => "elixir",
+        ".erl" => "erlang",
+        ".sql" => "sql",
+        ".ml" => "ocaml",
+        ".mli" => "ocaml",
+        ".htm" => "html",
+        ".xml" => "html",
+        ".bash" => "sh",
+        ".zsh" => "sh"
       }[File.extname(base).downcase]
       return ext_ft if ext_ft
+
+      # Basename-based detection (no extension)
+      base_ft = {
+        "Makefile" => "make",
+        "GNUmakefile" => "make",
+        "makefile" => "make",
+        "Dockerfile" => "dockerfile",
+        "Justfile" => "make",
+        "Vagrantfile" => "ruby"
+      }[base]
+      return base_ft if base_ft
+
+      return "dockerfile" if base.start_with?("Dockerfile")
 
       detect_filetype_from_shebang(p)
     end
@@ -1198,7 +1234,15 @@ module RuVim
       "c" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out",
       "cpp" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out",
       "scheme" => "gosh %",
-      "javascript" => "node %"
+      "javascript" => "node %",
+      "typescript" => "npx tsx %",
+      "go" => "go run %",
+      "rust" => "rustc -o /tmp/a.out % && /tmp/a.out",
+      "lua" => "lua %",
+      "perl" => "perl %",
+      "elixir" => "elixir %",
+      "ocaml" => "ocaml %",
+      "sh" => "bash %"
     }.freeze
 
     def filetype_default_runprg(ft)
@@ -1212,6 +1256,19 @@ module RuVim
       when "ruby" then Lang::Ruby
       when "c" then Lang::C
       when "cpp" then Lang::Cpp
+      when "python" then Lang::Python
+      when "javascript", "javascriptreact" then Lang::Javascript
+      when "typescript", "typescriptreact" then Lang::Typescript
+      when "go" then Lang::Go
+      when "rust" then Lang::Rust
+      when "sh" then Lang::Sh
+      when "yaml" then Lang::Yaml
+      when "json", "jsonl" then Lang::Json
+      when "lua" then Lang::Lua
+      when "perl" then Lang::Perl
+      when "elixir" then Lang::Elixir
+      when "ocaml" then Lang::Ocaml
+      when "scheme" then Lang::Scheme
       else Lang::Base
       end
     end
