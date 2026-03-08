@@ -9,9 +9,9 @@ module RuVim
       module_function
 
       def delimiter_for(format)
-        case format.to_s
-        when "csv" then ","
-        when "tsv" then "\t"
+        case format
+        when :csv then ","
+        when :tsv then "\t"
         else "\t"
         end
       end
