@@ -6,7 +6,7 @@ module RuVim
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
-    attr_accessor :stream_state, :stream_exit_status, :loading_state, :follow_backend, :stream_stop_handler,
+    attr_accessor :stream_state, :stream_exit_status, :stream_command, :loading_state, :follow_backend, :stream_stop_handler,
                   :stream_thread, :stream_io, :stream_pid, :stream_watcher
 
     def stream_status

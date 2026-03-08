@@ -982,9 +982,10 @@ module RuVim
       path = buffer.display_name
       mod = buffer.modified? ? " [+]" : ""
       stream = buffer.stream_status ? " [#{buffer.stream_status}]" : ""
+      cmd = buffer.stream_command ? " #{buffer.stream_command}" : ""
       loading = file_loading_status_token(buffer)
       tab = tab_status_token(editor)
-      left = "#{mode} #{path}#{mod}#{stream}#{loading}"
+      left = "#{mode} #{path}#{mod}#{stream}#{cmd}#{loading}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1}#{tab} "
       body_width = [width - right.length, 0].max
       "#{left.ljust(body_width)[0, body_width]}#{right}"

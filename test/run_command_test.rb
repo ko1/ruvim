@@ -3,6 +3,10 @@
 require_relative "test_helper"
 
 class RunCommandTest < Minitest::Test
+  TerminalStub = Struct.new(:winsize) do
+    def write(_data) = nil
+  end
+
   def setup
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
@@ -264,9 +268,18 @@ class RunCommandTest < Minitest::Test
     assert_equal "stdin/EOF", buf.stream_status
   end
 
-  def test_run_shows_command_in_message
+  def test_run_stores_command_on_output_buffer
     feed(*":run echo hello".chars, :enter)
-    # The echo message should contain the command
-    assert_match(/echo hello/, @editor.message.to_s)
+    output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
+    assert_equal "echo hello", output_buf.stream_command
+  end
+
+  def test_status_line_includes_run_command
+    feed(*":run echo hello".chars, :enter)
+    term = TerminalStub.new([6, 80])
+    screen = RuVim::Screen.new(terminal: term)
+    line = screen.send(:status_line, @editor, 80)
+    assert_includes line, "echo hello"
+    assert_includes line, "[run]"
   end
 end

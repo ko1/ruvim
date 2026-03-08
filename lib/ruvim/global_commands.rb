@@ -1201,9 +1201,9 @@ module RuVim
         editor.run_output_buffer_id = output_buf.id
       end
       output_buf.stream_state = :live
+      output_buf.stream_command = expanded
 
       editor.switch_to_buffer(output_buf.id)
-      editor.echo(":run #{expanded}")
 
       # Start streaming
       handler = editor.run_stream_handler
