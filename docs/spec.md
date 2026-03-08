@@ -219,7 +219,7 @@ RuVim::ExCommandRegistry.instance.register(
 
 - `stdin` が non-TTY で、起動引数ファイルがない場合は `stdin` を follow stream として開く
   - バッファ名は `[stdin]`
-  - statusline に `[stdin/live]`, `[stdin/closed]`, `[stdin/error]` を表示
+  - statusline に `[stdin]`（完了時 `[stdin/EOF]`、失敗時 `[stdin/error]`）を表示
   - Normal mode の `Ctrl-c` はデフォルトバインドで `stdin` stream stop（上流 PID へ直接 signal は送らない）
 - `Ctrl-z` は全モード共通で suspend
   - suspend 前に terminal を cooked + main screen に戻す
@@ -418,7 +418,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `:bindings` は current buffer 文脈の有効 key binding を layer 別（`buffer`, `filetype`, `app`）に一覧表示
   - 任意で mode filter を受ける（例 `:bindings normal`）
 - 大きいファイルを開くときは、閾値以上で段階読み込みになる場合がある
-  - statusline に `[load/live]`（失敗時 `[load/error]`）
+  - statusline に `[load]`（失敗時 `[load/error]`）
   - デフォルト実装は先頭 `8MB` を先に表示し、残りをチャンク単位でバックグラウンド読み込み
   - 環境変数:
     - `RUVIM_ASYNC_FILE_THRESHOLD_BYTES`
