@@ -148,8 +148,12 @@ ruvim -p a.rb b.rb
 - `:lopen`, `:lnext`, `:lprev`, `:lclose`
 - `:grep pattern [files...]`（外部 grep → quickfix）
 - `:lgrep pattern [files...]`（外部 grep → location list）
-- `:git blame` / `:git status` / `:git diff` / `:git log` / `:git branch` / `:git commit`
+- `:git blame` / `:git status` / `:git diff` / `:git log` / `:git branch` / `:git commit` / `:git grep`
 - `:gh link` / `:gh browse` / `:gh pr`
+- `:r file.txt`（ファイルの内容をカーソル行の下に挿入）
+- `:r !ls`（コマンドの出力をカーソル行の下に挿入）
+- `:w !wc -l`（バッファの内容をコマンドの stdin にパイプ）
+- `:!ls`（alternate screen でシェルコマンドを実行）
 
 ## Follow mode（`tail -f` 相当）
 

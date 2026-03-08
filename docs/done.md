@@ -77,6 +77,7 @@
 - PageUp / PageDown 対応
 - `:q` の window/tab/app クローズ挙動を Vim 寄りに調整
 - hit-enter prompt（複数行メッセージ表示: `:ls`, `:args`, `:set`, `:command`）
+- カーソル形状制御（DECSCUSR: Normal では非表示+セル反転、Insert ではバーカーソル）
 
 ## Unicode / 日本語 / 表示幅 / 座標系
 
@@ -100,6 +101,8 @@
 - シンタックスハイライト（最小）
 - Markdown シンタックスハイライト（`Lang::Markdown` に抽出、通常モード + Rich mode で共有）
 - 補完基盤（Ex 補完 / Insert mode 補完）
+- git/gh サブコマンドの Tab 補完（`git help -a` / `gh help` から動的取得、セッション内キャッシュ）
+- 未知の `:git` / `:gh` サブコマンドのシェルフォールバック実行
 
 ## CLI オプション（Vim 風・実装済み / placeholder 含む）
 

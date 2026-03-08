@@ -22,10 +22,10 @@ module RuVim
 
     def with_ui
       @stdin.raw do
-        write("\e]112\a\e[?1049h\e[?25l")
+        write("\e]112\a\e[2 q\e[?1049h\e[?25l")
         yield
       ensure
-        write("\e[?25h\e[?1049l")
+        write("\e[0 q\e[?25h\e[?1049l")
       end
     end
 
@@ -33,12 +33,12 @@ module RuVim
       shell = ENV["SHELL"].to_s
       shell = "/bin/sh" if shell.empty?
       @stdin.cooked do
-        write("\e[?25h\e[?1049l")
+        write("\e[0 q\e[?25h\e[?1049l")
         system(shell, "-c", command)
         status = $?
         write("\r\nPress ENTER or type command to continue")
         @stdin.raw { @stdin.getc }
-        write("\e[?1049h\e[?25l")
+        write("\e[2 q\e[?1049h\e[?25l")
         status
       end
     end
@@ -46,7 +46,7 @@ module RuVim
     def suspend_for_tstp
       prev_tstp = Signal.trap("TSTP", "DEFAULT")
       @stdin.cooked do
-        write("\e[?25h\e[?1049l")
+        write("\e[0 q\e[?25h\e[?1049l")
         Process.kill("TSTP", 0)
       end
     ensure
@@ -55,7 +55,7 @@ module RuVim
       rescue StandardError
         nil
       end
-      write("\e[?1049h\e[?25l")
+      write("\e[2 q\e[?1049h\e[?25l")
     end
   end
 end

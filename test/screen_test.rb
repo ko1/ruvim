@@ -590,4 +590,63 @@ class ScreenTest < Minitest::Test
     # win2 + win3 heights + separator should equal text_rows
     assert_equal text_rows, rects[win2.id][:height] + rects[win3.id][:height] + 1
   end
+
+  def test_cursor_hidden_in_normal_mode
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    editor.enter_normal_mode
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    output = term.writes.join
+    # Normal mode hides terminal cursor (cell rendering handles visibility)
+    refute_includes output, "\e[?25h", "Normal mode should hide terminal cursor"
+  end
+
+  def test_cursor_bar_in_insert_mode
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    editor.enter_insert_mode
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    output = term.writes.join
+    assert_includes output, "\e[6 q", "Insert mode should set steady bar cursor"
+    assert_includes output, "\e[?25h", "Insert mode should show terminal cursor"
+  end
+
+  def test_cursor_hidden_in_visual_mode
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    editor.enter_visual(:visual_char)
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    output = term.writes.join
+    refute_includes output, "\e[?25h", "Visual mode should hide terminal cursor"
+  end
+
+  def test_cursor_bar_in_command_line_mode
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    editor.add_window(buffer_id: buf.id)
+    editor.enter_command_line_mode
+
+    term = TerminalStub.new([8, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    screen.render(editor)
+
+    output = term.writes.join
+    assert_includes output, "\e[6 q", "Command-line mode should set steady bar cursor"
+    assert_includes output, "\e[?25h", "Command-line mode should show terminal cursor"
+  end
 end

@@ -504,6 +504,10 @@ ANSI エスケープシーケンスによる再描画です。
 - command-line mode 時も statusline は維持し、最下段だけを入力行として使う
 - ファイル未指定起動時は Vim 風 intro screen を表示（RuVim では intro 用の read-only 特殊バッファ）
 - カーソル位置の文字を反転表示（見やすさ向上）
+- カーソル形状の制御（DECSCUSR）
+  - Normal / Visual mode: ターミナルカーソルを非表示にし、セル描画（反転）でカーソルを表現
+  - Insert / Command-line mode: ターミナルのバーカーソル（`\e[6 q`）を表示
+  - UI 開始時に非点滅ブロック（`\e[2 q`）を設定、終了時にデフォルト（`\e[0 q`）に復元
 
 ### split UI
 

@@ -149,7 +149,7 @@
 - `Backspace` : 1文字削除
 - `Up` / `Down` : 履歴移動
 - `Left` / `Right` : カーソル移動
-- `Tab` (`Ctrl-i`) : Ex 補完（`:` prefix 時、コマンド名/一部引数の文脈対応）
+- `Tab` (`Ctrl-i`) : Ex 補完（`:` prefix 時、コマンド名/一部引数の文脈対応。`:git`/`:gh` サブコマンドも補完可能）
 - `Esc` : キャンセル
 - `Ctrl-c` : キャンセル
 - `Ctrl-z` : shell へ suspend（`fg` で復帰）

@@ -9,6 +9,7 @@ Vim の操作感をベースに、Ruby ならではの、もしくは ko1 が欲
 - **Rich View (`gr`)** — TSV / CSV / Markdown をテーブル整形して閲覧。CJK 幅を考慮したカラム揃え
 - **`g/` 検索フィルタ** — 検索にマッチする行だけを集めたバッファを作成。再帰的に絞り込み可能。ログ解析に便利
 - **Follow mode (`-f` / `:follow`)** — `tail -f` 相当のファイル追従。inotify 対応
+- **Git / GitHub 統合** — `:git blame`, `:git status`, `:git diff`, `:git log`, `:git branch`, `:git commit`, `:git grep` をエディタ内で実行。`:gh link` で GitHub URL をクリップボードにコピー、`:gh browse` でブラウザで開く
 - Ruby related:
   - **Ruby DSL 設定** — `~/.config/ruvim/init.rb` に Ruby で `nmap`, `set`, `command` を記述。Vim script 不要
   - **Ruby 正規表現** — 検索・置換は Ruby `Regexp`。Ruby ユーザーにそのまま馴染む
@@ -17,9 +18,11 @@ Vim の操作感をベースに、Ruby ならではの、もしくは ko1 が欲
 ## 概要
 
 - raw mode + ANSI 描画
-- Normal / Insert / Command-line / Visual
-- Ex コマンド（`:w`, `:q`, `:e`, `:help`, `:set` など）
-- split / vsplit / tab（最小実装）
+- Normal / Insert / Command-line / Visual（char / line / block）
+- Ex コマンド（`:w`, `:q`, `:e`, `:help`, `:set`, `:git`, `:gh` など）
+- split / vsplit / tab
+- quickfix / location list（`:vimgrep`, `:grep`, `:copen` など）
+- シェル連携（`:!cmd`, `:r !cmd`, `:w !cmd`）
 - Ruby DSL 設定（XDG）
 
 ## 起動
@@ -68,6 +71,8 @@ ruvim path/to/file.txt
   - 複数ファイルを垂直 split で開く（最小実装）
 - `ruvim -p a.rb b.rb`
   - 複数ファイルを tab で開く（最小実装）
+- `ruvim -f log.txt`
+  - follow mode（`tail -f` 相当）で起動
 - `ruvim -d file.txt`
   - diff mode placeholder（現状は未実装メッセージのみ）
 - `ruvim -q errors.log`
@@ -83,13 +88,17 @@ ruby -Ilib exe/ruvim
 
 ## 主な操作（抜粋）
 
-- 移動: `h j k l`, `w b e`, `0 ^ $`, `gg`, `G`
+- 移動: `h j k l`, `w b e`, `0 ^ $`, `gg`, `G`, `f/F/t/T`, `%`
 - 挿入: `i`, `a`, `A`, `I`, `o`, `O`
 - 編集: `x`, `dd`, `d{motion}`, `c{motion}`, `yy`, `yw`, `p`, `P`, `r<char>`
+- text object: `iw`, `aw`, `i"`, `a"`, `i)`, `a)`, `ip`, `ap` など
 - 検索: `/`, `?`, `n`, `N`, `*`, `#`, `g*`, `g#`
-- Visual: `v`, `V`, `y`, `d`
+- Visual: `v`, `V`, `Ctrl-v`, `y`, `d`
 - Undo/Redo: `u`, `Ctrl-r`
-- Ex: `:w`, `:q`, `:e`, `:help`, `:commands`, `:set`
+- マクロ: `q{reg}`, `@{reg}`, `@@`
+- Ex: `:w`, `:q`, `:e`, `:help`, `:set`, `:git`, `:gh`
+- Git: `Ctrl-g` で `:git` プリセット入力。blame / status / diff / log / branch / commit / grep
+- シェル: `:!cmd`, `:r !cmd`（出力を挿入）, `:w !cmd`（バッファをパイプ）
 
 詳しくは `docs/tutorial.md` を参照してください。
 

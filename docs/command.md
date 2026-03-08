@@ -143,7 +143,9 @@
   - `checkout <branch>` : 指定ブランチへチェックアウト
   - `commit` : コミットメッセージ入力バッファを開く
   - `grep <pattern> [args...]` : git grep -n を実行、結果バッファで Enter ジャンプ
+  - その他の未知サブコマンド: `:!` と同様に alternate screen でシェル実行（例: `:git stash`, `:git rebase -i`）
 - Git バッファは `Esc` / `Ctrl-c` で閉じる
+- Tab 補完: `git help -a` の出力から全サブコマンドを補完候補として提示（セッション内キャッシュ）
 
 ### `:gh`
 
@@ -154,6 +156,8 @@
   - `link` : 現在ファイル/選択範囲の GitHub URL を生成してクリップボードにコピー
   - `browse` : 現在ファイルの GitHub URL をブラウザで開く
   - `pr` : 現在ブランチの PR ページをブラウザで開く
+  - その他の未知サブコマンド: `:!` と同様に alternate screen でシェル実行（例: `:gh issue list`）
+- Tab 補完: `gh help` の出力からサブコマンドを補完候補として提示（セッション内キャッシュ）
 
 ### `:rich`
 

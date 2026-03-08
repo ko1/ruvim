@@ -69,7 +69,12 @@ module RuVim
             end
       cursor_row, cursor_col = cursor_screen_position(editor, text_rows, rects)
       out << "\e[#{cursor_row};#{cursor_col}H"
-      out << "\e[?25h"
+      if cursor_use_terminal?(editor)
+        out << "\e[6 q"
+        out << "\e[?25h"
+      else
+        out << "\e[?25l"
+      end
       @last_frame = frame.merge(cursor_row:, cursor_col:)
       @terminal.write(out)
     end
@@ -1017,6 +1022,16 @@ module RuVim
 
     def cursor_cell_seq(editor)
       "\e[7m"
+    end
+
+    # Insert/command-line: show terminal bar cursor; otherwise: hide terminal cursor, use cell rendering
+    def cursor_use_terminal?(editor)
+      case editor.mode
+      when :insert, :command_line
+        true
+      else
+        false
+      end
     end
 
     def cursor_screen_position(editor, text_rows, rects)
