@@ -83,6 +83,18 @@ module RuVim
         end
       end
 
+      def stop_stream!(editor)
+        # Try run stream first if on [Shell Output] buffer
+        if editor.current_buffer&.kind == :run_output
+          return true if stop_run_stream!
+        end
+
+        # Try stdin stream
+        return true if stop_stdin_stream!
+
+        false
+      end
+
       def stop_stdin_stream!
         buf = @editor.buffers[@stream_buffer_id]
         return false unless buf&.kind == :stream

@@ -169,15 +169,8 @@ module RuVim
     end
 
     def stream_stop_command
-      # Try run stream first (if on [Shell Output] buffer)
-      if @editor.current_buffer&.kind == :run_output
-        return if @stream_handler.stop_run_stream!
-      end
+      return if @stream_handler.stop_stream!(@editor)
 
-      # Try stdin stream
-      return if @stream_handler.stop_stdin_stream!
-
-      # Fallback: normal Ctrl-C behavior
       @key_handler.handle_normal_ctrl_c
     end
 
