@@ -9,6 +9,12 @@ require_relative "key_handler"
 
 module RuVim
   class App
+    StartupState = Struct.new(
+      :readonly, :diff_mode, :quickfix_errorfile, :session_file,
+      :nomodifiable, :follow, :time_path, :time_origin, :timeline,
+      :open_layout, :open_count,
+      keyword_init: true
+    )
     def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, follow: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       startup_paths = Array(paths || path).compact
       @ui_stdin = ui_stdin || stdin
@@ -24,20 +30,22 @@ module RuVim
       @clean_mode = clean
       @skip_user_config = skip_user_config
       @config_path = config_path
-      @startup_readonly = readonly
-      @startup_diff_mode = diff_mode
-      @startup_quickfix_errorfile = quickfix_errorfile
-      @startup_session_file = session_file
-      @startup_nomodifiable = nomodifiable
-      @startup_follow = follow
+      @startup = StartupState.new(
+        readonly: readonly,
+        diff_mode: diff_mode,
+        quickfix_errorfile: quickfix_errorfile,
+        session_file: session_file,
+        nomodifiable: nomodifiable,
+        follow: follow,
+        time_path: startup_time_path,
+        time_origin: monotonic_now,
+        timeline: [],
+        open_layout: startup_open_layout,
+        open_count: startup_open_count
+      )
       @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
-      @startup_time_path = startup_time_path
-      @startup_time_origin = monotonic_now
-      @startup_timeline = []
-      @startup_open_layout = startup_open_layout
-      @startup_open_count = startup_open_count
 
       @stream_handler = StreamHandler.new(editor: @editor, signal_w: @signal_w)
       @completion = CompletionManager.new(
@@ -92,7 +100,7 @@ module RuVim
         verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
       else
-        verbose_log(1, "startup: open_paths #{startup_paths.inspect} layout=#{@startup_open_layout || :single}")
+        verbose_log(1, "startup: open_paths #{startup_paths.inspect} layout=#{@startup.open_layout || :single}")
         open_startup_paths!(startup_paths)
       end
       startup_mark("buffers.opened")
@@ -105,6 +113,7 @@ module RuVim
       startup_mark("startup_actions.done")
       @stream_handler.start_stdin_stream_reader! if @stream_handler.stream_buffer_id
       write_startuptime_log!
+      @startup = nil
     end
 
     def run
@@ -523,22 +532,22 @@ module RuVim
     end
 
     def startup_mark(label)
-      return unless @startup_time_path
+      return unless @startup&.time_path
 
-      @startup_timeline << [label.to_s, monotonic_now]
+      @startup.timeline << [label.to_s, monotonic_now]
     end
 
     def write_startuptime_log!
-      return unless @startup_time_path
+      return unless @startup&.time_path
 
-      prev = @startup_time_origin
-      lines = @startup_timeline.map do |label, t|
-        total_ms = ((t - @startup_time_origin) * 1000.0)
+      prev = @startup.time_origin
+      lines = @startup.timeline.map do |label, t|
+        total_ms = ((t - @startup.time_origin) * 1000.0)
         delta_ms = ((t - prev) * 1000.0)
         prev = t
         format("%9.3f %9.3f %s", total_ms, delta_ms, label)
       end
-      File.write(@startup_time_path, lines.join("\n") + "\n")
+      File.write(@startup.time_path, lines.join("\n") + "\n")
     rescue StandardError => e
       verbose_log(1, "startuptime write error: #{e.message}")
     end
@@ -550,9 +559,9 @@ module RuVim
     end
 
     def apply_startup_buffer_flags!
-      apply_startup_readonly! if @startup_readonly
-      apply_startup_nomodifiable! if @startup_nomodifiable
-      apply_startup_follow! if @startup_follow
+      apply_startup_readonly! if @startup.readonly
+      apply_startup_nomodifiable! if @startup.nomodifiable
+      apply_startup_follow! if @startup.follow
     end
 
     def apply_startup_readonly!
@@ -584,19 +593,19 @@ module RuVim
     end
 
     def apply_startup_compat_mode_messages!
-      if @startup_diff_mode
+      if @startup.diff_mode
         verbose_log(1, "startup: -d requested (diff mode placeholder)")
         @editor.echo("diff mode (-d) is not implemented yet")
       end
 
-      if @startup_quickfix_errorfile
-        verbose_log(1, "startup: -q #{@startup_quickfix_errorfile} requested (quickfix placeholder)")
-        @editor.echo("quickfix startup (-q #{@startup_quickfix_errorfile}) is not implemented yet")
+      if @startup.quickfix_errorfile
+        verbose_log(1, "startup: -q #{@startup.quickfix_errorfile} requested (quickfix placeholder)")
+        @editor.echo("quickfix startup (-q #{@startup.quickfix_errorfile}) is not implemented yet")
       end
 
-      if @startup_session_file
-        verbose_log(1, "startup: -S #{@startup_session_file} requested (session placeholder)")
-        @editor.echo("session startup (-S #{@startup_session_file}) is not implemented yet")
+      if @startup.session_file
+        verbose_log(1, "startup: -S #{@startup.session_file} requested (session placeholder)")
+        @editor.echo("session startup (-S #{@startup.session_file}) is not implemented yet")
       end
     end
 
@@ -611,7 +620,7 @@ module RuVim
       @editor.open_path(first)
       apply_startup_buffer_flags!
 
-      case @startup_open_layout
+      case @startup.open_layout
       when :horizontal
         first_win_id = @editor.current_window_id
         rest.each { |p| open_path_in_split!(p, layout: :horizontal) }
@@ -626,7 +635,7 @@ module RuVim
       else
         rest.each do |p|
           buf = @editor.add_buffer_from_file(p)
-          @stream_handler.start_follow!(buf) if @startup_follow
+          @stream_handler.start_follow!(buf) if @startup.follow
         end
       end
     end
