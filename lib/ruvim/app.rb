@@ -12,7 +12,7 @@ module RuVim
     StartupState = Struct.new(
       :readonly, :diff_mode, :quickfix_errorfile, :session_file,
       :nomodifiable, :follow, :time_path, :time_origin, :timeline,
-      :open_layout, :open_count,
+      :open_layout, :open_count, :skip_user_config, :config_path,
       keyword_init: true
     )
     def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, follow: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
@@ -28,9 +28,9 @@ module RuVim
       @signal_r, @signal_w = IO.pipe
       @needs_redraw = true
       @clean_mode = clean
-      @skip_user_config = skip_user_config
-      @config_path = config_path
       @startup = StartupState.new(
+        skip_user_config: skip_user_config,
+        config_path: config_path,
         readonly: readonly,
         diff_mode: diff_mode,
         quickfix_errorfile: quickfix_errorfile,
@@ -487,10 +487,10 @@ module RuVim
 
     def load_user_config!
       return if @clean_mode || @restricted_mode
-      return if @skip_user_config
+      return if @startup.skip_user_config
 
-      if @config_path
-        @config_loader.load_file(@config_path)
+      if @startup.config_path
+        @config_loader.load_file(@startup.config_path)
       else
         @config_loader.load_default!
       end
