@@ -62,13 +62,32 @@ class RunCommandTest < Minitest::Test
   # --- :run with args ---
 
   def test_run_with_args_creates_shell_output_buffer
-    # Use a quick command
     feed(*":run echo hello".chars, :enter)
-    # Should have switched to Shell Output buffer
-    # The buffer may be streaming, so just check it was created
     output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     assert output_buf, "Expected [Shell Output] buffer to be created"
     assert output_buf.readonly?
+  end
+
+  def test_run_opens_in_horizontal_split
+    feed(*":run echo hello".chars, :enter)
+    # Should have 2 windows after split
+    leaves = @editor.send(:tree_leaves, @editor.layout_tree)
+    assert_equal 2, leaves.length, "Expected 2 windows (source + output)"
+    # Current window should show the output buffer
+    output_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
+    assert_equal output_buf.id, @editor.current_window.buffer_id
+  end
+
+  def test_run_reuses_existing_output_window
+    feed(*":run echo first".chars, :enter)
+    leaves_after_first = @editor.send(:tree_leaves, @editor.layout_tree)
+
+    # Focus source window and run again
+    feed(*":wincmd w".chars, :enter)
+    feed(*":run echo second".chars, :enter)
+
+    leaves_after_second = @editor.send(:tree_leaves, @editor.layout_tree)
+    assert_equal leaves_after_first.length, leaves_after_second.length, "Should not create additional splits"
   end
 
   def test_run_reuses_shell_output_buffer
@@ -76,8 +95,8 @@ class RunCommandTest < Minitest::Test
     first_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
     first_id = first_buf.id
 
-    # Switch back to original buffer and run again
-    feed(*":bprev".chars, :enter)
+    # Switch to source window and run again
+    feed(*":wincmd w".chars, :enter)
     feed(*":run echo second".chars, :enter)
     second_buf = @editor.buffers.values.find { |b| b.name == "[Shell Output]" }
 

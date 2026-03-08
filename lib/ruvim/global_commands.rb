@@ -1203,7 +1203,17 @@ module RuVim
       output_buf.stream_state = :live
       output_buf.stream_command = expanded
 
-      editor.switch_to_buffer(output_buf.id)
+      # Open output buffer in a split (reuse existing window if present)
+      existing_win = editor.windows.values.find { |w| w.buffer_id == output_buf.id }
+      if existing_win
+        editor.current_window_id = existing_win.id
+      else
+        win = editor.split_current_window(layout: :horizontal, place: :after)
+        win.buffer_id = output_buf.id
+        win.cursor_x = 0
+        win.cursor_y = 0
+        win.row_offset = 0
+      end
 
       # Start streaming
       handler = editor.run_stream_handler
