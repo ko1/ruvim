@@ -18,6 +18,7 @@ module RuVim
               when :run then "run"
               when :follow
                 @follow_backend == :inotify ? "follow/i" : "follow"
+              when :file_load then "load"
               end
       return nil unless label
 

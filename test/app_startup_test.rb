@@ -335,19 +335,19 @@ class AppStartupTest < Minitest::Test
 
         buf = editor.open_path(f.path)
         assert_match(/loading/i, editor.message)
-        assert_includes [:live, :closed], buf.loading_state
+        assert_includes [:live, :closed], buf.stream&.state
         assert_equal false, buf.modifiable?
 
         100.times do
           sh.drain_events!
-          break if buf.loading_state != :live
+          break if buf.stream&.state != :live
           state = sh.instance_variable_get(:@async_file_loads)[buf.id]
           break unless state && state[:thread]&.alive?
           sleep 0.005
         end
         sh.drain_events!
 
-        assert_equal :closed, buf.loading_state
+        assert_equal :closed, buf.stream&.state
         assert_equal true, buf.modifiable?
         assert_equal %w[a b c], buf.lines
         assert_match(/#{Regexp.escape(f.path)}/, editor.message)
@@ -374,18 +374,18 @@ class AppStartupTest < Minitest::Test
         sh = app.instance_variable_get(:@stream_handler)
 
         buf = editor.open_path(f.path)
-        assert_equal :live, buf.loading_state
+        assert_equal :live, buf.stream&.state
         assert_equal ["ab", ""], buf.lines
         assert_match(/showing first/i, editor.message)
 
         100.times do
           sh.drain_events!
-          break if buf.loading_state != :live
+          break if buf.stream&.state != :live
           sleep 0.005
         end
         sh.drain_events!
 
-        assert_equal :closed, buf.loading_state
+        assert_equal :closed, buf.stream&.state
         assert_equal %w[ab cd ef], buf.lines
       ensure
         ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev_async

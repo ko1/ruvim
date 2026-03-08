@@ -983,24 +983,13 @@ module RuVim
       mod = buffer.modified? ? " [+]" : ""
       stream = buffer.stream_status ? " [#{buffer.stream_status}]" : ""
       cmd = buffer.stream_command ? " #{buffer.stream_command}" : ""
-      loading = file_loading_status_token(buffer)
       tab = tab_status_token(editor)
-      left = "#{mode} #{path}#{mod}#{stream}#{cmd}#{loading}"
+      left = "#{mode} #{path}#{mod}#{stream}#{cmd}"
       right = " #{window.cursor_y + 1}:#{window.cursor_x + 1}#{tab} "
       body_width = [width - right.length, 0].max
       "#{left.ljust(body_width)[0, body_width]}#{right}"
     end
 
-    def file_loading_status_token(buffer)
-      return "" unless buffer.respond_to?(:loading_state)
-      return "" unless buffer.file_buffer?
-
-      state = buffer.loading_state
-      return "" unless state
-      return "" if state == :closed
-
-      " [load/#{state}]"
-    end
 
     def tab_status_token(editor)
       return "" if editor.tabpage_count <= 1

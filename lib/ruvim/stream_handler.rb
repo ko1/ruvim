@@ -390,7 +390,7 @@ module RuVim
         return false unless buf
 
         buf.finalize_async_file_load!(ended_with_newline: !!ended_with_newline)
-        buf.loading_state = :closed
+        buf.stream.state = :closed
         @editor.echo(format("\"%s\" %dL", buf.display_name, buf.line_count))
         true
       end
@@ -398,8 +398,8 @@ module RuVim
       def fail_async_file_load!(buffer_id, error)
         state = @async_file_loads.delete(buffer_id)
         buf = @editor.buffers[buffer_id]
-        if buf
-          buf.loading_state = :error
+        if buf&.stream
+          buf.stream.state = :error
         end
         @editor.echo_error("\"#{(state && state[:path]) || (buf && buf.display_name) || buffer_id}\" load error: #{error}")
         true
@@ -447,7 +447,9 @@ module RuVim
         file_size = File.size(path)
         buf = @editor.add_empty_buffer(path: path)
         @editor.switch_to_buffer(buf.id)
-        buf.loading_state = :live
+        buf.ensure_stream!
+        buf.stream.source = :file_load
+        buf.stream.state = :live
         buf.modified = false
 
         ensure_event_queue!
@@ -472,7 +474,7 @@ module RuVim
 
         if io.eof?
           buf.finalize_async_file_load!(ended_with_newline: state[:ended_with_newline])
-          buf.loading_state = :closed
+          buf.stream.state = :closed
           io.close unless io.closed?
           return buf
         end

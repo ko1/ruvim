@@ -8,7 +8,6 @@ module RuVim
     attr_accessor :path
     attr_reader :options
     attr_writer :modified
-    attr_accessor :loading_state
     attr_accessor :stream
 
     def stream_status
@@ -79,7 +78,6 @@ module RuVim
       @readonly = !!readonly
       @modifiable = !!modifiable
       @stream = nil
-      @loading_state = nil
       @undo_stack = []
       @redo_stack = []
       @change_group_depth = 0
@@ -107,7 +105,7 @@ module RuVim
     end
 
     def modifiable?
-      @modifiable && @loading_state != :live && !@stream&.live?
+      @modifiable && !@stream&.live?
     end
 
     def modifiable=(value)
@@ -136,7 +134,6 @@ module RuVim
       @readonly = !!readonly
       @modifiable = !!modifiable
       @stream = nil unless @kind == :stream
-      @loading_state = nil
       self
     end
 
@@ -147,7 +144,6 @@ module RuVim
       @readonly = false
       @modifiable = true
       @stream = nil
-      @loading_state = nil
       @lines = [""]
       @modified = false
       @undo_stack.clear
