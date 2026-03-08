@@ -178,4 +178,85 @@ class HighlighterTest < Minitest::Test
     refute_empty cols
     assert_equal "\e[33m", cols[0]
   end
+
+  # --- C ---
+
+  def test_c_keyword_if
+    cols = RuVim::Highlighter.color_columns("c", "if (x > 0) {")
+    assert_equal "\e[36m", cols[0]  # "if"
+    assert_equal "\e[36m", cols[1]
+  end
+
+  def test_c_keyword_return
+    cols = RuVim::Highlighter.color_columns("c", "  return 0;")
+    assert_equal "\e[36m", cols[2]  # "return"
+  end
+
+  def test_c_type_keyword
+    cols = RuVim::Highlighter.color_columns("c", "int main(void) {")
+    assert_equal "\e[36m", cols[0]  # "int"
+    assert_equal "\e[36m", cols[9]  # "void"
+  end
+
+  def test_c_string
+    cols = RuVim::Highlighter.color_columns("c", 'printf("hello");')
+    assert_equal "\e[32m", cols[7]  # opening quote
+    assert_equal "\e[32m", cols[13] # closing quote
+  end
+
+  def test_c_char_literal
+    cols = RuVim::Highlighter.color_columns("c", "char c = 'a';")
+    assert_equal "\e[32m", cols[9]  # opening quote
+    assert_equal "\e[32m", cols[11] # closing quote
+  end
+
+  def test_c_number_decimal
+    cols = RuVim::Highlighter.color_columns("c", "int x = 42;")
+    assert_equal "\e[33m", cols[8]  # "4"
+    assert_equal "\e[33m", cols[9]  # "2"
+  end
+
+  def test_c_number_hex
+    cols = RuVim::Highlighter.color_columns("c", "int x = 0xFF;")
+    assert_equal "\e[33m", cols[8]  # "0"
+    assert_equal "\e[33m", cols[11] # "F"
+  end
+
+  def test_c_line_comment
+    cols = RuVim::Highlighter.color_columns("c", "x = 1; // comment")
+    assert_equal "\e[90m", cols[7]  # "//"
+    assert_equal "\e[90m", cols[16] # end of comment
+  end
+
+  def test_c_block_comment_single_line
+    cols = RuVim::Highlighter.color_columns("c", "x = 1; /* comment */")
+    assert_equal "\e[90m", cols[7]  # "/*"
+    assert_equal "\e[90m", cols[19] # "*/"
+  end
+
+  def test_c_preprocessor
+    cols = RuVim::Highlighter.color_columns("c", "#include <stdio.h>")
+    assert_equal "\e[35m", cols[0]  # "#"
+    assert_equal "\e[35m", cols[7]  # "e" of include
+  end
+
+  def test_c_define_preprocessor
+    cols = RuVim::Highlighter.color_columns("c", "#define MAX 100")
+    assert_equal "\e[35m", cols[0]  # "#"
+  end
+
+  def test_c_constant_macro
+    cols = RuVim::Highlighter.color_columns("c", "if (ptr == NULL) {")
+    assert_equal "\e[96m", cols[11] # "N" of NULL
+  end
+
+  def test_c_all_caps_identifier
+    cols = RuVim::Highlighter.color_columns("c", "x = MAX_SIZE;")
+    assert_equal "\e[96m", cols[4]  # "M"
+  end
+
+  def test_c_empty_line
+    cols = RuVim::Highlighter.color_columns("c", "")
+    assert_empty cols
+  end
 end

@@ -285,3 +285,84 @@ class RubyIndentTest < Minitest::Test
     assert_equal 0, calc(lines, 3)  # end
   end
 end
+
+class CIndentTest < Minitest::Test
+  def calc(lines, target_row, sw = 2)
+    RuVim::Lang::C.calculate_indent(lines, target_row, sw)
+  end
+
+  def test_first_line_is_zero
+    assert_equal 0, calc(["int main() {"], 0)
+  end
+
+  def test_after_open_brace
+    lines = ["int main() {", "  return 0;"]
+    assert_equal 2, calc(lines, 1)
+  end
+
+  def test_close_brace
+    lines = ["int main() {", "  return 0;", "}"]
+    assert_equal 0, calc(lines, 2)
+  end
+
+  def test_nested_braces
+    lines = [
+      "void foo() {",
+      "  if (x) {",
+      "    bar();",
+      "  }",
+      "}"
+    ]
+    assert_equal 2, calc(lines, 1)
+    assert_equal 4, calc(lines, 2)
+    assert_equal 2, calc(lines, 3)
+    assert_equal 0, calc(lines, 4)
+  end
+
+  def test_switch_case
+    lines = [
+      "switch (x) {",
+      "case 1:",
+      "  foo();",
+      "  break;",
+      "case 2:",
+      "  bar();",
+      "  break;",
+      "default:",
+      "  baz();",
+      "}"
+    ]
+    assert_equal 0, calc(lines, 1)  # case 1:
+    assert_equal 2, calc(lines, 2)  # foo()
+    assert_equal 2, calc(lines, 3)  # break
+    assert_equal 0, calc(lines, 4)  # case 2:
+    assert_equal 2, calc(lines, 5)  # bar()
+    assert_equal 0, calc(lines, 7)  # default:
+    assert_equal 2, calc(lines, 8)  # baz()
+    assert_equal 0, calc(lines, 9)  # }
+  end
+
+  def test_shiftwidth_4
+    lines = ["void foo() {", "    bar();", "}"]
+    assert_equal 4, calc(lines, 1, 4)
+    assert_equal 0, calc(lines, 2, 4)
+  end
+
+  def test_indent_trigger_open_brace
+    assert RuVim::Lang::C.indent_trigger?("int main() {")
+    assert RuVim::Lang::C.indent_trigger?("if (x) {")
+  end
+
+  def test_indent_trigger_no_trigger
+    refute RuVim::Lang::C.indent_trigger?("return 0;")
+    refute RuVim::Lang::C.indent_trigger?("}")
+  end
+
+  def test_dedent_trigger_close_brace
+    assert_kind_of Regexp, RuVim::Lang::C.dedent_trigger("}")
+  end
+
+  def test_dedent_trigger_no_trigger
+    assert_nil RuVim::Lang::C.dedent_trigger("a")
+  end
+end

@@ -288,7 +288,13 @@ module RuVim
         ".csv" => "csv",
         ".scm" => "scheme",
         ".ss" => "scheme",
-        ".sld" => "scheme"
+        ".sld" => "scheme",
+        ".c" => "c",
+        ".h" => "c",
+        ".cpp" => "c",
+        ".cc" => "c",
+        ".cxx" => "c",
+        ".hpp" => "c"
       }[File.extname(base).downcase]
       return ext_ft if ext_ft
 
@@ -1170,6 +1176,7 @@ module RuVim
     def resolve_lang_module(ft)
       case ft
       when "ruby" then Lang::Ruby
+      when "c" then Lang::C
       else Lang::Base
       end
     end
