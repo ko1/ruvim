@@ -138,6 +138,48 @@ class RunCommandTest < Minitest::Test
     assert stop_called, "Expected buffer's stream_stop_handler to be called"
   end
 
+  # --- auto-save before :run ---
+
+  def test_run_auto_saves_modified_buffer
+    Tempfile.create(["ruvim-run-save", ".rb"]) do |f|
+      f.write("original\n")
+      f.flush
+
+      app = RuVim::App.new(path: f.path, clean: true)
+      editor = app.instance_variable_get(:@editor)
+      kh = app.instance_variable_get(:@key_handler)
+      buf = editor.current_buffer
+
+      # Simulate editing
+      buf.lines[0] = "modified"
+      buf.modified = true
+
+      ":run echo ok".chars.each { |k| kh.handle(k) }
+      kh.handle(:enter)
+
+      # File should be saved
+      assert_equal "modified", File.read(f.path)
+      assert_equal false, buf.modified?
+    end
+  end
+
+  def test_run_does_not_save_unmodified_buffer
+    Tempfile.create(["ruvim-run-nosave", ".rb"]) do |f|
+      f.write("original\n")
+      f.flush
+      mtime_before = File.mtime(f.path)
+
+      app = RuVim::App.new(path: f.path, clean: true)
+      kh = app.instance_variable_get(:@key_handler)
+
+      sleep 0.01 # ensure mtime would differ if written
+      ":run echo ok".chars.each { |k| kh.handle(k) }
+      kh.handle(:enter)
+
+      assert_equal mtime_before, File.mtime(f.path)
+    end
+  end
+
   # --- streaming output arrives incrementally ---
 
   def test_run_streams_output_incrementally

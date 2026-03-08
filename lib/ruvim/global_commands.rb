@@ -1174,6 +1174,11 @@ module RuVim
         command = argv.first
       end
 
+      # Auto-save modified buffer before running
+      if source_buffer.modified? && source_buffer.path
+        source_buffer.write_to
+      end
+
       expanded = expand_run_command(command, source_buffer)
       editor.run_history[source_buffer.id] = command
 
