@@ -52,15 +52,21 @@ module RuVim
       return if parsed.nil?
 
       spec = @ex_registry.fetch(parsed.name)
-      validate_ex_args!(spec, parsed.argv, parsed.bang)
-      invocation = CommandInvocation.new(id: spec.name, argv: parsed.argv, bang: parsed.bang)
+      argv = parsed.argv
+      if spec.raw_args
+        # Re-extract raw text after command name (preserving shell quoting)
+        raw_rest = rest.strip.sub(/\A\S+\s*/, "")
+        argv = raw_rest.empty? ? [] : [raw_rest]
+      end
+      validate_ex_args!(spec, argv, parsed.bang)
+      invocation = CommandInvocation.new(id: spec.name, argv: argv, bang: parsed.bang)
       ctx = Context.new(editor:, invocation:)
       range_kwargs = {}
       if range_result
         range_kwargs[:range_start] = range_result[:range_start]
         range_kwargs[:range_end] = range_result[:range_end]
       end
-      @command_host.call(spec.call, ctx, argv: parsed.argv, bang: parsed.bang, count: 1, kwargs: range_kwargs)
+      @command_host.call(spec.call, ctx, argv: argv, bang: parsed.bang, count: 1, kwargs: range_kwargs)
     rescue StandardError => e
       editor.echo_error("Error: #{e.message}")
     ensure

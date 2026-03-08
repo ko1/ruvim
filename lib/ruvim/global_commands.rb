@@ -1171,7 +1171,7 @@ module RuVim
           command = runprg
         end
       else
-        command = argv.join(" ")
+        command = argv.first
       end
 
       expanded = expand_run_command(command, source_buffer)

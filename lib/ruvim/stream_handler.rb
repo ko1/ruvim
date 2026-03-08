@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "pty"
+
 module RuVim
   class StreamHandler
       LARGE_FILE_ASYNC_THRESHOLD_BYTES = 64 * 1024 * 1024
@@ -71,16 +73,23 @@ module RuVim
         queue = @stream_event_queue
         buf.stream_stop_handler = -> { stop_buffer_stream!(buf) }
         buf.stream_thread = Thread.new do
-          IO.popen([shell, "-c", command], err: [:child, :out]) do |io|
-            buf.stream_io = io
-            while (chunk = io.read(4096))
-              queue << { type: :stream_data, buffer_id: buffer_id, data: Buffer.decode_text(chunk) }
-              notify_signal_wakeup
+          PTY.spawn(shell, "-c", command) do |r, _w, pid|
+            buf.stream_io = r
+            buf.stream_pid = pid
+            begin
+              while (chunk = r.readpartial(4096))
+                text = Buffer.decode_text(chunk).delete("\r")
+                queue << { type: :stream_data, buffer_id: buffer_id, data: text }
+                notify_signal_wakeup
+              end
+            rescue EOFError
+              # expected
             end
+            _status = Process.waitpid2(pid)[1] rescue nil
+            buf.stream_io = nil
+            queue << { type: :stream_eof, buffer_id: buffer_id, status: _status }
+            notify_signal_wakeup
           end
-          buf.stream_io = nil
-          queue << { type: :stream_eof, buffer_id: buffer_id, status: $? }
-          notify_signal_wakeup
         rescue StandardError => e
           buf.stream_io = nil
           queue << { type: :stream_error, buffer_id: buffer_id, error: e.message.to_s }
@@ -116,6 +125,12 @@ module RuVim
         return false unless buf
         return false unless buf.stream_state == :live
 
+        pid = buf.stream_pid
+        buf.stream_pid = nil
+        if pid
+          Process.kill(:TERM, pid) rescue nil
+          Process.waitpid(pid) rescue nil
+        end
         io = buf.stream_io
         buf.stream_io = nil
         if io

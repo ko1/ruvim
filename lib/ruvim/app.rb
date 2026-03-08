@@ -360,7 +360,7 @@ module RuVim
       register_internal_unless(cmd, "git.grep.open_file", call: :git_grep_open_file, desc: "Open file from git grep")
       register_internal_unless(cmd, "git.branch.checkout", call: :git_branch_checkout, desc: "Checkout branch under cursor")
       register_internal_unless(cmd, "git.commit.execute", call: :git_commit_execute, desc: "Execute git commit")
-      register_ex_unless(ex, "run", call: :ex_run, desc: "Run command and show output in buffer", nargs: :any)
+      register_ex_unless(ex, "run", call: :ex_run, desc: "Run command and show output in buffer", nargs: :any, raw_args: true)
       register_ex_unless(ex, "git", call: :ex_git, desc: "Git subcommand dispatcher", nargs: :any)
       register_ex_unless(ex, "gh", call: :ex_gh, desc: "GitHub subcommand dispatcher", nargs: :any)
     end

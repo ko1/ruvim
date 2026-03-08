@@ -9,6 +9,7 @@ module RuVim
       :desc,
       :nargs,
       :bang,
+      :raw_args,
       :source,
       keyword_init: true
     )
@@ -20,7 +21,7 @@ module RuVim
       @lookup = {}
     end
 
-    def register(name, call:, aliases: [], desc: "", nargs: :any, bang: false, source: :builtin)
+    def register(name, call:, aliases: [], desc: "", nargs: :any, bang: false, raw_args: false, source: :builtin)
       canonical = name.to_s
       if @specs.key?(canonical)
         raise RuVim::CommandError, "Ex command already exists: #{canonical}"
@@ -32,6 +33,7 @@ module RuVim
         desc: desc,
         nargs: nargs,
         bang: bang,
+        raw_args: raw_args,
         source: source
       )
 
