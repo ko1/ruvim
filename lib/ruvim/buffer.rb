@@ -346,6 +346,12 @@ module RuVim
       @modified = true
     end
 
+    def replace_line!(row, text)
+      record_change_before_mutation!
+      @lines[row] = text.dup
+      @modified = true
+    end
+
     def replace_all_lines!(new_lines)
       record_change_before_mutation!
       @lines = Array(new_lines).map(&:dup)

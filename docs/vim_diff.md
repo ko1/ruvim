@@ -120,6 +120,6 @@ RuVim は「Vim ライクな Ruby 製ターミナルエディタ」です。Vim 
 - LSP / diagnostics
 - job / channel / terminal 連携
 - `:make`, `:cfile`, `:lfile`（`:grep`, `:lgrep` は実装済み）
-- substitute の `c`（confirm）フラグ（`g`, `i`, `I`, `n`, `e` は実装済み）
+- substitute の全フラグ実装済み（`g`, `i`, `I`, `n`, `e`, `c`）
 - swap / backup（`undofile` は実装済み）
 - `-d`（diff mode）, `-q`（quickfix mode）, `-S`（session）は placeholder のみ

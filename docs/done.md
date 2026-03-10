@@ -20,6 +20,7 @@
 - text object 実装（`iw`, `aw`, quote/bracket 系など）
 - `c` operator と change 系コマンド（`cw`, `cc`, `c$` など）
 - 検索の強化（regex, highlight, `* # g* g#`, 最小 substitute）
+- `:substitute` の `c`（confirm）フラグ — `y/n/a/q/l/Esc` 対応
 - named register / clipboard 対応（`"a`, `"A`, `"+`, `"*`）
 - マーク / ジャンプリスト
 - マクロ（`q{reg}`, `@{reg}`）

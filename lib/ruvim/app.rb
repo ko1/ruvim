@@ -75,6 +75,10 @@ module RuVim
         @screen.invalidate_cache!
         result
       }
+      @editor.confirm_key_reader = -> {
+        @screen.render(@editor)
+        @input.read_key
+      }
 
       @completion.load_history!
 

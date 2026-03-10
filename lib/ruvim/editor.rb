@@ -61,7 +61,7 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows, :layout_tree
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :open_path_handler, :keymap_manager, :app_action_handler, :git_stream_handler, :git_stream_stop_handler, :shell_executor, :run_stream_handler, :confirm_key_reader
 
     def initialize
       @buffers = {}

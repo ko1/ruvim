@@ -1436,7 +1436,6 @@ module RuVim
     def ex_substitute(ctx, pattern:, replacement:, flags_str: nil, range_start: nil, range_end: nil, global: false, **)
       materialize_intro_buffer_if_needed(ctx)
       flags = parse_substitute_flags(flags_str, default_global: global)
-      raise RuVim::CommandError, "Confirm flag (:s///c) is not yet supported" if flags[:confirm]
 
       regex = build_substitute_regex(pattern, flags, ctx)
 
@@ -1449,7 +1448,11 @@ module RuVim
         return
       end
 
-      changed = substitute_range(ctx, regex, replacement, r_start, r_end, flags)
+      changed = if flags[:confirm]
+                  substitute_range_confirm(ctx, regex, replacement, r_start, r_end, flags)
+                else
+                  substitute_range(ctx, regex, replacement, r_start, r_end, flags)
+                end
 
       if changed.positive?
         ctx.editor.echo("#{changed} substitution(s)")
@@ -3353,6 +3356,71 @@ module RuVim
         ctx.buffer.replace_all_lines!(new_lines)
         ctx.buffer.end_change_group
       end
+      changed
+    end
+
+    def substitute_range_confirm(ctx, regex, replacement, r_start, r_end, flags)
+      changed = 0
+      reader = ctx.editor.confirm_key_reader
+      return 0 unless reader
+
+      ctx.buffer.begin_change_group
+      replace_all = false
+
+      catch(:quit_substitute) do
+        (r_start..r_end).each do |row|
+          line = ctx.buffer.line_at(row)
+          offset = 0
+
+          loop do
+            m = line.match(regex, offset)
+            break unless m
+
+            match_col = m.begin(0)
+            match_text = m[0]
+
+            unless replace_all
+              ctx.window.cursor_y = row
+              ctx.window.cursor_x = match_col
+              ctx.editor.echo("replace with #{replacement} (y/n/a/q/l/Esc)?")
+
+              key = reader.call
+              case key
+              when "y"
+                # replace and continue
+              when "n"
+                offset = match_col + [match_text.length, 1].max
+                next
+              when "a"
+                replace_all = true
+              when "l"
+                # replace this one and stop
+                new_line = line[0...match_col] + line[match_col..].sub(regex, replacement)
+                ctx.buffer.replace_line!(row, new_line)
+                changed += 1
+                throw :quit_substitute
+              when "q", :escape, :ctrl_c
+                throw :quit_substitute
+              else
+                offset = match_col + [match_text.length, 1].max
+                next
+              end
+            end
+
+            # Do the replacement
+            new_line = line[0...match_col] + line[match_col..].sub(regex, replacement)
+            replaced_length = new_line.length - line.length + match_text.length
+            ctx.buffer.replace_line!(row, new_line)
+            line = new_line
+            changed += 1
+            offset = match_col + [replaced_length, 1].max
+
+            break unless flags[:global]
+          end
+        end
+      end
+
+      ctx.buffer.end_change_group
       changed
     end
 

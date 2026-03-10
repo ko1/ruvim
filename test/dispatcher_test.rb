@@ -545,6 +545,96 @@ class DispatcherTest < Minitest::Test
     assert_equal "zzz", @editor.current_buffer.line_at(2)
   end
 
+  # --- :s///c (confirm substitute) tests ---
+
+  def test_substitute_confirm_yes_replaces
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo bar foo"])
+    keys = ["y", "y"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/baz/gc")
+
+    assert_equal "baz bar baz", @editor.current_buffer.line_at(0)
+    assert_match(/2 substitution/, @editor.message)
+  end
+
+  def test_substitute_confirm_no_skips
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo bar foo"])
+    keys = ["n", "n"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/baz/gc")
+
+    assert_equal "foo bar foo", @editor.current_buffer.line_at(0)
+    assert_match(/Pattern not found/, @editor.message)
+  end
+
+  def test_substitute_confirm_quit_stops
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo", "foo"])
+    keys = ["y", "q"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/c")
+
+    assert_equal "bar", @editor.current_buffer.line_at(0)
+    assert_equal "foo", @editor.current_buffer.line_at(1)
+    assert_equal "foo", @editor.current_buffer.line_at(2)
+  end
+
+  def test_substitute_confirm_all_replaces_remaining
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo", "foo"])
+    keys = ["n", "a"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/c")
+
+    assert_equal "foo", @editor.current_buffer.line_at(0)
+    assert_equal "bar", @editor.current_buffer.line_at(1)
+    assert_equal "bar", @editor.current_buffer.line_at(2)
+  end
+
+  def test_substitute_confirm_last_replaces_one_and_stops
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo", "foo"])
+    keys = ["l"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/c")
+
+    assert_equal "bar", @editor.current_buffer.line_at(0)
+    assert_equal "foo", @editor.current_buffer.line_at(1)
+    assert_equal "foo", @editor.current_buffer.line_at(2)
+  end
+
+  def test_substitute_confirm_escape_stops
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo"])
+    keys = [:escape].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/c")
+
+    assert_equal "foo", @editor.current_buffer.line_at(0)
+    assert_equal "foo", @editor.current_buffer.line_at(1)
+  end
+
+  def test_substitute_confirm_undo_is_single_unit
+    @editor.materialize_intro_buffer!
+    @editor.current_buffer.replace_all_lines!(["foo", "foo", "foo"])
+    keys = ["y", "y", "y"].each
+    @editor.confirm_key_reader = -> { keys.next }
+
+    @dispatcher.dispatch_ex(@editor, "%s/foo/bar/c")
+
+    assert_equal ["bar", "bar", "bar"], @editor.current_buffer.lines
+    assert @editor.current_buffer.undo!
+    assert_equal ["foo", "foo", "foo"], @editor.current_buffer.lines
+  end
+
   # --- :d (delete lines) tests ---
 
   def test_delete_lines_with_range

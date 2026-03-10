@@ -394,7 +394,7 @@ RuVim::ExCommandRegistry.instance.register(
 - `N` : 直前検索を逆方向に繰り返し
 - `*`, `#` : カーソル下の単語を前/後方検索（単語境界つき）
 - `g*`, `g#` : カーソル下の単語を前/後方検索（部分一致）
-- `:{range}s/pat/repl/[flags]` : substitute（フラグ: `g`, `i`, `I`, `n`, `e` 対応。`c` は未実装）
+- `:{range}s/pat/repl/[flags]` : substitute（フラグ: `g`, `i`, `I`, `n`, `e`, `c` 対応）
 
 ### 仕様メモ
 
@@ -947,7 +947,7 @@ Blame バッファ内のバッファローカルバインディング:
 - 永続 undo（`undofile` / `undodir` — 実装済み。`:set undofile` で有効化）
 - session 保存/復元（`-S` / `:mksession` 相当の実体）
 - `:make` / `:cfile` / `:lfile` など quickfix 入口（`:grep` / `:lgrep` は実装済み）
-- `:substitute` の `c`（confirm）フラグ（`g`, `i`, `I`, `n`, `e` は実装済み）
+- `:substitute` の `c`（confirm）フラグ — 実装済み（`y/n/a/q/l/Esc` 対応）
 - `Ctrl-w` resize / close-others / equalize など window 操作拡張
 - `:set` 高度構文（`+=`, `-=`, `:set all`, 短縮名）
 - tag jump / folds / `:global` / `:normal`
