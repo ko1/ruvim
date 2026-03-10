@@ -414,6 +414,47 @@ module RuVim
       target
     end
 
+    # ---- persistent undo ----
+
+    def undo_file_path(undodir)
+      return nil if @path.nil? || @path.empty?
+
+      require "digest"
+      hash = Digest::SHA256.hexdigest(File.expand_path(@path))
+      File.join(undodir, hash)
+    end
+
+    def save_undo_file(undodir)
+      return if undodir.nil? || undodir.empty?
+
+      uf = undo_file_path(undodir)
+      return unless uf
+
+      if @undo_stack.empty? && @redo_stack.empty?
+        File.delete(uf) if File.exist?(uf)
+        return
+      end
+
+      require "fileutils"
+      FileUtils.mkdir_p(undodir)
+      data = Marshal.dump({ undo: @undo_stack, redo: @redo_stack })
+      File.binwrite(uf, data)
+    end
+
+    def load_undo_file(undodir)
+      return if undodir.nil? || undodir.empty?
+
+      uf = undo_file_path(undodir)
+      return unless uf
+      return unless File.exist?(uf)
+
+      data = Marshal.load(File.binread(uf)) # rubocop:disable Security/MarshalLoad
+      @undo_stack = data.fetch(:undo)
+      @redo_stack = data.fetch(:redo)
+    rescue StandardError
+      # Corrupted or incompatible undo file — silently ignore
+    end
+
     private
 
     def normalize_span(start_row, start_col, end_row, end_col)

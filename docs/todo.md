@@ -73,12 +73,11 @@
 
 ### Day 7: 永続化の第一段（undofile 先行）
 
-- `undofile`, `undodir` option 実体化
-- 保存時/終了時の undo dump（最小）
-- ファイル再オープン時の undo restore（path ベース）
-- エラー時の degrade（読めない/壊れた undo file は無視してメッセージ）
-- docs 更新
-  - `docs/config.md`, `docs/spec.md`, `docs/vim_diff.md`
+- `[DONE]` `undofile`, `undodir` option 実体化
+- `[DONE]` 保存時の undo dump（最小）
+- `[DONE]` ファイルオープン時の undo restore（path ベース）
+- `[DONE]` エラー時の degrade（読めない/壊れた undo file は無視）
+- `[DONE]` docs 更新
 
 ### 次の週に回す候補（この週の続き）
 
@@ -148,7 +147,7 @@
 ## TODO 永続化
 
 - 永続 undo / セッション
-  - `undofile` / `undodir` 実体（保存・復元）
+  - `[DONE]` `undofile` / `undodir` 実体（保存・復元）
   - session file（開いている buffer / cursor 位置 / tab/window レイアウト）
   - `-S [session]` の実体化（現在 placeholder）
 
@@ -210,8 +209,8 @@
 
 ### P2: 実用性は高いが依存が増えやすい / 実装範囲が広い
 
-- `undofile`（永続 undo の ON/OFF）
-- `undodir`（永続 undo の保存先）
+- `[DONE]` `undofile`（永続 undo の ON/OFF）
+- `[DONE]` `undodir`（永続 undo の保存先）
 - `updatetime`（アイドル更新間隔。診断/自動処理にも関係）
 - `swapfile`（swap file の ON/OFF）
 - `backup`（バックアップ保存）

@@ -53,6 +53,8 @@ module RuVim
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil },
       "onsavehook" => { default_scope: :buffer, type: :bool, default: true },
+      "undofile" => { default_scope: :global, type: :bool, default: false },
+      "undodir" => { default_scope: :global, type: :string, default: nil },
       "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
       "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
       "runprg" => { default_scope: :buffer, type: :string, default: nil }
@@ -587,6 +589,7 @@ module RuVim
       id = next_buffer_id
       buffer = Buffer.from_file(id:, path:)
       assign_detected_filetype(buffer)
+      load_undo_file_for(buffer)
       @buffers[id] = buffer
       buffer
     end
@@ -1154,6 +1157,27 @@ module RuVim
 
     def filetype_default_runprg(ft)
       Lang::Registry.runprg_for(ft)
+    end
+
+    def resolved_undodir
+      dir = get_option("undodir", scope: :global)
+      return dir if dir && !dir.empty?
+
+      xdg = ENV["XDG_DATA_HOME"]
+      base = (xdg && !xdg.empty?) ? xdg : File.join(Dir.home, ".local", "share")
+      File.join(base, "ruvim", "undo")
+    end
+
+    def load_undo_file_for(buffer)
+      return unless @global_options["undofile"]
+
+      buffer.load_undo_file(resolved_undodir)
+    end
+
+    def save_undo_file_for(buffer)
+      return unless @global_options["undofile"]
+
+      buffer.save_undo_file(resolved_undodir)
     end
 
     private

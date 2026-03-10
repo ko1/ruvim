@@ -9,6 +9,7 @@
 ## コア編集 / Vim ライク基本機能
 
 - `Undo/Redo`（`u`, `Ctrl-r`）
+- 永続 undo（`undofile` / `undodir`）— `:set undofile` で有効化、Marshal シリアライズ、SHA256 パス
 - 検索（`/`, `?`, `n`, `N`）
 - 複数キー解釈の拡張（operator-pending 基礎）
 - 移動コマンド追加（`gg`, `G`, `w`, `b`, `e`, `$`, `^`）

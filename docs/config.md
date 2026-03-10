@@ -265,6 +265,17 @@ setglobal "tabstop=8"
   - ftplugin 読み込み対象、filetype-local keymap、簡易 syntax highlight の判定に使います。
   - 手動で変更した場合の ftplugin 再適用は現状未対応です。
 
+### Global options（永続 undo）
+
+- `undofile` (`bool`, default `false`) [`DONE`]
+  - `true` にすると、ファイル保存時に undo/redo 履歴を永続化します。
+  - 次回ファイルを開いた際に undo 履歴が復元されます。
+
+- `undodir` (`string`, default `nil` → `$XDG_DATA_HOME/ruvim/undo/`) [`DONE`]
+  - undo ファイルの保存先ディレクトリを指定します。
+  - `nil` の場合は `~/.local/share/ruvim/undo/` を使用します。
+  - ファイル名はファイルの絶対パスの SHA256 ハッシュです。
+
 ### Global options（検索・grep）
 
 - `grepprg` (`string`, default `"grep -nH"`) [`DONE`]
