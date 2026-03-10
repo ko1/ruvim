@@ -1208,7 +1208,7 @@ module RuVim
     end
 
     def resolved_undodir
-      dir = @global_options["undodir"]
+      dir = get_option("undodir", scope: :global)
       return dir if dir && !dir.empty?
 
       xdg = ENV["XDG_DATA_HOME"]
@@ -1217,13 +1217,13 @@ module RuVim
     end
 
     def load_undo_file_for(buffer)
-      return unless @global_options["undofile"]
+      return unless get_option("undofile", scope: :global)
 
       buffer.load_undo_file(resolved_undodir)
     end
 
     def save_undo_file_for(buffer)
-      return unless @global_options["undofile"]
+      return unless get_option("undofile", scope: :global)
 
       buffer.save_undo_file(resolved_undodir)
     end
