@@ -53,7 +53,7 @@ module RuVim
       "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
       "filetype" => { default_scope: :buffer, type: :string, default: nil },
       "onsavehook" => { default_scope: :buffer, type: :bool, default: true },
-      "undofile" => { default_scope: :global, type: :bool, default: false },
+      "undofile" => { default_scope: :global, type: :bool, default: true },
       "undodir" => { default_scope: :global, type: :string, default: nil },
       "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
       "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
@@ -202,32 +202,34 @@ module RuVim
       option_def(name)&.fetch(:default_scope, :global) || :global
     end
 
-    def effective_option(name, window: current_window, buffer: current_buffer)
+    def effective_option(name, window: nil, buffer: nil)
       key = name.to_s
-      if window && window.options.key?(key)
-        window.options[key]
-      elsif buffer && buffer.options.key?(key)
-        buffer.options[key]
+      w = window || current_window
+      b = buffer || current_buffer
+      if w && w.options.key?(key)
+        w.options[key]
+      elsif b && b.options.key?(key)
+        b.options[key]
       else
         @global_options[key]
       end
     end
 
-    def get_option(name, scope: :effective, window: current_window, buffer: current_buffer)
+    def get_option(name, scope: :effective, window: nil, buffer: nil)
       key = name.to_s
       case scope
       when :global
         @global_options[key]
       when :buffer
-        buffer&.options&.[](key)
+        (buffer || current_buffer)&.options&.[](key)
       when :window
-        window&.options&.[](key)
+        (window || current_window)&.options&.[](key)
       else
-        effective_option(key, window:, buffer:)
+        effective_option(key, window: window, buffer: buffer)
       end
     end
 
-    def set_option(name, value, scope: :auto, window: current_window, buffer: current_buffer)
+    def set_option(name, value, scope: :auto, window: nil, buffer: nil)
       key = name.to_s
       value = coerce_option_value(key, value)
       actual_scope = (scope == :auto ? option_default_scope(key) : scope)
@@ -235,26 +237,30 @@ module RuVim
       when :global
         @global_options[key] = value
       when :buffer
-        raise RuVim::CommandError, "No current buffer" unless buffer
-        buffer.options[key] = value
+        b = buffer || current_buffer
+        raise RuVim::CommandError, "No current buffer" unless b
+        b.options[key] = value
       when :window
-        raise RuVim::CommandError, "No current window" unless window
-        window.options[key] = value
+        w = window || current_window
+        raise RuVim::CommandError, "No current window" unless w
+        w.options[key] = value
       else
         raise RuVim::CommandError, "Unknown option scope: #{actual_scope}"
       end
       value
     end
 
-    def option_snapshot(window: current_window, buffer: current_buffer)
-      keys = (OPTION_DEFS.keys + @global_options.keys + (buffer&.options&.keys || []) + (window&.options&.keys || [])).uniq.sort
+    def option_snapshot(window: nil, buffer: nil)
+      w = window || current_window
+      b = buffer || current_buffer
+      keys = (OPTION_DEFS.keys + @global_options.keys + (b&.options&.keys || []) + (w&.options&.keys || [])).uniq.sort
       keys.map do |k|
         {
           name: k,
-          effective: get_option(k, scope: :effective, window:, buffer:),
-          global: get_option(k, scope: :global, window:, buffer:),
-          buffer: get_option(k, scope: :buffer, window:, buffer:),
-          window: get_option(k, scope: :window, window:, buffer:)
+          effective: get_option(k, scope: :effective, window: w, buffer: b),
+          global: get_option(k, scope: :global, window: w, buffer: b),
+          buffer: get_option(k, scope: :buffer, window: w, buffer: b),
+          window: get_option(k, scope: :window, window: w, buffer: b)
         }
       end
     end
@@ -1202,7 +1208,7 @@ module RuVim
     end
 
     def resolved_undodir
-      dir = get_option("undodir", scope: :global)
+      dir = @global_options["undodir"]
       return dir if dir && !dir.empty?
 
       xdg = ENV["XDG_DATA_HOME"]

@@ -267,9 +267,10 @@ setglobal "tabstop=8"
 
 ### Global options（永続 undo）
 
-- `undofile` (`bool`, default `false`) [`DONE`]
-  - `true` にすると、ファイル保存時に undo/redo 履歴を永続化します。
+- `undofile` (`bool`, default `true`) [`DONE`]
+  - ファイル保存時に undo/redo 履歴を永続化します。
   - 次回ファイルを開いた際に undo 履歴が復元されます。
+  - `:set noundofile` で無効化可能。
 
 - `undodir` (`string`, default `nil` → `$XDG_DATA_HOME/ruvim/undo/`) [`DONE`]
   - undo ファイルの保存先ディレクトリを指定します。

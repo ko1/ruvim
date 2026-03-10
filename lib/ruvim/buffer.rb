@@ -445,6 +445,8 @@ module RuVim
       FileUtils.mkdir_p(undodir)
       data = Marshal.dump({ undo: @undo_stack, redo: @redo_stack })
       File.binwrite(uf, data)
+    rescue StandardError
+      # Cannot write undo file — silently ignore (e.g. permission denied)
     end
 
     def load_undo_file(undodir)
