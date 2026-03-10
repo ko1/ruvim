@@ -1102,12 +1102,13 @@ module RuVim
       children = node[:children]
       n = children.length
       rects = {}
+      weights = node[:weights]
 
       case node[:type]
       when :vsplit
         sep_count = n - 1
         usable = [width - sep_count, n].max
-        widths = split_sizes(usable, n)
+        widths = weighted_split_sizes(usable, n, weights)
         cur_left = left
         children.each_with_index do |child, i|
           w = widths[i]
@@ -1119,7 +1120,7 @@ module RuVim
       when :hsplit
         sep_count = n - 1
         usable = [height - sep_count, n].max
-        heights = split_sizes(usable, n)
+        heights = weighted_split_sizes(usable, n, weights)
         cur_top = top
         children.each_with_index do |child, i|
           h = heights[i]
@@ -1149,6 +1150,25 @@ module RuVim
       base = total / n
       rem = total % n
       Array.new(n) { |i| base + (i < rem ? 1 : 0) }
+    end
+
+    def weighted_split_sizes(total, n, weights)
+      return split_sizes(total, n) unless weights && weights.length == n
+
+      wsum = weights.sum.to_f
+      return split_sizes(total, n) if wsum <= 0
+
+      raw = weights.map { |w| (w / wsum * total).floor }
+      raw.map! { |v| [v, 1].max }
+      remainder = total - raw.sum
+      remainder.times { |i| raw[i % n] += 1 } if remainder > 0
+      if remainder < 0
+        (-remainder).times do |i|
+          idx = (n - 1 - i) % n
+          raw[idx] -= 1 if raw[idx] > 1
+        end
+      end
+      raw
     end
 
     def selected_in_visual?(visual, row, col)

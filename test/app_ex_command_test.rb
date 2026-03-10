@@ -136,6 +136,59 @@ class AppExCommandTest < Minitest::Test
     assert_equal :normal, @editor.mode
   end
 
+  # --- Ctrl-w c (close window) ---
+
+  def test_ctrl_w_c_closes_window
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    assert_equal 2, @editor.window_count
+
+    feed(:ctrl_w, "c")
+    assert_equal 1, @editor.window_count
+  end
+
+  def test_ctrl_w_c_does_nothing_on_last_window
+    assert_equal 1, @editor.window_count
+    feed(:ctrl_w, "c")
+    assert_equal 1, @editor.window_count
+  end
+
+  # --- Ctrl-w o (only window) ---
+
+  def test_ctrl_w_o_closes_other_windows
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    feed(":", "v", "s", "p", "l", "i", "t", :enter)
+    assert_operator @editor.window_count, :>=, 3
+
+    current_id = @editor.current_window_id
+    feed(:ctrl_w, "o")
+    assert_equal 1, @editor.window_count
+    assert_equal current_id, @editor.current_window_id
+  end
+
+  # --- Ctrl-w = (equalize) ---
+
+  def test_ctrl_w_equal_resets_weights
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    feed(:ctrl_w, "=")
+    assert_equal :normal, @editor.mode
+  end
+
+  # --- Ctrl-w +/-/</>  (resize) ---
+
+  def test_ctrl_w_plus_minus_resize
+    feed(":", "s", "p", "l", "i", "t", :enter)
+    feed(:ctrl_w, "+")
+    feed(:ctrl_w, "-")
+    assert_equal 2, @editor.window_count
+  end
+
+  def test_ctrl_w_angle_bracket_resize
+    feed(":", "v", "s", "p", "l", "i", "t", :enter)
+    feed(:ctrl_w, ">")
+    feed(:ctrl_w, "<")
+    assert_equal 2, @editor.window_count
+  end
+
   # --- :b# (alternate buffer) ---
 
   def test_buffer_alternate_hash

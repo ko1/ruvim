@@ -661,6 +661,48 @@ module RuVim
       current_window
     end
 
+    def close_other_windows
+      leaves = tree_leaves(@layout_tree)
+      return if leaves.length <= 1
+
+      save_current_tabpage_state! unless @suspend_tab_autosave
+      leaves.each do |wid|
+        next if wid == @current_window_id
+
+        @windows.delete(wid)
+        @location_lists.delete(wid)
+      end
+      @layout_tree = { type: :window, id: @current_window_id }
+      save_current_tabpage_state! unless @suspend_tab_autosave
+    end
+
+    def resize_window(dir, amount = 1)
+      return if window_count <= 1
+
+      save_current_tabpage_state! unless @suspend_tab_autosave
+      _split_type, parent, child_idx = find_parent_split(@layout_tree, @current_window_id, dir)
+      return unless parent
+
+      parent[:weights] ||= Array.new(parent[:children].length, 1.0)
+      weights = parent[:weights]
+
+      case dir
+      when :height_increase
+        weights[child_idx] += amount * 0.1
+      when :height_decrease
+        weights[child_idx] = [weights[child_idx] - amount * 0.1, 0.1].max
+      when :width_increase
+        weights[child_idx] += amount * 0.1
+      when :width_decrease
+        weights[child_idx] = [weights[child_idx] - amount * 0.1, 0.1].max
+      end
+      save_current_tabpage_state! unless @suspend_tab_autosave
+    end
+
+    def equalize_windows
+      clear_weights(@layout_tree)
+    end
+
     def close_current_tabpage
       ensure_initial_tabpage!
       return nil if @tabpages.length <= 1
@@ -1566,6 +1608,33 @@ module RuVim
 
     # Compute normalized rects (0.0–1.0 coordinate space) for direction finding.
     # Separators are ignored here — this is purely for adjacency/direction logic.
+    def find_parent_split(node, target_id, dir)
+      return nil unless node.is_a?(Hash) && node[:children]
+
+      wanted_type = case dir
+                    when :height_increase, :height_decrease then :hsplit
+                    when :width_increase, :width_decrease then :vsplit
+                    end
+
+      node[:children].each_with_index do |child, i|
+        if child[:type] == :window && child[:id] == target_id
+          return [node[:type], node, i] if node[:type] == wanted_type
+        elsif child[:children]
+          result = find_parent_split(child, target_id, dir)
+          return result if result
+        end
+      end
+
+      nil
+    end
+
+    def clear_weights(node)
+      return unless node.is_a?(Hash)
+
+      node.delete(:weights) if node.key?(:weights)
+      node[:children]&.each { |c| clear_weights(c) }
+    end
+
     def tree_compute_rects(node, top:, left:, height:, width:)
       return {} if node.nil?
 

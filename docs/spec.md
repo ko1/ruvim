@@ -518,7 +518,10 @@ ANSI エスケープシーケンスによる再描画です。
   - 例: vsplit 後に右ウィンドウを split すると、右カラムだけが上下分割される
 - 同方向の分割は親ノードにマージ（hsplit の中で hsplit しても 1 レベルに統合）
 - `close_window` でツリーを簡略化（子が 1 個になった分割ノードは子に置き換え）
+- `close_other_windows` で current 以外の全 window を閉じる（`Ctrl-w o`）
 - `focus_window_direction` は正規化座標空間で最近接ウィンドウを選択
+- `resize_window` で分割ノードに weight を設定してサイズ調整（`Ctrl-w +/-/</>` ）
+- `equalize_windows` で全 weight をリセット（`Ctrl-w =`）
 - 各 window は cursor / scroll を独立して保持
 
 ### Tabpage（現状）
@@ -948,7 +951,7 @@ Blame バッファ内のバッファローカルバインディング:
 - session 保存/復元（`-S` / `:mksession` 相当の実体）
 - `:make` / `:cfile` / `:lfile` など quickfix 入口（`:grep` / `:lgrep` は実装済み）
 - `:substitute` の `c`（confirm）フラグ — 実装済み（`y/n/a/q/l/Esc` 対応）
-- `Ctrl-w` resize / close-others / equalize など window 操作拡張
+- `Ctrl-w` window 操作 — `c`(close), `o`(only), `=`(equalize), `+/-/</>` (resize) 実装済み
 - `:set` 高度構文（`+=`, `-=`, `:set all`, 短縮名）
 - tag jump / folds / `:global` / `:normal`
 - LSP / diagnostics / fuzzy finder など中長期機能

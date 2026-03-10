@@ -117,11 +117,12 @@
 
 ### P1: Vim 運用でよく触る基盤（あると詰まりにくい）
 
-- `Ctrl-w` window 操作の拡張
-  - `Ctrl-w c`（window close）
-  - `Ctrl-w o`（only / 他 window を閉じる）
-  - `Ctrl-w =`（equalize）
-  - resize 系（`+`, `-`, `<`, `>`, `_`, `|` の最小）
+- `[DONE]` `Ctrl-w` window 操作の拡張
+  - `[DONE]` `Ctrl-w c`（window close）
+  - `[DONE]` `Ctrl-w o`（only / 他 window を閉じる）
+  - `[DONE]` `Ctrl-w =`（equalize）
+  - `[DONE]` resize 系（`+`, `-`, `<`, `>`）
+  - 未実装: `_`（maximize height）, `|`（maximize width）
 - `:set` 構文の拡張
   - `+=`, `-=`, `^=`, `&`, `<`
   - option 名短縮（例: `nu`, `ts`）

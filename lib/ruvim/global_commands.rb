@@ -299,6 +299,42 @@ module RuVim
       end
     end
 
+    def window_close(ctx, **)
+      if ctx.editor.window_count <= 1
+        ctx.editor.echo("Cannot close last window")
+        return
+      end
+      ctx.editor.close_current_window
+    end
+
+    def window_only(ctx, **)
+      if ctx.editor.window_count <= 1
+        ctx.editor.echo("Already only one window")
+        return
+      end
+      ctx.editor.close_other_windows
+    end
+
+    def window_equalize(ctx, **)
+      ctx.editor.equalize_windows
+    end
+
+    def window_resize_height_inc(ctx, count: 1, **)
+      ctx.editor.resize_window(:height_increase, count)
+    end
+
+    def window_resize_height_dec(ctx, count: 1, **)
+      ctx.editor.resize_window(:height_decrease, count)
+    end
+
+    def window_resize_width_inc(ctx, count: 1, **)
+      ctx.editor.resize_window(:width_increase, count)
+    end
+
+    def window_resize_width_dec(ctx, count: 1, **)
+      ctx.editor.resize_window(:width_decrease, count)
+    end
+
     def tab_new(ctx, argv:, **)
       path = argv[0]
       if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)

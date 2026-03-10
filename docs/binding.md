@@ -67,6 +67,11 @@
 - `V` : Visual (linewise)
 - `Ctrl-w w` : 次の window へ移動
 - `Ctrl-w h/j/k/l` : window 間移動（split UI）
+- `Ctrl-w c` : 現在の window を閉じる
+- `Ctrl-w o` : 他の window をすべて閉じる
+- `Ctrl-w =` : window サイズを均等化
+- `Ctrl-w +/-` : window の高さを増減
+- `Ctrl-w >/<` : window の幅を増減
 - `Shift+矢印キー` : window 間移動 or 分割（1ウィンドウ時は分割、2個以上なら移動）
 - `u` : Undo
 - `Ctrl-r` : Redo
