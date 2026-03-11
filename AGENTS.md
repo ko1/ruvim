@@ -72,10 +72,9 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `display_width.rb` | Character display width (CJK, emoji, combining marks) |
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
-| `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
 | `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
 | `lang/registry.rb` | Central lang registry (filetype detection, buffer_defaults lookup); autoloads all lang/* modules on demand |
-| `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
+| `lang/base.rb` | Base lang class: apply_regex, color constants, no-op indent/dedent/on_save defaults |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex; auto-indent |

@@ -3,469 +3,478 @@
 require_relative "test_helper"
 
 class LangTest < Minitest::Test
+  private
+
+  def color_columns(filetype, line)
+    mod = RuVim::Lang::Registry.resolve_module(filetype)
+    mod.respond_to?(:color_columns) ? mod.color_columns(line) : {}
+  end
+
+  public
+
   # --- YAML ---
 
   def test_yaml_key_highlighted
-    cols = RuVim::Highlighter.color_columns("yaml", "name: value")
+    cols = color_columns("yaml", "name: value")
     assert_equal "\e[36m", cols[0] # "name" as key
   end
 
   def test_yaml_string_highlighted
-    cols = RuVim::Highlighter.color_columns("yaml", 'key: "hello"')
+    cols = color_columns("yaml", 'key: "hello"')
     assert_equal "\e[32m", cols[5] # opening quote
   end
 
   def test_yaml_boolean_highlighted
-    cols = RuVim::Highlighter.color_columns("yaml", "enabled: true")
+    cols = color_columns("yaml", "enabled: true")
     assert_equal "\e[35m", cols[9] # "true"
   end
 
   def test_yaml_comment_overrides
-    cols = RuVim::Highlighter.color_columns("yaml", "# comment")
+    cols = color_columns("yaml", "# comment")
     assert_equal "\e[90m", cols[0]
     assert_equal "\e[90m", cols[8]
   end
 
   def test_yaml_anchor
-    cols = RuVim::Highlighter.color_columns("yaml", "base: &default")
+    cols = color_columns("yaml", "base: &default")
     assert_equal "\e[93m", cols[6] # "&default"
   end
 
   def test_yaml_empty
-    cols = RuVim::Highlighter.color_columns("yaml", "")
+    cols = color_columns("yaml", "")
     assert_empty cols
   end
 
   # --- Shell ---
 
   def test_sh_keyword_if
-    cols = RuVim::Highlighter.color_columns("sh", "if [ -f foo ]; then")
+    cols = color_columns("sh", "if [ -f foo ]; then")
     assert_equal "\e[36m", cols[0] # "if"
   end
 
   def test_sh_variable
-    cols = RuVim::Highlighter.color_columns("sh", 'echo $HOME')
+    cols = color_columns("sh", 'echo $HOME')
     assert_equal "\e[93m", cols[5] # "$HOME"
   end
 
   def test_sh_string
-    cols = RuVim::Highlighter.color_columns("sh", 'x="hello"')
+    cols = color_columns("sh", 'x="hello"')
     assert_equal "\e[32m", cols[2] # opening quote
   end
 
   def test_sh_comment
-    cols = RuVim::Highlighter.color_columns("sh", "# comment here")
+    cols = color_columns("sh", "# comment here")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_sh_empty
-    cols = RuVim::Highlighter.color_columns("sh", "")
+    cols = color_columns("sh", "")
     assert_empty cols
   end
 
   # --- Python ---
 
   def test_python_keyword_def
-    cols = RuVim::Highlighter.color_columns("python", "def foo():")
+    cols = color_columns("python", "def foo():")
     assert_equal "\e[36m", cols[0] # "def"
   end
 
   def test_python_decorator
-    cols = RuVim::Highlighter.color_columns("python", "@staticmethod")
+    cols = color_columns("python", "@staticmethod")
     assert_equal "\e[35m", cols[0] # "@"
   end
 
   def test_python_string
-    cols = RuVim::Highlighter.color_columns("python", 'x = "hello"')
+    cols = color_columns("python", 'x = "hello"')
     assert_equal "\e[32m", cols[4] # opening quote
   end
 
   def test_python_builtin
-    cols = RuVim::Highlighter.color_columns("python", "print(len(x))")
+    cols = color_columns("python", "print(len(x))")
     assert_equal "\e[35m", cols[0] # "print"
   end
 
   def test_python_comment
-    cols = RuVim::Highlighter.color_columns("python", "x = 1  # comment")
+    cols = color_columns("python", "x = 1  # comment")
     assert_equal "\e[90m", cols[7]
   end
 
   def test_python_empty
-    cols = RuVim::Highlighter.color_columns("python", "")
+    cols = color_columns("python", "")
     assert_empty cols
   end
 
   # --- JavaScript ---
 
   def test_javascript_keyword_const
-    cols = RuVim::Highlighter.color_columns("javascript", "const x = 42;")
+    cols = color_columns("javascript", "const x = 42;")
     assert_equal "\e[36m", cols[0] # "const"
   end
 
   def test_javascript_string
-    cols = RuVim::Highlighter.color_columns("javascript", "let s = 'hello';")
+    cols = color_columns("javascript", "let s = 'hello';")
     assert_equal "\e[32m", cols[8] # opening quote
   end
 
   def test_javascript_template_string
-    cols = RuVim::Highlighter.color_columns("javascript", "let s = `hello`;")
+    cols = color_columns("javascript", "let s = `hello`;")
     assert_equal "\e[32m", cols[8] # opening backtick
   end
 
   def test_javascript_number
-    cols = RuVim::Highlighter.color_columns("javascript", "let x = 42;")
+    cols = color_columns("javascript", "let x = 42;")
     assert_equal "\e[33m", cols[8]
   end
 
   def test_javascript_line_comment
-    cols = RuVim::Highlighter.color_columns("javascript", "x = 1; // comment")
+    cols = color_columns("javascript", "x = 1; // comment")
     assert_equal "\e[90m", cols[7]
   end
 
   def test_javascript_empty
-    cols = RuVim::Highlighter.color_columns("javascript", "")
+    cols = color_columns("javascript", "")
     assert_empty cols
   end
 
   # --- TypeScript ---
 
   def test_typescript_keyword_interface
-    cols = RuVim::Highlighter.color_columns("typescript", "interface Foo {}")
+    cols = color_columns("typescript", "interface Foo {}")
     assert_equal "\e[36m", cols[0] # "interface"
   end
 
   def test_typescript_inherits_js_string
-    cols = RuVim::Highlighter.color_columns("typescript", 'let s = "hello";')
+    cols = color_columns("typescript", 'let s = "hello";')
     assert_equal "\e[32m", cols[8]
   end
 
   def test_typescript_empty
-    cols = RuVim::Highlighter.color_columns("typescript", "")
+    cols = color_columns("typescript", "")
     assert_empty cols
   end
 
   # --- HTML ---
 
   def test_html_tag
-    cols = RuVim::Highlighter.color_columns("html", "<div>hello</div>")
+    cols = color_columns("html", "<div>hello</div>")
     assert_equal "\e[36m", cols[0] # "<div"
   end
 
   def test_html_attribute_string
-    cols = RuVim::Highlighter.color_columns("html", '<a href="url">')
+    cols = color_columns("html", '<a href="url">')
     assert_equal "\e[32m", cols[8] # opening quote
   end
 
   def test_html_comment
-    cols = RuVim::Highlighter.color_columns("html", "<!-- comment -->")
+    cols = color_columns("html", "<!-- comment -->")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_html_empty
-    cols = RuVim::Highlighter.color_columns("html", "")
+    cols = color_columns("html", "")
     assert_empty cols
   end
 
   # --- TOML ---
 
   def test_toml_table_header
-    cols = RuVim::Highlighter.color_columns("toml", "[package]")
+    cols = color_columns("toml", "[package]")
     assert_equal "\e[1;36m", cols[0]
   end
 
   def test_toml_key
-    cols = RuVim::Highlighter.color_columns("toml", "name = \"test\"")
+    cols = color_columns("toml", "name = \"test\"")
     assert_equal "\e[36m", cols[0] # "name"
   end
 
   def test_toml_string
-    cols = RuVim::Highlighter.color_columns("toml", 'name = "test"')
+    cols = color_columns("toml", 'name = "test"')
     assert_equal "\e[32m", cols[7] # opening quote
   end
 
   def test_toml_comment
-    cols = RuVim::Highlighter.color_columns("toml", "# comment")
+    cols = color_columns("toml", "# comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_toml_empty
-    cols = RuVim::Highlighter.color_columns("toml", "")
+    cols = color_columns("toml", "")
     assert_empty cols
   end
 
   # --- Go ---
 
   def test_go_keyword_func
-    cols = RuVim::Highlighter.color_columns("go", "func main() {")
+    cols = color_columns("go", "func main() {")
     assert_equal "\e[36m", cols[0] # "func"
   end
 
   def test_go_type
-    cols = RuVim::Highlighter.color_columns("go", "var x int = 42")
+    cols = color_columns("go", "var x int = 42")
     assert_equal "\e[36m", cols[6] # "int"
   end
 
   def test_go_string
-    cols = RuVim::Highlighter.color_columns("go", 'fmt.Println("hello")')
+    cols = color_columns("go", 'fmt.Println("hello")')
     assert_equal "\e[32m", cols[12] # opening quote
   end
 
   def test_go_line_comment
-    cols = RuVim::Highlighter.color_columns("go", "x := 1 // comment")
+    cols = color_columns("go", "x := 1 // comment")
     assert_equal "\e[90m", cols[7]
   end
 
   def test_go_empty
-    cols = RuVim::Highlighter.color_columns("go", "")
+    cols = color_columns("go", "")
     assert_empty cols
   end
 
   # --- Rust ---
 
   def test_rust_keyword_fn
-    cols = RuVim::Highlighter.color_columns("rust", "fn main() {")
+    cols = color_columns("rust", "fn main() {")
     assert_equal "\e[36m", cols[0] # "fn"
   end
 
   def test_rust_keyword_let
-    cols = RuVim::Highlighter.color_columns("rust", "let mut x = 42;")
+    cols = color_columns("rust", "let mut x = 42;")
     assert_equal "\e[36m", cols[0] # "let"
     assert_equal "\e[36m", cols[4] # "mut"
   end
 
   def test_rust_string
-    cols = RuVim::Highlighter.color_columns("rust", 'println!("hello");')
+    cols = color_columns("rust", 'println!("hello");')
     assert_equal "\e[32m", cols[9] # opening quote
   end
 
   def test_rust_lifetime
-    cols = RuVim::Highlighter.color_columns("rust", "fn foo<'a>(x: &'a str)")
+    cols = color_columns("rust", "fn foo<'a>(x: &'a str)")
     assert_equal "\e[35m", cols[7] # "'a"
   end
 
   def test_rust_line_comment
-    cols = RuVim::Highlighter.color_columns("rust", "x = 1; // comment")
+    cols = color_columns("rust", "x = 1; // comment")
     assert_equal "\e[90m", cols[7]
   end
 
   def test_rust_empty
-    cols = RuVim::Highlighter.color_columns("rust", "")
+    cols = color_columns("rust", "")
     assert_empty cols
   end
 
   # --- Makefile ---
 
   def test_makefile_target
-    cols = RuVim::Highlighter.color_columns("make", "all:")
+    cols = color_columns("make", "all:")
     assert_equal "\e[1;33m", cols[0]
   end
 
   def test_makefile_variable_ref
-    cols = RuVim::Highlighter.color_columns("make", "\t$(CC) -o $@ $<")
+    cols = color_columns("make", "\t$(CC) -o $@ $<")
     assert_equal "\e[93m", cols[1] # "$(CC)"
   end
 
   def test_makefile_comment
-    cols = RuVim::Highlighter.color_columns("make", "# comment")
+    cols = color_columns("make", "# comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_makefile_empty
-    cols = RuVim::Highlighter.color_columns("make", "")
+    cols = color_columns("make", "")
     assert_empty cols
   end
 
   # --- Dockerfile ---
 
   def test_dockerfile_instruction
-    cols = RuVim::Highlighter.color_columns("dockerfile", "FROM ubuntu:22.04")
+    cols = color_columns("dockerfile", "FROM ubuntu:22.04")
     assert_equal "\e[36m", cols[0] # "FROM"
   end
 
   def test_dockerfile_variable
-    cols = RuVim::Highlighter.color_columns("dockerfile", "ENV PATH=$PATH:/app")
+    cols = color_columns("dockerfile", "ENV PATH=$PATH:/app")
     assert_equal "\e[93m", cols[9] # "$PATH"
   end
 
   def test_dockerfile_comment
-    cols = RuVim::Highlighter.color_columns("dockerfile", "# comment")
+    cols = color_columns("dockerfile", "# comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_dockerfile_empty
-    cols = RuVim::Highlighter.color_columns("dockerfile", "")
+    cols = color_columns("dockerfile", "")
     assert_empty cols
   end
 
   # --- SQL ---
 
   def test_sql_keyword_select
-    cols = RuVim::Highlighter.color_columns("sql", "SELECT * FROM users;")
+    cols = color_columns("sql", "SELECT * FROM users;")
     assert_equal "\e[36m", cols[0] # "SELECT"
   end
 
   def test_sql_string
-    cols = RuVim::Highlighter.color_columns("sql", "WHERE name = 'foo'")
+    cols = color_columns("sql", "WHERE name = 'foo'")
     assert_equal "\e[32m", cols[13] # opening quote
   end
 
   def test_sql_line_comment
-    cols = RuVim::Highlighter.color_columns("sql", "-- comment")
+    cols = color_columns("sql", "-- comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_sql_empty
-    cols = RuVim::Highlighter.color_columns("sql", "")
+    cols = color_columns("sql", "")
     assert_empty cols
   end
 
   # --- Elixir ---
 
   def test_elixir_keyword_def
-    cols = RuVim::Highlighter.color_columns("elixir", "def hello do")
+    cols = color_columns("elixir", "def hello do")
     assert_equal "\e[36m", cols[0] # "def"
   end
 
   def test_elixir_atom
-    cols = RuVim::Highlighter.color_columns("elixir", ":ok")
+    cols = color_columns("elixir", ":ok")
     assert_equal "\e[96m", cols[0] # ":ok"
   end
 
   def test_elixir_module_attribute
-    cols = RuVim::Highlighter.color_columns("elixir", "@moduledoc false")
+    cols = color_columns("elixir", "@moduledoc false")
     assert_equal "\e[93m", cols[0] # "@moduledoc"
   end
 
   def test_elixir_string
-    cols = RuVim::Highlighter.color_columns("elixir", 'IO.puts("hello")')
+    cols = color_columns("elixir", 'IO.puts("hello")')
     assert_equal "\e[32m", cols[8] # opening quote
   end
 
   def test_elixir_comment
-    cols = RuVim::Highlighter.color_columns("elixir", "# comment")
+    cols = color_columns("elixir", "# comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_elixir_empty
-    cols = RuVim::Highlighter.color_columns("elixir", "")
+    cols = color_columns("elixir", "")
     assert_empty cols
   end
 
   # --- Perl ---
 
   def test_perl_keyword_my
-    cols = RuVim::Highlighter.color_columns("perl", "my $x = 42;")
+    cols = color_columns("perl", "my $x = 42;")
     assert_equal "\e[36m", cols[0] # "my"
   end
 
   def test_perl_scalar_variable
-    cols = RuVim::Highlighter.color_columns("perl", "my $name = 1;")
+    cols = color_columns("perl", "my $name = 1;")
     assert_equal "\e[93m", cols[3] # "$name"
   end
 
   def test_perl_array_variable
-    cols = RuVim::Highlighter.color_columns("perl", "my @list = (1,2);")
+    cols = color_columns("perl", "my @list = (1,2);")
     assert_equal "\e[35m", cols[3] # "@list"
   end
 
   def test_perl_hash_variable
-    cols = RuVim::Highlighter.color_columns("perl", 'my %hash = (a => 1);')
+    cols = color_columns("perl", 'my %hash = (a => 1);')
     assert_equal "\e[96m", cols[3] # "%hash"
   end
 
   def test_perl_string
-    cols = RuVim::Highlighter.color_columns("perl", 'print "hello";')
+    cols = color_columns("perl", 'print "hello";')
     assert_equal "\e[32m", cols[6] # opening quote
   end
 
   def test_perl_comment
-    cols = RuVim::Highlighter.color_columns("perl", "# comment")
+    cols = color_columns("perl", "# comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_perl_pod_line
-    cols = RuVim::Highlighter.color_columns("perl", "=head1 NAME")
+    cols = color_columns("perl", "=head1 NAME")
     assert_equal "\e[90m", cols[0]
     assert_equal "\e[90m", cols[10]
   end
 
   def test_perl_empty
-    cols = RuVim::Highlighter.color_columns("perl", "")
+    cols = color_columns("perl", "")
     assert_empty cols
   end
 
   # --- Lua ---
 
   def test_lua_keyword_function
-    cols = RuVim::Highlighter.color_columns("lua", "function hello()")
+    cols = color_columns("lua", "function hello()")
     assert_equal "\e[36m", cols[0] # "function"
   end
 
   def test_lua_keyword_local
-    cols = RuVim::Highlighter.color_columns("lua", "local x = 42")
+    cols = color_columns("lua", "local x = 42")
     assert_equal "\e[36m", cols[0] # "local"
   end
 
   def test_lua_string
-    cols = RuVim::Highlighter.color_columns("lua", 'print("hello")')
+    cols = color_columns("lua", 'print("hello")')
     assert_equal "\e[32m", cols[6] # opening quote
   end
 
   def test_lua_builtin
-    cols = RuVim::Highlighter.color_columns("lua", "print(type(x))")
+    cols = color_columns("lua", "print(type(x))")
     assert_equal "\e[35m", cols[0] # "print"
   end
 
   def test_lua_line_comment
-    cols = RuVim::Highlighter.color_columns("lua", "-- comment")
+    cols = color_columns("lua", "-- comment")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_lua_number
-    cols = RuVim::Highlighter.color_columns("lua", "local x = 42")
+    cols = color_columns("lua", "local x = 42")
     assert_equal "\e[33m", cols[10] # "4"
   end
 
   def test_lua_empty
-    cols = RuVim::Highlighter.color_columns("lua", "")
+    cols = color_columns("lua", "")
     assert_empty cols
   end
 
   # --- OCaml ---
 
   def test_ocaml_keyword_let
-    cols = RuVim::Highlighter.color_columns("ocaml", "let x = 42")
+    cols = color_columns("ocaml", "let x = 42")
     assert_equal "\e[36m", cols[0] # "let"
   end
 
   def test_ocaml_keyword_match
-    cols = RuVim::Highlighter.color_columns("ocaml", "match x with")
+    cols = color_columns("ocaml", "match x with")
     assert_equal "\e[36m", cols[0] # "match"
   end
 
   def test_ocaml_string
-    cols = RuVim::Highlighter.color_columns("ocaml", 'let s = "hello"')
+    cols = color_columns("ocaml", 'let s = "hello"')
     assert_equal "\e[32m", cols[8] # opening quote
   end
 
   def test_ocaml_block_comment
-    cols = RuVim::Highlighter.color_columns("ocaml", "(* comment *)")
+    cols = color_columns("ocaml", "(* comment *)")
     assert_equal "\e[90m", cols[0]
     assert_equal "\e[90m", cols[12]
   end
 
   def test_ocaml_type_variable
-    cols = RuVim::Highlighter.color_columns("ocaml", "type 'a list")
+    cols = color_columns("ocaml", "type 'a list")
     assert_equal "\e[93m", cols[5] # "'a"
   end
 
   def test_ocaml_number
-    cols = RuVim::Highlighter.color_columns("ocaml", "let x = 42")
+    cols = color_columns("ocaml", "let x = 42")
     assert_equal "\e[33m", cols[8] # "4"
   end
 
   def test_ocaml_empty
-    cols = RuVim::Highlighter.color_columns("ocaml", "")
+    cols = color_columns("ocaml", "")
     assert_empty cols
   end
 
@@ -600,29 +609,29 @@ class LangTest < Minitest::Test
   # --- ERB ---
 
   def test_erb_html_tag_highlighted
-    cols = RuVim::Highlighter.color_columns("erb", "<div>hello</div>")
+    cols = color_columns("erb", "<div>hello</div>")
     assert_equal "\e[36m", cols[0] # "<div"
   end
 
   def test_erb_ruby_tag_highlighted
-    cols = RuVim::Highlighter.color_columns("erb", '<%= link_to "home", root_path %>')
+    cols = color_columns("erb", '<%= link_to "home", root_path %>')
     # <%= and %> delimiters should be highlighted
     assert_equal "\e[35m", cols[0] # "<%="
   end
 
   def test_erb_ruby_comment_tag
-    cols = RuVim::Highlighter.color_columns("erb", "<%# this is a comment %>")
+    cols = color_columns("erb", "<%# this is a comment %>")
     assert_equal "\e[90m", cols[0]
   end
 
   def test_erb_mixed_html_and_ruby
-    cols = RuVim::Highlighter.color_columns("erb", '<p><%= "hi" %></p>')
+    cols = color_columns("erb", '<p><%= "hi" %></p>')
     assert_equal "\e[36m", cols[0] # "<p"
     assert_equal "\e[35m", cols[3] # "<%="
   end
 
   def test_erb_empty
-    cols = RuVim::Highlighter.color_columns("erb", "")
+    cols = color_columns("erb", "")
     assert_empty cols
   end
 

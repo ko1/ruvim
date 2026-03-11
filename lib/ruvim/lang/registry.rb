@@ -88,18 +88,6 @@ module RuVim
           nil
         end
 
-        # Returns true if the filetype has a color_columns method.
-        def highlight?(ft)
-          entry = @entries[ft]
-          return false unless entry
-          mod = entry[:mod]
-          if mod.is_a?(Symbol)
-            mod != :Base
-          else
-            mod.respond_to?(:color_columns)
-          end
-        end
-
         # Look up entry by filetype. Returns nil if not found.
         def [](ft)
           @entries[ft]

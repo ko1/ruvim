@@ -107,9 +107,9 @@ end
 puts
 
 # ---------------------------------------------------------------------------
-# 5. Highlighter.color_columns — syntax highlighting
+# 5. Lang::*.color_columns — syntax highlighting
 # ---------------------------------------------------------------------------
-puts "--- 5. Highlighter.color_columns ---"
+puts "--- 5. Lang color_columns ---"
 highlight_cases = {
   "Ruby"       => ["ruby", RUBY_LINE],
   "C"          => ["c", C_LINE],
@@ -119,7 +119,8 @@ highlight_cases = {
 }
 Benchmark.bm(20) do |x|
   highlight_cases.each do |label, (ft, line)|
-    x.report(label) { N_RENDER.times { RuVim::Highlighter.color_columns(ft, line) } }
+    mod = RuVim::Lang::Registry.resolve_module(ft)
+    x.report(label) { N_RENDER.times { mod.color_columns(line) } }
   end
 end
 puts
@@ -135,20 +136,19 @@ Benchmark.bm(20) do |x|
       screen_lines.each { |line| RuVim::TextMetrics.clip_cells_for_width(line, SCREEN_WIDTH) }
     end
   end
+  lang_mods = %w[ruby c markdown json javascript].map { |ft| RuVim::Lang::Registry.resolve_module(ft) }
   x.report("highlight only") do
     N_RENDER.times do
       screen_lines.each_with_index do |line, i|
-        ft = %w[ruby c markdown json javascript][i % 5]
-        RuVim::Highlighter.color_columns(ft, line)
+        lang_mods[i % 5].color_columns(line)
       end
     end
   end
   x.report("clip + highlight") do
     N_RENDER.times do
       screen_lines.each_with_index do |line, i|
-        ft = %w[ruby c markdown json javascript][i % 5]
         RuVim::TextMetrics.clip_cells_for_width(line, SCREEN_WIDTH)
-        RuVim::Highlighter.color_columns(ft, line)
+        lang_mods[i % 5].color_columns(line)
       end
     end
   end

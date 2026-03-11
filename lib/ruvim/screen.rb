@@ -1234,8 +1234,8 @@ module RuVim
     end
 
     def syntax_highlight_source_cols(editor, window, buffer, source_line_text, source_col_offset:)
-      filetype = editor.effective_option("filetype", buffer:, window:)
-      rel = cached_syntax_color_columns(filetype, source_line_text)
+      lang_mod = buffer.lang_module
+      rel = cached_syntax_color_columns(lang_mod, source_line_text)
       return {} if rel.empty?
 
       rel.each_with_object({}) do |(idx, color), h|
@@ -1251,13 +1251,13 @@ module RuVim
       editor.spell_checker.spell_highlight_cols(source_line_text, source_col_offset: source_col_offset)
     end
 
-    def cached_syntax_color_columns(filetype, source_line_text)
-      key = [filetype.to_s, source_line_text.to_s]
+    def cached_syntax_color_columns(lang_mod, source_line_text)
+      key = [lang_mod, source_line_text.to_s]
       if (cached = @syntax_color_cache[key])
         return cached
       end
 
-      cols = RuVim::Highlighter.color_columns(filetype, source_line_text)
+      cols = lang_mod.respond_to?(:color_columns) ? lang_mod.color_columns(source_line_text) : {}
       @syntax_color_cache[key] = cols
       if @syntax_color_cache.length > SYNTAX_CACHE_LIMIT
         trim = @syntax_color_cache.length - SYNTAX_CACHE_LIMIT / 2

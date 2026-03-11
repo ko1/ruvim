@@ -2,14 +2,12 @@
 
 module RuVim
   module Lang
-    module Csv
-      module_function
-
+    class Csv < Base
       # Detect CSV from buffer content: commas > 0 (and not TSV)
-      def detect?(buffer)
-        sample = (0...[buffer.line_count, 20].min).map { |i| buffer.line_at(i) }
-        commas = sample.sum { |l| l.count(",") }
-        commas > 0
+      def self.detect?(buffer)
+      sample = (0...[buffer.line_count, 20].min).map { |i| buffer.line_at(i) }
+      commas = sample.sum { |l| l.count(",") }
+      commas > 0
       end
     end
   end

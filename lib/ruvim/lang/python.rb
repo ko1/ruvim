@@ -2,12 +2,12 @@
 
 module RuVim
   module Lang
-    module Python
+    class Python < Base
       KEYWORDS = %w[
-        and as assert async await break class continue def del elif else
-        except finally for from global if import in is lambda nonlocal
-        not or pass raise return try while with yield
-        True False None
+      and as assert async await break class continue def del elif else
+      except finally for from global if import in is lambda nonlocal
+      not or pass raise return try while with yield
+      True False None
       ].freeze
 
       KEYWORD_RE = /\b(?:#{KEYWORDS.join("|")})\b/
@@ -26,56 +26,54 @@ module RuVim
       INDENT_CLOSE_RE = /\A\s*(?:return|break|continue|pass|raise)\b/
 
       DEDENT_TRIGGERS = {
-        "s" => /\A(\s*)(?:else|class)\z/,
-        ":" => /\A(\s*)(?:else|elif|except|finally)\s*.*:\z/,
-        "f" => /\A(\s*)elif\z/
+      "s" => /\A(\s*)(?:else|class)\z/,
+      ":" => /\A(\s*)(?:else|elif|except|finally)\s*.*:\z/,
+      "f" => /\A(\s*)elif\z/
       }.freeze
-
-      module_function
 
       BUFFER_DEFAULTS = { "runprg" => "python3 %" }.freeze
 
-      def calculate_indent(lines, target_row, shiftwidth)
-        return 0 if target_row == 0
+      def self.calculate_indent(lines, target_row, shiftwidth)
+      return 0 if target_row == 0
 
-        prev_row = target_row - 1
-        prev_row -= 1 while prev_row > 0 && lines[prev_row].to_s.strip.empty?
-        prev = lines[prev_row].to_s
-        prev_indent = prev[/\A */].size
+      prev_row = target_row - 1
+      prev_row -= 1 while prev_row > 0 && lines[prev_row].to_s.strip.empty?
+      prev = lines[prev_row].to_s
+      prev_indent = prev[/\A */].size
 
-        if prev.rstrip.match?(INDENT_OPEN_RE)
-          return prev_indent + shiftwidth
-        end
-
-        target_line = lines[target_row].to_s.strip
-        if target_line.match?(/\A(?:else|elif|except|finally)\b/)
-          depth = prev_indent - shiftwidth
-          return depth < 0 ? 0 : depth
-        end
-
-        prev_indent
+      if prev.rstrip.match?(INDENT_OPEN_RE)
+        return prev_indent + shiftwidth
       end
 
-      def indent_trigger?(line)
-        line.to_s.rstrip.match?(INDENT_OPEN_RE)
+      target_line = lines[target_row].to_s.strip
+      if target_line.match?(/\A(?:else|elif|except|finally)\b/)
+        depth = prev_indent - shiftwidth
+        return depth < 0 ? 0 : depth
       end
 
-      def dedent_trigger(char)
-        DEDENT_TRIGGERS[char]
+      prev_indent
       end
 
-      def color_columns(text)
-        cols = {}
-        Highlighter.apply_regex(cols, text, STRING_DOUBLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, STRING_SINGLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, FSTRING_PREFIX_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, KEYWORD_RE, Highlighter::KEYWORD_COLOR)
-        Highlighter.apply_regex(cols, text, BUILTIN_RE, "\e[35m")
-        Highlighter.apply_regex(cols, text, DECORATOR_RE, "\e[35m")
-        Highlighter.apply_regex(cols, text, NUMBER_RE, Highlighter::NUMBER_COLOR)
-        Highlighter.apply_regex(cols, text, CONSTANT_RE, Highlighter::CONSTANT_COLOR)
-        Highlighter.apply_regex(cols, text, COMMENT_RE, Highlighter::COMMENT_COLOR, override: true)
-        cols
+      def self.indent_trigger?(line)
+      line.to_s.rstrip.match?(INDENT_OPEN_RE)
+      end
+
+      def self.dedent_trigger(char)
+      DEDENT_TRIGGERS[char]
+      end
+
+      def self.color_columns(text)
+      cols = {}
+      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+      apply_regex(cols, text, FSTRING_PREFIX_RE, STRING_COLOR)
+      apply_regex(cols, text, KEYWORD_RE, KEYWORD_COLOR)
+      apply_regex(cols, text, BUILTIN_RE, "\e[35m")
+      apply_regex(cols, text, DECORATOR_RE, "\e[35m")
+      apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)
+      apply_regex(cols, text, CONSTANT_RE, CONSTANT_COLOR)
+      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+      cols
       end
     end
   end

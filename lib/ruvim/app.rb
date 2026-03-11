@@ -21,7 +21,6 @@ end
 require_relative "lang/registry"
 
 # Core data structures
-require_relative "highlighter"
 require_relative "context"
 require_relative "buffer"
 require_relative "window"

@@ -2,25 +2,23 @@
 
 module RuVim
   module Lang
-    module Erb
+    class Erb < Base
       ERB_COMMENT_RE = /<%#.*?%>/
       ERB_TAG_RE = /<%[=\-]?|[-%]?%>/
 
-      module_function
+      def self.color_columns(text)
+      cols = {}
 
-      def color_columns(text)
-        cols = {}
+      # First apply HTML highlighting as base
+      Html.color_columns(text).each { |k, v| cols[k] = v }
 
-        # First apply HTML highlighting as base
-        Html.color_columns(text).each { |k, v| cols[k] = v }
+      # ERB delimiters (<%= %> <% %> <%- -%>)
+      apply_regex(cols, text, ERB_TAG_RE, "\e[35m", override: true)
 
-        # ERB delimiters (<%= %> <% %> <%- -%>)
-        Highlighter.apply_regex(cols, text, ERB_TAG_RE, "\e[35m", override: true)
+      # ERB comment tags override everything (including delimiters)
+      apply_regex(cols, text, ERB_COMMENT_RE, COMMENT_COLOR, override: true)
 
-        # ERB comment tags override everything (including delimiters)
-        Highlighter.apply_regex(cols, text, ERB_COMMENT_RE, Highlighter::COMMENT_COLOR, override: true)
-
-        cols
+      cols
       end
     end
   end

@@ -2,7 +2,7 @@
 
 module RuVim
   module Lang
-    module Makefile
+    class Makefile < Base
       TARGET_RE = /\A[\w.\-\/]+\s*:/
       VARIABLE_DEF_RE = /\A[\w.\-]+\s*[?:+]?=/
       VARIABLE_REF_RE = /\$[({][\w.\-]+[)}]|\$[A-Za-z@<*^?%]/
@@ -13,20 +13,18 @@ module RuVim
       STRING_SINGLE_RE = /'(?:\\.|[^'\\])*'/
       AUTO_VAR_RE = /\$[@<*^?%]/
 
-      module_function
-
-      def color_columns(text)
-        cols = {}
-        Highlighter.apply_regex(cols, text, TARGET_RE, "\e[1;33m")
-        Highlighter.apply_regex(cols, text, VARIABLE_DEF_RE, Highlighter::KEYWORD_COLOR)
-        Highlighter.apply_regex(cols, text, DIRECTIVE_RE, Highlighter::KEYWORD_COLOR)
-        Highlighter.apply_regex(cols, text, STRING_DOUBLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, STRING_SINGLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, FUNCTION_RE, "\e[35m")
-        Highlighter.apply_regex(cols, text, VARIABLE_REF_RE, Highlighter::VARIABLE_COLOR)
-        Highlighter.apply_regex(cols, text, AUTO_VAR_RE, Highlighter::VARIABLE_COLOR)
-        Highlighter.apply_regex(cols, text, COMMENT_RE, Highlighter::COMMENT_COLOR, override: true)
-        cols
+      def self.color_columns(text)
+      cols = {}
+      apply_regex(cols, text, TARGET_RE, "\e[1;33m")
+      apply_regex(cols, text, VARIABLE_DEF_RE, KEYWORD_COLOR)
+      apply_regex(cols, text, DIRECTIVE_RE, KEYWORD_COLOR)
+      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+      apply_regex(cols, text, FUNCTION_RE, "\e[35m")
+      apply_regex(cols, text, VARIABLE_REF_RE, VARIABLE_COLOR)
+      apply_regex(cols, text, AUTO_VAR_RE, VARIABLE_COLOR)
+      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+      cols
       end
     end
   end

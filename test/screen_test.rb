@@ -138,18 +138,18 @@ class ScreenTest < Minitest::Test
   def test_render_reuses_syntax_highlight_cache_for_same_line
     editor = RuVim::Editor.new
     buf = editor.add_empty_buffer
-    win = editor.add_window(buffer_id: buf.id)
+    editor.add_window(buffer_id: buf.id)
     buf.replace_all_lines!(['def x; "hi"; end'])
-    editor.set_option("filetype", "ruby", scope: :buffer, buffer: buf, window: win)
+    editor.assign_filetype(buf, "ruby")
 
     term = TerminalStub.new([6, 40])
     screen = RuVim::Screen.new(terminal: term)
 
     calls = 0
-    mod = RuVim::Highlighter.singleton_class
+    lang_mod = buf.lang_module.singleton_class
     verbose, $VERBOSE = $VERBOSE, nil
-    mod.alias_method(:__orig_color_columns_for_screen_test, :color_columns)
-    mod.define_method(:color_columns) do |*args, **kwargs|
+    lang_mod.alias_method(:__orig_color_columns_for_screen_test, :color_columns)
+    lang_mod.define_method(:color_columns) do |*args, **kwargs|
       calls += 1
       __orig_color_columns_for_screen_test(*args, **kwargs)
     end
@@ -158,8 +158,8 @@ class ScreenTest < Minitest::Test
       screen.render(editor)
       screen.render(editor)
     ensure
-      mod.alias_method(:color_columns, :__orig_color_columns_for_screen_test)
-      mod.remove_method(:__orig_color_columns_for_screen_test) rescue nil
+      lang_mod.alias_method(:color_columns, :__orig_color_columns_for_screen_test)
+      lang_mod.remove_method(:__orig_color_columns_for_screen_test) rescue nil
       $VERBOSE = verbose
     end
 

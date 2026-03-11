@@ -2,7 +2,7 @@
 
 module RuVim
   module Lang
-    module Html
+    class Html < Base
       TAG_RE = /<\/?[\w\-]+/
       TAG_CLOSE_RE = /\/?>/
       ATTR_NAME_RE = /\b[\w\-]+(?==)/
@@ -12,19 +12,17 @@ module RuVim
       DOCTYPE_RE = /<!DOCTYPE\b[^>]*/i
       ENTITY_RE = /&\w+;|&#\d+;|&#x[\da-fA-F]+;/
 
-      module_function
-
-      def color_columns(text)
-        cols = {}
-        Highlighter.apply_regex(cols, text, TAG_RE, Highlighter::KEYWORD_COLOR)
-        Highlighter.apply_regex(cols, text, TAG_CLOSE_RE, Highlighter::KEYWORD_COLOR)
-        Highlighter.apply_regex(cols, text, DOCTYPE_RE, "\e[35m")
-        Highlighter.apply_regex(cols, text, ATTR_NAME_RE, Highlighter::VARIABLE_COLOR)
-        Highlighter.apply_regex(cols, text, STRING_DOUBLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, STRING_SINGLE_RE, Highlighter::STRING_COLOR)
-        Highlighter.apply_regex(cols, text, ENTITY_RE, Highlighter::CONSTANT_COLOR)
-        Highlighter.apply_regex(cols, text, COMMENT_RE, Highlighter::COMMENT_COLOR, override: true)
-        cols
+      def self.color_columns(text)
+      cols = {}
+      apply_regex(cols, text, TAG_RE, KEYWORD_COLOR)
+      apply_regex(cols, text, TAG_CLOSE_RE, KEYWORD_COLOR)
+      apply_regex(cols, text, DOCTYPE_RE, "\e[35m")
+      apply_regex(cols, text, ATTR_NAME_RE, VARIABLE_COLOR)
+      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+      apply_regex(cols, text, ENTITY_RE, CONSTANT_COLOR)
+      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+      cols
       end
     end
   end

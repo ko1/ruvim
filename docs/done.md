@@ -217,4 +217,9 @@
   - `lang/*` モジュールを autoload 化（Registry に検出メタデータ集約、モジュール本体は遅延読込）
   - `buffer_defaults` を Registry の register 引数から各 lang モジュールの `BUFFER_DEFAULTS` 定数に移動
   - Highlighter を `entry[:mod]` 直接参照から `Registry.resolve_module` 経由に変更
+- Highlighter 削除と lang モジュールのクラス化
+  - `highlighter.rb` を削除し、`apply_regex` + カラー定数を `Lang::Base` に移動
+  - `lang/*` の全モジュールを `module X` から `class X < Base` に変換（27ファイル）
+  - `class << self` を `def self.method` に変換（親クラス定数の可視性問題を解決）
+  - `Buffer` が `lang_module` を保持し、Screen が毎行の Registry lookup を回避
 
