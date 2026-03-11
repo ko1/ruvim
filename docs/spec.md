@@ -397,6 +397,11 @@ RuVim::ExCommandRegistry.instance.register(
 - `:{range}s/pat/repl/[flags]` : substitute（フラグ: `g`, `i`, `I`, `n`, `e`, `c` 対応）
 - `:[range]g/pattern/command` : global（マッチ行に Ex コマンドを実行）
 - `:[range]v/pattern/command` : vglobal（非マッチ行に Ex コマンドを実行）
+- `:{range}p` / `:{range}nu` : 行の表示 / 行番号付き表示
+- `:{range}m {addr}` / `:{range}t {addr}` : 行の移動 / コピー
+- `:{range}j` : 行の結合
+- `:{range}>` / `:{range}<` : インデント増減
+- `:{range}normal {keys}` : 各行で Normal mode コマンドを実行
 
 ### 仕様メモ
 

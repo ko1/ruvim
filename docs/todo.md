@@ -138,7 +138,7 @@
   - tags file 読み込み + jump stack
 - Ex の追加制御コマンド
   - `[DONE]` `:global` / `:vglobal`
-  - `:normal` / `:normal!`
+  - `[DONE]` `:normal` / `:norm`
 - folds（最小）
   - `za`, `zc`, `zo`
   - 表示・カーソル移動・検索の整合

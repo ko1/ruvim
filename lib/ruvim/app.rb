@@ -79,6 +79,7 @@ module RuVim
         @screen.render(@editor)
         @input.read_key
       }
+      @editor.normal_key_feeder = ->(keys) { keys.each { |k| @key_handler.handle(k) } }
 
       @completion.load_history!
 
@@ -349,6 +350,14 @@ module RuVim
       register_ex_unless(ex, "lgrep", call: :ex_lgrep, desc: "Search with external grep (location list)", nargs: :any)
       register_ex_unless(ex, "d", call: :ex_delete_lines, aliases: %w[delete], desc: "Delete lines", nargs: :any)
       register_ex_unless(ex, "y", call: :ex_yank_lines, aliases: %w[yank], desc: "Yank lines", nargs: :any)
+      register_ex_unless(ex, "p", call: :ex_print_lines, aliases: %w[print], desc: "Print lines", nargs: 0)
+      register_ex_unless(ex, "nu", call: :ex_number_lines, aliases: %w[number], desc: "Print lines with numbers", nargs: 0)
+      register_ex_unless(ex, "m", call: :ex_move_lines, aliases: %w[move], desc: "Move lines", nargs: :any, raw_args: true)
+      register_ex_unless(ex, "t", call: :ex_copy_lines, aliases: %w[copy co], desc: "Copy lines", nargs: :any, raw_args: true)
+      register_ex_unless(ex, "j", call: :ex_join_lines, aliases: %w[join], desc: "Join lines", nargs: 0)
+      register_ex_unless(ex, ">", call: :ex_shift_right, desc: "Shift lines right", nargs: 0)
+      register_ex_unless(ex, "<", call: :ex_shift_left, desc: "Shift lines left", nargs: 0)
+      register_ex_unless(ex, "normal", call: :ex_normal, aliases: %w[norm], desc: "Execute normal mode commands", nargs: :any, raw_args: true)
       register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
       register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.invoke_app_action(:follow_toggle) }, desc: "Toggle file follow mode", nargs: 0)
       register_ex_unless(ex, "nohlsearch", call: ->(ctx, **) { ctx.editor.suppress_hlsearch! }, aliases: %w[noh nohl nohlsearc nohlsear nohlsea nohlse nohls], desc: "Temporarily clear search highlight", nargs: 0)

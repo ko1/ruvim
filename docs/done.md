@@ -52,6 +52,7 @@
 - `:run` コマンド（PTY ストリーミング、`runprg` オプション、バッファごと実行履歴、`%` ファイル名展開、auto-save、Ctrl-C 停止、status line にコマンド表示）
 - `path:line:col` 形式でのファイルオープン（CLI 引数 / `:e` / `gf` 対応、存在するファイルのみ解釈）
 - `:global` / `:vglobal`（`:g/pattern/command`, `:v/pattern/command`）— マッチ行に Ex コマンドを実行、undo は一括
+- Ex コマンド追加: `:print`/`:p`, `:number`/`:nu`, `:move`/`:m`, `:copy`/`:t`, `:join`/`:j`, `:>`/`:<`, `:normal`/`:norm`
 
 ## Rich mode / 構造化データ表示
 

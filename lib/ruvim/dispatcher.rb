@@ -64,11 +64,31 @@ module RuVim
       parsed = parse_ex(rest)
       return if parsed.nil?
 
-      spec = @ex_registry.fetch(parsed.name)
+      spec = @ex_registry.resolve(parsed.name)
+      unless spec
+        # Try splitting single-char command from trailing content (e.g. "m$" -> "m" + "$")
+        head = parsed.name
+        bang = parsed.bang
+        bare = bang ? head : head
+        if bare.length > 1
+          first = bare[0]
+          spec = @ex_registry.resolve(first)
+          if spec
+            parsed = ExCall.new(name: first, argv: [bare[1..]] + parsed.argv, bang: bang)
+          end
+        end
+        spec ||= @ex_registry.fetch(parsed.name) # raises if truly unknown
+      end
       argv = parsed.argv
       if spec.raw_args
         # Re-extract raw text after command name (preserving shell quoting)
-        raw_rest = rest.strip.sub(/\A\S+\s*/, "")
+        cmd_name = parsed.name
+        trimmed = rest.strip
+        if trimmed.start_with?(cmd_name)
+          raw_rest = trimmed[cmd_name.length..].to_s.lstrip
+        else
+          raw_rest = trimmed.sub(/\A\S+\s*/, "")
+        end
         argv = raw_rest.empty? ? [] : [raw_rest]
       end
       validate_ex_args!(spec, argv, parsed.bang)

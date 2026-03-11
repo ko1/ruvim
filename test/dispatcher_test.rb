@@ -997,4 +997,247 @@ class DispatcherTest < Minitest::Test
       assert_equal [""], @editor.current_buffer.lines
     end
   end
+
+  # ---- Ex commands: :print, :number, :move, :copy, :join, :>/<, :normal ----
+
+  class ExPrintTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_print_current_line
+      set_lines("aaa", "bbb", "ccc")
+      @editor.current_window.cursor_y = 1
+      @dispatcher.dispatch_ex(@editor, "p")
+      assert_match(/bbb/, @editor.message)
+    end
+
+    def test_print_range
+      set_lines("aaa", "bbb", "ccc")
+      @dispatcher.dispatch_ex(@editor, "1,2p")
+      assert_match(/aaa/, @editor.message)
+      assert_match(/bbb/, @editor.message)
+    end
+
+    def test_number_current_line
+      set_lines("aaa", "bbb", "ccc")
+      @editor.current_window.cursor_y = 1
+      @dispatcher.dispatch_ex(@editor, "nu")
+      assert_match(/2.*bbb/, @editor.message)
+    end
+
+    def test_number_range
+      set_lines("aaa", "bbb", "ccc")
+      @dispatcher.dispatch_ex(@editor, "1,3nu")
+      assert_match(/1.*aaa/, @editor.message)
+      assert_match(/3.*ccc/, @editor.message)
+    end
+  end
+
+  class ExMoveTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_move_line_to_end
+      set_lines("a", "b", "c", "d")
+      @editor.current_window.cursor_y = 0
+      @dispatcher.dispatch_ex(@editor, "1m$")
+      assert_equal %w[b c d a], @editor.current_buffer.lines
+    end
+
+    def test_move_line_to_beginning
+      set_lines("a", "b", "c")
+      @editor.current_window.cursor_y = 2
+      @dispatcher.dispatch_ex(@editor, "3m0")
+      assert_equal %w[c a b], @editor.current_buffer.lines
+    end
+
+    def test_move_range
+      set_lines("a", "b", "c", "d", "e")
+      @dispatcher.dispatch_ex(@editor, "2,3m$")
+      assert_equal %w[a d e b c], @editor.current_buffer.lines
+    end
+
+    def test_move_no_arg_error
+      set_lines("a", "b")
+      @dispatcher.dispatch_ex(@editor, "m")
+      assert @editor.message_error?
+    end
+  end
+
+  class ExCopyTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_copy_line_to_end
+      set_lines("a", "b", "c")
+      @editor.current_window.cursor_y = 0
+      @dispatcher.dispatch_ex(@editor, "1t$")
+      assert_equal %w[a b c a], @editor.current_buffer.lines
+    end
+
+    def test_copy_line_to_beginning
+      set_lines("a", "b", "c")
+      @editor.current_window.cursor_y = 2
+      @dispatcher.dispatch_ex(@editor, "3t0")
+      assert_equal %w[c a b c], @editor.current_buffer.lines
+    end
+
+    def test_copy_range
+      set_lines("a", "b", "c", "d")
+      @dispatcher.dispatch_ex(@editor, "2,3t$")
+      assert_equal %w[a b c d b c], @editor.current_buffer.lines
+    end
+  end
+
+  class ExJoinTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_join_current_line
+      set_lines("hello", "world", "end")
+      @editor.current_window.cursor_y = 0
+      @dispatcher.dispatch_ex(@editor, "j")
+      assert_equal ["hello world", "end"], @editor.current_buffer.lines
+    end
+
+    def test_join_range
+      set_lines("a", "b", "c", "d")
+      @dispatcher.dispatch_ex(@editor, "1,3j")
+      assert_equal ["a b c", "d"], @editor.current_buffer.lines
+    end
+  end
+
+  class ExShiftTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_shift_right
+      set_lines("aaa", "bbb", "ccc")
+      @editor.current_window.cursor_y = 1
+      @dispatcher.dispatch_ex(@editor, "2>")
+      assert_equal "  bbb", @editor.current_buffer.line_at(1)
+    end
+
+    def test_shift_left
+      set_lines("aaa", "  bbb", "ccc")
+      @editor.current_window.cursor_y = 1
+      @dispatcher.dispatch_ex(@editor, "2<")
+      assert_equal "bbb", @editor.current_buffer.line_at(1)
+    end
+
+    def test_shift_right_range
+      set_lines("aaa", "bbb", "ccc")
+      @dispatcher.dispatch_ex(@editor, "1,3>")
+      assert_equal "  aaa", @editor.current_buffer.line_at(0)
+      assert_equal "  bbb", @editor.current_buffer.line_at(1)
+      assert_equal "  ccc", @editor.current_buffer.line_at(2)
+    end
+
+    def test_shift_left_range
+      set_lines("  aaa", "  bbb", "  ccc")
+      @dispatcher.dispatch_ex(@editor, "1,3<")
+      assert_equal "aaa", @editor.current_buffer.line_at(0)
+      assert_equal "bbb", @editor.current_buffer.line_at(1)
+      assert_equal "ccc", @editor.current_buffer.line_at(2)
+    end
+  end
+
+  class ExNormalTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+      @key_handler = @app.instance_variable_get(:@key_handler)
+      # Wire up normal_key_feeder so :normal can feed keys
+      @editor.normal_key_feeder = ->(keys) { keys.each { |k| @key_handler.handle(k) } }
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_normal_delete_word
+      set_lines("hello world", "foo bar")
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 0
+      @dispatcher.dispatch_ex(@editor, "normal dw")
+      assert_equal "world", @editor.current_buffer.line_at(0)
+    end
+
+    def test_normal_with_range
+      set_lines("hello", "world", "foo")
+      @dispatcher.dispatch_ex(@editor, "1,3normal A!")
+      assert_equal "hello!", @editor.current_buffer.line_at(0)
+      assert_equal "world!", @editor.current_buffer.line_at(1)
+      assert_equal "foo!", @editor.current_buffer.line_at(2)
+    end
+
+    def test_normal_dd
+      set_lines("aaa", "bbb", "ccc")
+      @editor.current_window.cursor_y = 1
+      @dispatcher.dispatch_ex(@editor, "2normal dd")
+      assert_equal %w[aaa ccc], @editor.current_buffer.lines
+    end
+
+    def test_global_normal_append
+      set_lines("foo", "bar foo", "baz")
+      @dispatcher.dispatch_ex(@editor, "g/foo/normal A;")
+      assert_equal "foo;", @editor.current_buffer.line_at(0)
+      assert_equal "bar foo;", @editor.current_buffer.line_at(1)
+      assert_equal "baz", @editor.current_buffer.line_at(2)
+    end
+  end
 end
