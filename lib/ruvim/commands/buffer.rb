@@ -5,7 +5,7 @@ require "open3"
 module RuVim
   module Commands
     # Buffer management, file I/O, quit, marks, jumps, arglist, rich view
-    module BufferFile
+    module Buffer
       def mark_set(ctx, kwargs:, **)
         mark = (kwargs[:mark] || kwargs["mark"]).to_s
         raise RuVim::CommandError, "Invalid mark" unless ctx.editor.set_mark(mark)

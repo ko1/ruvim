@@ -5,8 +5,8 @@ require "open3"
 
 module RuVim
   module Commands
-    # Runtime/meta commands: help, set, bindings, ruby, run, shell, define command, normal exec
-    module Runtime
+    # Meta commands: help, set, bindings, ruby eval, run, shell, define command, normal exec
+    module Meta
       def show_help(ctx, argv: [], **)
         topic = argv.first.to_s
         registry = RuVim::ExCommandRegistry.instance

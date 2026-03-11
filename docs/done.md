@@ -176,16 +176,16 @@
   - `commands/register.rb` — ヤンク、ペースト、ビジュアルヤンク/削除、レジスタ操作
   - `commands/search.rb` — 検索、置換、global、フィルタ、grep
   - `commands/window.rb` — ウィンドウ分割/フォーカス/クローズ/リサイズ、タブ操作
-  - `commands/buffer_file.rb` — バッファ管理、ファイルI/O、終了、マーク、ジャンプ、arglist、リッチビュー
-  - `commands/runtime.rb` — ランタイム/メタコマンド（help, set, bindings, ruby, run, shell, define command, normal exec）
+  - `commands/buffer.rb` — バッファ管理、ファイルI/O、終了、マーク、ジャンプ、arglist、リッチビュー
+  - `commands/meta.rb` — メタコマンド（help, set, bindings, ruby eval, run, shell, define command, normal exec）
   - Git::Handler と同じ mixin パターンを横展開
 - `commands/ex.rb` を廃止し、ドメイン別モジュールに再配置
   - `ex_` プレフィックスを全コマンドメソッドから除去（ドメイン名に変更）
   - quickfix/location list/spell/vimgrep → `commands/search.rb`
   - 範囲操作（delete/yank/print/number/move/copy/join/shift） → `commands/edit.rb`
-  - read → `commands/buffer_file.rb`
-  - help/set/bindings/ruby/run/shell/command/normal → `commands/runtime.rb`（新規）
-  - `ex_git`/`ex_gh` → `git_dispatch`/`gh_dispatch`（`git/handler.rb`）
+  - read → `commands/buffer.rb`
+  - help/set/bindings/ruby/run/shell/command/normal → `commands/meta.rb`（新規）
+  - `ex_git`/`ex_gh` → `git_dispatch`/`gh_dispatch`（`commands/git/handler.rb`, `commands/gh.rb`）
   - `ex_follow_toggle` → `follow_toggle`（`stream_mixer.rb`）
 - `editor.rb`（1769行→1176行）から5つのモジュールを抽出
   - `editor/options.rb` — オプションシステム（OPTION_DEFS、get/set/effective、型変換）
@@ -200,5 +200,10 @@
 - `git/` → `commands/git/`、`gh/link.rb` → `commands/gh.rb` に移動
   - 名前空間を `RuVim::Git` → `RuVim::Commands::Git`、`RuVim::Gh::Link` → `RuVim::Commands::Gh` に変更
   - `gh/` ディレクトリ（単一ファイル）を `commands/gh.rb` にフラット化
+- コマンドモジュールの命名整理
+  - `commands/yank_paste.rb` → `commands/register.rb`（ドメイン名に変更）
+  - `commands/buffer_file.rb` → `commands/buffer.rb`（簡潔化）
+  - `commands/runtime.rb` → `commands/meta.rb`（メタコマンドとして明確化）
+  - `Gh::HandlerMethods` → `Gh::Handler`（Git::Handler と対称な構造に統一）
   - `repo_root` を `Commands::Git.repo_root` として `module_function` で公開
 

@@ -8,8 +8,8 @@ require_relative "commands/edit"
 require_relative "commands/register"
 require_relative "commands/search"
 require_relative "commands/window"
-require_relative "commands/buffer_file"
-require_relative "commands/runtime"
+require_relative "commands/buffer"
+require_relative "commands/meta"
 
 module RuVim
   class GlobalCommands
@@ -19,10 +19,10 @@ module RuVim
     include Commands::Register
     include Commands::Search
     include Commands::Window
-    include Commands::BufferFile
-    include Commands::Runtime
+    include Commands::Buffer
+    include Commands::Meta
     include Commands::Git::Handler
-    include Commands::Gh::HandlerMethods
+    include Commands::Gh::Handler
 
     def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: nil)
       case spec_call

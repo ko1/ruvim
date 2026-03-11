@@ -129,7 +129,7 @@ module RuVim
         [pr_search_url(base_url, branch.strip), nil]
       end
 
-      module HandlerMethods
+      module Handler
         GH_SUBCOMMANDS = {
           "link"   => :gh_link,
           "browse" => :gh_browse,

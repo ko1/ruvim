@@ -48,14 +48,14 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `editor/layout_tree.rb` | Layout tree helpers (split, remove, rects, leaves) |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
-| `global_commands.rb` | Command host (singleton, includes command modules and Git::Handler) |
+| `global_commands.rb` | Command host (singleton, includes command modules, Git::Handler, Gh::Handler) |
 | `commands/motion.rb` | Cursor movement, scrolling, word movement, bracket matching |
 | `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects, range operations |
 | `commands/register.rb` | Yank, paste, visual yank/delete, register operations |
 | `commands/search.rb` | Search, substitute, global, filter, grep, quickfix/location list, spell, vimgrep |
 | `commands/window.rb` | Window split/focus/close/resize, tab operations |
-| `commands/buffer_file.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view, read |
-| `commands/runtime.rb` | Runtime/meta commands (help, set, bindings, ruby, run, shell, define command, normal exec) |
+| `commands/buffer.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view, read |
+| `commands/meta.rb` | Meta commands (help, set, bindings, ruby eval, run, shell, define command, normal exec) |
 | `screen.rb` | Rendering: window layout, syntax highlight, line numbers, status line, wrap |
 | `dispatcher.rb` | Routes commands; parses Ex ranges/substitute; shell execution |
 | `keymap_manager.rb` | Key-to-command mapping with layers (filetype > buffer > mode > global) |
@@ -108,8 +108,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `commands/git/branch.rb` | Git branch: listing, checkout, command handlers |
 | `commands/git/commit.rb` | Git commit: message buffer, execute, command handlers |
 | `commands/git/grep.rb` | Git grep: search, location parser, command handlers |
-| `commands/git/handler.rb` | Git/GitHub module (repo_root), dispatcher, close, shared helpers |
-| `commands/gh.rb` | GitHub link/browse/PR: URL generation, OSC 52 clipboard, command handlers |
+| `commands/git/handler.rb` | Git module (repo_root), dispatcher, close, shared helpers |
+| `commands/gh.rb` | GitHub link/browse/PR: URL generation, OSC 52 clipboard, dispatcher, command handlers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `browser.rb` | URL open (open/xdg-open/wslview/PowerShell) |
