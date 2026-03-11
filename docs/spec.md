@@ -424,6 +424,9 @@ RuVim::ExCommandRegistry.instance.register(
     - `RUVIM_ASYNC_FILE_THRESHOLD_BYTES`
     - `RUVIM_ASYNC_FILE_PREFIX_BYTES`
 - ファイルを開く際、FIFO・デバイス・ソケット等の特殊ファイルは拒否する（`File.file?` チェック）
+- `path:line` / `path:line:col` 形式でファイルを開くと、指定行・桁にジャンプする
+  - path 部分が実在するファイルの場合のみ解釈する（存在しなければ全体をリテラルパスとして扱う）
+  - CLI 引数、`:e`、`gf` のいずれでも対応
 
 ### `:command`（現状仕様）
 

@@ -966,7 +966,7 @@ module RuVim
       end
 
       ctx.editor.open_path(path)
-      move_cursor_to_gf_line(ctx, target[:line]) if target[:line]
+      move_cursor_to_gf_line(ctx, target[:line], target[:col]) if target[:line]
     end
 
     def buffer_list(ctx, **)
@@ -2752,20 +2752,39 @@ module RuVim
 
     def parse_gf_target(token)
       raw = token.to_s
-      if (m = /\A(.+):(\d+)\z/.match(raw))
-        return { path: m[1], line: m[2].to_i } unless m[1].end_with?(":")
+      if (m = /\A(.+):(\d+):(\d+)\z/.match(raw))
+        return { path: m[1], line: m[2].to_i, col: m[3].to_i } unless m[1].end_with?(":")
       end
-      { path: raw, line: nil }
+      if (m = /\A(.+):(\d+)\z/.match(raw))
+        return { path: m[1], line: m[2].to_i, col: nil } unless m[1].end_with?(":")
+      end
+      { path: raw, line: nil, col: nil }
     end
 
-    def move_cursor_to_gf_line(ctx, line_no)
+    def self.parse_path_with_location(str)
+      raw = str.to_s
+      # Try path:line:col
+      if (m = /\A(.+):(\d+):(\d+)\z/.match(raw))
+        path = m[1]
+        return { path: path, line: m[2].to_i, col: m[3].to_i } if !path.end_with?(":") && File.exist?(path)
+      end
+      # Try path:line
+      if (m = /\A(.+):(\d+)\z/.match(raw))
+        path = m[1]
+        return { path: path, line: m[2].to_i, col: nil } if !path.end_with?(":") && File.exist?(path)
+      end
+      { path: raw, line: nil, col: nil }
+    end
+
+    def move_cursor_to_gf_line(ctx, line_no, col_no = nil)
       line = line_no.to_i
       return if line <= 0
 
       w = ctx.editor.current_window
       b = ctx.editor.current_buffer
       w.cursor_y = [line - 1, b.line_count - 1].min
-      w.cursor_x = 0
+      w.cursor_x = col_no.to_i if col_no
+      w.cursor_x = 0 unless col_no
       w.clamp_to_buffer(b)
     end
 

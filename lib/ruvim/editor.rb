@@ -800,10 +800,26 @@ module RuVim
     end
 
     def open_path(path)
-      handler = @open_path_handler
-      return handler.call(path) if handler
+      loc = RuVim::GlobalCommands.parse_path_with_location(path)
+      actual_path = loc[:path]
 
-      open_path_sync(path)
+      handler = @open_path_handler
+      result = if handler
+                 handler.call(actual_path)
+               else
+                 open_path_sync(actual_path)
+               end
+
+      if loc[:line]
+        w = current_window
+        b = current_buffer
+        w.cursor_y = [[loc[:line] - 1, 0].max, b.line_count - 1].min
+        w.cursor_x = loc[:col].to_i if loc[:col]
+        w.cursor_x = 0 unless loc[:col]
+        w.clamp_to_buffer(b)
+      end
+
+      result
     end
 
     def open_path_sync(path)

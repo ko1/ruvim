@@ -719,4 +719,131 @@ class DispatcherTest < Minitest::Test
       refute @editor.message_error?
     end
   end
+
+  # ---- parse_gf_target with col ----
+
+  class ParseGfTargetColTest < Minitest::Test
+    def setup
+      @gc = RuVim::GlobalCommands.instance
+    end
+
+    def test_path_line_col
+      result = @gc.send(:parse_gf_target, "foo.rb:10:5")
+      assert_equal "foo.rb", result[:path]
+      assert_equal 10, result[:line]
+      assert_equal 5, result[:col]
+    end
+
+    def test_path_line_only
+      result = @gc.send(:parse_gf_target, "foo.rb:10")
+      assert_equal "foo.rb", result[:path]
+      assert_equal 10, result[:line]
+      assert_nil result[:col]
+    end
+
+    def test_plain_path
+      result = @gc.send(:parse_gf_target, "foo.rb")
+      assert_equal "foo.rb", result[:path]
+      assert_nil result[:line]
+      assert_nil result[:col]
+    end
+
+    def test_path_line_col_zero_col
+      result = @gc.send(:parse_gf_target, "foo.rb:1:0")
+      assert_equal "foo.rb", result[:path]
+      assert_equal 1, result[:line]
+      assert_equal 0, result[:col]
+    end
+  end
+
+  # ---- parse_path_with_location ----
+
+  class ParsePathWithLocationTest < Minitest::Test
+    def test_existing_file_with_line
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "hello.rb")
+        File.write(path, "line1\nline2\nline3\n")
+
+        result = RuVim::GlobalCommands.parse_path_with_location("#{path}:2")
+        assert_equal path, result[:path]
+        assert_equal 2, result[:line]
+        assert_nil result[:col]
+      end
+    end
+
+    def test_existing_file_with_line_and_col
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "hello.rb")
+        File.write(path, "line1\nline2\nline3\n")
+
+        result = RuVim::GlobalCommands.parse_path_with_location("#{path}:3:7")
+        assert_equal path, result[:path]
+        assert_equal 3, result[:line]
+        assert_equal 7, result[:col]
+      end
+    end
+
+    def test_nonexistent_file_with_digits_treated_as_literal
+      result = RuVim::GlobalCommands.parse_path_with_location("/no/such/file.rb:10")
+      assert_equal "/no/such/file.rb:10", result[:path]
+      assert_nil result[:line]
+      assert_nil result[:col]
+    end
+
+    def test_existing_file_without_location
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "hello.rb")
+        File.write(path, "content\n")
+
+        result = RuVim::GlobalCommands.parse_path_with_location(path)
+        assert_equal path, result[:path]
+        assert_nil result[:line]
+        assert_nil result[:col]
+      end
+    end
+
+    def test_nil_input
+      result = RuVim::GlobalCommands.parse_path_with_location(nil)
+      assert_equal "", result[:path]
+      assert_nil result[:line]
+    end
+  end
+
+  # ---- open_path with path:line:col ----
+
+  class OpenPathLocationTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new
+      @editor = @app.instance_variable_get(:@editor)
+    end
+
+    def test_open_path_jumps_to_line
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "test.rb")
+        File.write(path, (1..20).map { |i| "line #{i}" }.join("\n"))
+
+        @editor.open_path("#{path}:10")
+        assert_equal path, @editor.current_buffer.path
+        assert_equal 9, @editor.current_window.cursor_y  # 0-indexed
+      end
+    end
+
+    def test_open_path_jumps_to_line_and_col
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "test.rb")
+        File.write(path, (1..20).map { |i| "line #{i}" }.join("\n"))
+
+        @editor.open_path("#{path}:5:3")
+        assert_equal path, @editor.current_buffer.path
+        assert_equal 4, @editor.current_window.cursor_y  # 0-indexed
+        assert_equal 3, @editor.current_window.cursor_x
+      end
+    end
+
+    def test_open_path_nonexistent_colon_digits_literal
+      @editor.open_path("/tmp/nonexistent_path_test:42")
+      # treated as literal path since /tmp/nonexistent_path_test doesn't exist
+      assert_equal "/tmp/nonexistent_path_test:42", @editor.current_buffer.path
+    end
+  end
 end
