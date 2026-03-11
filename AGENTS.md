@@ -27,7 +27,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 | File | Description |
 |------|-------------|
-| `app.rb` | Main application: initialization, run loop, config, startup |
+| `app.rb` | Main application: initialization, run loop, config, startup; autoloads Clipboard, Browser, SpellChecker, FileWatcher |
 | `app_defaults.rb` | Built-in command/Ex registration and default key bindings |
 | `key_handler.rb` | Key input dispatch, mode handling, normal/visual/command-line/rich modes |
 | `key_handler/pending_state.rb` | Pending state machines (operator, register, mark, jump, replace, find) |
@@ -74,7 +74,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
 | `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
-| `lang/registry.rb` | Central lang registry (filetype detection, module/runprg/buffer_defaults lookup) |
+| `lang/registry.rb` | Central lang registry (filetype detection, module/runprg/buffer_defaults lookup); requires all lang/* modules |
 | `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
@@ -110,14 +110,14 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `commands/git/branch.rb` | Git branch: listing, checkout, command handlers |
 | `commands/git/commit.rb` | Git commit: message buffer, execute, command handlers |
 | `commands/git/grep.rb` | Git grep: search, location parser, command handlers |
-| `commands/git/handler.rb` | Git module (repo_root), dispatcher, close, shared helpers |
+| `commands/git/handler.rb` | Git module (repo_root), dispatcher, close, shared helpers; requires all git/* submodules |
 | `commands/gh.rb` | GitHub link/browse/PR: URL generation, OSC 52 clipboard, dispatcher, command handlers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `browser.rb` | URL open (open/xdg-open/wslview/PowerShell) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
 | `command_invocation.rb` | Single command invocation (id, argv, count, bang) |
-| `rich_view.rb` | Rich view mode (TSV/CSV/Markdown rendering) |
+| `rich_view.rb` | Rich view mode (TSV/CSV/Markdown rendering); requires lang/tsv and lang/csv |
 | `rich_view/table_renderer.rb` | Table formatting with display-width-aware column alignment |
 | `rich_view/markdown_renderer.rb` | Markdown rendering (headings, inline, tables, code blocks, HR) |
 | `rich_view/json_renderer.rb` | JSON pretty-print into virtual buffer |

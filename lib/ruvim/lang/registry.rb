@@ -99,3 +99,31 @@ module RuVim
     end
   end
 end
+
+# Load all built-in language modules (each self-registers with Registry).
+require_relative "base"
+require_relative "markdown"
+require_relative "ruby"
+require_relative "json"
+require_relative "scheme"
+require_relative "c"
+require_relative "cpp"
+require_relative "diff"
+require_relative "yaml"
+require_relative "sh"
+require_relative "python"
+require_relative "javascript"
+require_relative "typescript"
+require_relative "html"
+require_relative "toml"
+require_relative "go"
+require_relative "rust"
+require_relative "makefile"
+require_relative "dockerfile"
+require_relative "sql"
+require_relative "elixir"
+require_relative "perl"
+require_relative "lua"
+require_relative "ocaml"
+require_relative "erb"
+require_relative "gitcommit"

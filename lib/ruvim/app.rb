@@ -8,69 +8,39 @@ require_relative "command_invocation"
 require_relative "display_width"
 require_relative "keyword_chars"
 require_relative "text_metrics"
-require_relative "clipboard"
-require_relative "browser"
 
-# Language modules
+# Autoloaded: used on demand, not at startup
+module RuVim
+  autoload :Clipboard, File.expand_path("clipboard", __dir__)
+  autoload :Browser, File.expand_path("browser", __dir__)
+  autoload :SpellChecker, File.expand_path("spell_checker", __dir__)
+  autoload :FileWatcher, File.expand_path("file_watcher", __dir__)
+end
+
+# Language modules (registry loads all lang/* internally)
 require_relative "lang/registry"
-require_relative "lang/base"
-require_relative "lang/markdown"
-require_relative "lang/ruby"
-require_relative "lang/json"
-require_relative "lang/scheme"
-require_relative "lang/c"
-require_relative "lang/cpp"
-require_relative "lang/diff"
-require_relative "lang/yaml"
-require_relative "lang/sh"
-require_relative "lang/python"
-require_relative "lang/javascript"
-require_relative "lang/typescript"
-require_relative "lang/html"
-require_relative "lang/toml"
-require_relative "lang/go"
-require_relative "lang/rust"
-require_relative "lang/makefile"
-require_relative "lang/dockerfile"
-require_relative "lang/sql"
-require_relative "lang/elixir"
-require_relative "lang/perl"
-require_relative "lang/lua"
-require_relative "lang/ocaml"
-require_relative "lang/erb"
-require_relative "lang/gitcommit"
 
 # Core data structures
 require_relative "highlighter"
-require_relative "spell_checker"
 require_relative "context"
 require_relative "buffer"
 require_relative "window"
 require_relative "editor"
 
-# Registries and commands
+# Registries and commands (handler.rb loads git/* internally)
 require_relative "command_registry"
 require_relative "ex_command_registry"
-require_relative "commands/git/blame"
-require_relative "commands/git/status"
-require_relative "commands/git/diff"
-require_relative "commands/git/log"
-require_relative "commands/git/branch"
-require_relative "commands/git/commit"
-require_relative "commands/git/grep"
 require_relative "commands/gh"
 require_relative "commands/git/handler"
 require_relative "global_commands"
 require_relative "dispatcher"
 
-# Input and rendering
+# Input and rendering (rich_view.rb loads tsv/csv internally)
 require_relative "keymap_manager"
 require_relative "command_line"
 require_relative "input"
 require_relative "terminal"
 require_relative "rich_view"
-require_relative "lang/tsv"
-require_relative "lang/csv"
 require_relative "screen"
 
 # Configuration
@@ -78,7 +48,6 @@ require_relative "config_dsl"
 require_relative "config_loader"
 
 # App components
-require_relative "file_watcher"
 require_relative "stream_mixer"
 require_relative "completion_manager"
 require_relative "key_handler"

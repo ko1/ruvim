@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 require "open3"
+require_relative "blame"
+require_relative "status"
+require_relative "diff"
+require_relative "log"
+require_relative "branch"
+require_relative "commit"
+require_relative "grep"
 
 module RuVim
   module Commands

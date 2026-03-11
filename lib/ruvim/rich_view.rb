@@ -114,3 +114,7 @@ module RuVim
     register(:jsonl, JsonlRenderer)
   end
 end
+
+# Load format modules that register with RichView.
+require_relative "lang/tsv"
+require_relative "lang/csv"

@@ -209,4 +209,9 @@
 - `app.rb` から `register_builtins!` + `bind_default_keys!` を `app/defaults.rb` に切り出し（約310行）
 - `key_handler.rb` の git 系 Enter ハンドラを `BUFFER_KIND_ENTER_COMMANDS` テーブルに統合
 - `editor.rb` から filetype 検出ロジックを `editor/filetype.rb` に切り出し
+- require 所有者の適正化と autoload 化
+  - `lang/*` の require を `app.rb` → `lang/registry.rb` に移動
+  - `lang/tsv`, `lang/csv` の require を `app.rb` → `rich_view.rb` に移動
+  - `commands/git/*` の require を `app.rb` → `commands/git/handler.rb` に移動
+  - `Clipboard`, `Browser`, `SpellChecker`, `FileWatcher` を autoload 化（起動時不要）
 
