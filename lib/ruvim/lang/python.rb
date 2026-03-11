@@ -33,6 +33,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "python3 %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         return 0 if target_row == 0
 
@@ -76,10 +78,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("python", mod: Python,
-      extensions: %w[.py],
-      shebangs: [/\Apython(?:\d+(?:\.\d+)*)?\z/],
-      buffer_defaults: { "runprg" => "python3 %" })
   end
 end

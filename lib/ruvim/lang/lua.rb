@@ -29,6 +29,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "lua %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -67,10 +69,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("lua", mod: Lua,
-      extensions: %w[.lua],
-      shebangs: ["lua", /\Alua\d*\z/],
-      buffer_defaults: { "runprg" => "lua %" })
   end
 end

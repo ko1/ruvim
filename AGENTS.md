@@ -74,7 +74,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
 | `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
-| `lang/registry.rb` | Central lang registry (filetype detection, module/runprg/buffer_defaults lookup); requires all lang/* modules |
+| `lang/registry.rb` | Central lang registry (filetype detection, buffer_defaults lookup); autoloads all lang/* modules on demand |
 | `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |

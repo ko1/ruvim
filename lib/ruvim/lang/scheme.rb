@@ -28,6 +28,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "gosh %" }.freeze
+
       def color_columns(text)
         cols = {}
         # Order matters: comment overrides all, then strings, then others
@@ -40,10 +42,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("scheme", mod: Scheme,
-      extensions: %w[.scm .ss .sld],
-      shebangs: %w[gosh],
-      buffer_defaults: { "runprg" => "gosh %" })
   end
 end

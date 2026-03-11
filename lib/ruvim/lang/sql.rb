@@ -45,8 +45,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("sql", mod: Sql,
-      extensions: %w[.sql])
   end
 end

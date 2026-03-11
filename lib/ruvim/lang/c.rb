@@ -40,6 +40,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -108,9 +110,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("c", mod: C,
-      extensions: %w[.c .h],
-      buffer_defaults: { "runprg" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out" })
   end
 end

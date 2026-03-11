@@ -23,8 +23,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("erb", mod: Erb,
-      extensions: %w[.erb])
   end
 end

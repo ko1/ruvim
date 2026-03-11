@@ -37,7 +37,5 @@ module RuVim
         end
       end
     end
-
-    Registry.register("diff", mod: Diff)
   end
 end

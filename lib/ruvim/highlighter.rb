@@ -14,13 +14,9 @@ module RuVim
     def color_columns(filetype, line)
       ft = filetype.to_s
       return {} if line.empty?
+      return {} unless Lang::Registry.highlight?(ft)
 
-      entry = Lang::Registry[ft]
-      if entry && entry[:mod].respond_to?(:color_columns)
-        entry[:mod].color_columns(line)
-      else
-        {}
-      end
+      Lang::Registry.resolve_module(ft).color_columns(line)
     end
 
     def apply_regex(cols, text, regex, color, override: false)

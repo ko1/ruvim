@@ -110,6 +110,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "ruby -w %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -233,11 +235,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("ruby", mod: Ruby,
-      extensions: %w[.rb .rake .ru],
-      basenames: %w[Gemfile Rakefile Guardfile Vagrantfile],
-      shebangs: [/\Aruby(?:\d+(?:\.\d+)*)?\z/],
-      buffer_defaults: { "runprg" => "ruby -w %" })
   end
 end

@@ -38,6 +38,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "perl %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -82,10 +84,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("perl", mod: Perl,
-      extensions: %w[.pl .pm .t],
-      shebangs: [/\Aperl(?:\d+(?:\.\d+)*)?\z/],
-      buffer_defaults: { "runprg" => "perl %" })
   end
 end

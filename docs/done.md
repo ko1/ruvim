@@ -214,4 +214,7 @@
   - `lang/tsv`, `lang/csv` の require を `app.rb` → `rich_view.rb` に移動
   - `commands/git/*` の require を `app.rb` → `commands/git/handler.rb` に移動
   - `Clipboard`, `Browser`, `SpellChecker`, `FileWatcher` を autoload 化（起動時不要）
+  - `lang/*` モジュールを autoload 化（Registry に検出メタデータ集約、モジュール本体は遅延読込）
+  - `buffer_defaults` を Registry の register 引数から各 lang モジュールの `BUFFER_DEFAULTS` 定数に移動
+  - Highlighter を `entry[:mod]` 直接参照から `Registry.resolve_module` 経由に変更
 

@@ -38,6 +38,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "elixir %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -76,10 +78,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("elixir", mod: Elixir,
-      extensions: %w[.ex .exs],
-      shebangs: %w[elixir iex],
-      buffer_defaults: { "runprg" => "elixir %" })
   end
 end

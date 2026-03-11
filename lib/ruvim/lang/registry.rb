@@ -3,7 +3,7 @@
 module RuVim
   module Lang
     # Central registry for language modules.
-    # Each lang module registers itself at load time via Lang.register.
+    # Detection metadata is stored eagerly; actual modules are resolved lazily via autoload.
     module Registry
       @entries = {}
 
@@ -11,14 +11,16 @@ module RuVim
         # Register a language module.
         #
         # @param filetype [String] primary filetype name (e.g. "ruby")
-        # @param mod [Module] the lang module (must respond to :color_columns)
+        # @param mod [Module, Symbol] the lang module, or a Symbol for lazy resolution via Lang.const_get.
+        #   When a Symbol is given and the constant is not yet defined, autoload is set up automatically.
         # @param extensions [Array<String>] file extensions including dot (e.g. [".rb", ".rake"])
         # @param basenames [Array<String>] exact basenames (e.g. ["Makefile"])
         # @param basename_prefix [String, nil] prefix match for basename (e.g. "Dockerfile")
         # @param shebangs [Array<String, Regexp>] shebang command matchers
         # @param aliases [Array<String>] additional filetype names that map to the same module
         def register(filetype, mod:, extensions: [], basenames: [], basename_prefix: nil,
-                     shebangs: [], aliases: [], buffer_defaults: {})
+                     shebangs: [], aliases: [])
+          setup_autoload(mod) if mod.is_a?(Symbol)
           entry = {
             filetype: filetype,
             mod: mod,
@@ -26,8 +28,7 @@ module RuVim
             basenames: basenames,
             basename_prefix: basename_prefix,
             shebangs: shebangs,
-            aliases: aliases,
-            buffer_defaults: buffer_defaults
+            aliases: aliases
           }.freeze
           @entries[filetype] = entry
           aliases.each { |a| @entries[a] = entry }
@@ -37,13 +38,15 @@ module RuVim
         # Returns the module or Lang::Base if not found.
         def resolve_module(ft)
           entry = @entries[ft]
-          entry ? entry[:mod] : Lang::Base
+          return Lang::Base unless entry
+          resolve_mod(entry[:mod])
         end
 
-        # Look up buffer defaults by filetype string. Returns {} if not registered.
+        # Look up buffer defaults by filetype string.
+        # Reads BUFFER_DEFAULTS from the lang module. Returns {} if not defined.
         def buffer_defaults_for(ft)
-          entry = @entries[ft]
-          entry&.[](:buffer_defaults) || {}
+          mod = resolve_module(ft)
+          mod.const_defined?(:BUFFER_DEFAULTS, false) ? mod::BUFFER_DEFAULTS : {}
         end
 
         # Detect filetype from file extension.
@@ -88,42 +91,77 @@ module RuVim
         # Returns true if the filetype has a color_columns method.
         def highlight?(ft)
           entry = @entries[ft]
-          entry && entry[:mod].respond_to?(:color_columns)
+          return false unless entry
+          mod = entry[:mod]
+          if mod.is_a?(Symbol)
+            mod != :Base
+          else
+            mod.respond_to?(:color_columns)
+          end
         end
 
         # Look up entry by filetype. Returns nil if not found.
         def [](ft)
           @entries[ft]
         end
+
+        private
+
+        def resolve_mod(mod)
+          mod.is_a?(Symbol) ? Lang.const_get(mod) : mod
+        end
+
+        def setup_autoload(mod_name)
+          return if Lang.const_defined?(mod_name, false) || Lang.autoload?(mod_name)
+
+          file = File.expand_path(mod_name.to_s.downcase, __dir__)
+          Lang.autoload(mod_name, file)
+        end
       end
+
+      # Built-in filetype registrations.
+      # Detection metadata only — buffer_defaults are in each lang module's BUFFER_DEFAULTS constant.
+      register("text",    mod: :Base, extensions: %w[.txt])
+      register("css",     mod: :Base, extensions: %w[.css])
+      register("erlang",  mod: :Base, extensions: %w[.erl])
+      register("markdown", mod: :Markdown, extensions: %w[.md])
+      register("ruby",    mod: :Ruby, extensions: %w[.rb .rake .ru],
+               basenames: %w[Gemfile Rakefile Guardfile Vagrantfile],
+               shebangs: [/\Aruby(?:\d+(?:\.\d+)*)?\z/])
+      register("json",    mod: :Json, extensions: %w[.json], aliases: %w[jsonl])
+      register("jsonl",   mod: :Json, extensions: %w[.jsonl])
+      register("scheme",  mod: :Scheme, extensions: %w[.scm .ss .sld], shebangs: %w[gosh])
+      register("c",       mod: :C, extensions: %w[.c .h])
+      register("cpp",     mod: :Cpp, extensions: %w[.cpp .cc .cxx .hpp])
+      register("diff",    mod: :Diff)
+      register("yaml",    mod: :Yaml, extensions: %w[.yml .yaml])
+      register("sh",      mod: :Sh, extensions: %w[.sh .bash .zsh],
+               shebangs: %w[bash sh zsh ksh dash])
+      register("python",  mod: :Python, extensions: %w[.py],
+               shebangs: [/\Apython(?:\d+(?:\.\d+)*)?\z/])
+      register("javascript", mod: :Javascript, extensions: %w[.js .mjs .cjs],
+               aliases: %w[javascriptreact], shebangs: %w[node nodejs deno])
+      register("javascriptreact", mod: :Javascript, extensions: %w[.jsx])
+      register("typescript", mod: :Typescript, extensions: %w[.ts],
+               aliases: %w[typescriptreact])
+      register("typescriptreact", mod: :Typescript, extensions: %w[.tsx])
+      register("html",    mod: :Html, extensions: %w[.html .htm .xml])
+      register("toml",    mod: :Toml, extensions: %w[.toml])
+      register("go",      mod: :Go, extensions: %w[.go])
+      register("rust",    mod: :Rust, extensions: %w[.rs])
+      register("make",    mod: :Makefile, basenames: %w[Makefile GNUmakefile makefile Justfile])
+      register("dockerfile", mod: :Dockerfile, basenames: %w[Dockerfile], basename_prefix: "Dockerfile")
+      register("sql",     mod: :Sql, extensions: %w[.sql])
+      register("elixir",  mod: :Elixir, extensions: %w[.ex .exs], shebangs: %w[elixir iex])
+      register("perl",    mod: :Perl, extensions: %w[.pl .pm .t],
+               shebangs: [/\Aperl(?:\d+(?:\.\d+)*)?\z/])
+      register("lua",     mod: :Lua, extensions: %w[.lua],
+               shebangs: ["lua", /\Alua\d*\z/])
+      register("ocaml",   mod: :Ocaml, extensions: %w[.ml .mli], shebangs: %w[ocaml])
+      register("erb",     mod: :Erb, extensions: %w[.erb])
+      register("gitcommit", mod: :Gitcommit)
+      register("tsv",     mod: :Base, extensions: %w[.tsv])
+      register("csv",     mod: :Base, extensions: %w[.csv])
     end
   end
 end
-
-# Load all built-in language modules (each self-registers with Registry).
-require_relative "base"
-require_relative "markdown"
-require_relative "ruby"
-require_relative "json"
-require_relative "scheme"
-require_relative "c"
-require_relative "cpp"
-require_relative "diff"
-require_relative "yaml"
-require_relative "sh"
-require_relative "python"
-require_relative "javascript"
-require_relative "typescript"
-require_relative "html"
-require_relative "toml"
-require_relative "go"
-require_relative "rust"
-require_relative "makefile"
-require_relative "dockerfile"
-require_relative "sql"
-require_relative "elixir"
-require_relative "perl"
-require_relative "lua"
-require_relative "ocaml"
-require_relative "erb"
-require_relative "gitcommit"

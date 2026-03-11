@@ -17,6 +17,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "npx tsx %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         Javascript.calculate_indent(lines, target_row, shiftwidth)
       end
@@ -42,12 +44,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("typescript", mod: Typescript,
-      extensions: %w[.ts],
-      aliases: %w[typescriptreact],
-      buffer_defaults: { "runprg" => "npx tsx %" })
-    Registry.register("typescriptreact", mod: Typescript,
-      extensions: %w[.tsx])
   end
 end

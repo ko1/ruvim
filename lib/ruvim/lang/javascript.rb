@@ -32,6 +32,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "node %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -71,13 +73,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("javascript", mod: Javascript,
-      extensions: %w[.js .mjs .cjs],
-      aliases: %w[javascriptreact],
-      shebangs: %w[node nodejs deno],
-      buffer_defaults: { "runprg" => "node %" })
-    Registry.register("javascriptreact", mod: Javascript,
-      extensions: %w[.jsx])
   end
 end

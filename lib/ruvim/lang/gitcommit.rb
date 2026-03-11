@@ -7,6 +7,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "spell" => true }.freeze
+
       def color_columns(text)
         cols = {}
         if text.start_with?("#")
@@ -15,9 +17,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("gitcommit",
-                       mod: Gitcommit,
-                       buffer_defaults: { "spell" => true })
   end
 end

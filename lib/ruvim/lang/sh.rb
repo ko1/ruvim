@@ -31,6 +31,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "bash %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -67,10 +69,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("sh", mod: Sh,
-      extensions: %w[.sh .bash .zsh],
-      shebangs: %w[bash sh zsh ksh dash],
-      buffer_defaults: { "runprg" => "bash %" })
   end
 end

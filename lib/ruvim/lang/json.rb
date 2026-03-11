@@ -48,11 +48,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("json", mod: Json,
-      extensions: %w[.json],
-      aliases: %w[jsonl])
-    Registry.register("jsonl", mod: Json,
-      extensions: %w[.jsonl])
   end
 end

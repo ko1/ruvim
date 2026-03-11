@@ -36,6 +36,8 @@ module RuVim
 
       module_function
 
+      BUFFER_DEFAULTS = { "runprg" => "go run %" }.freeze
+
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0
         (0...target_row).each do |row|
@@ -75,9 +77,5 @@ module RuVim
         cols
       end
     end
-
-    Registry.register("go", mod: Go,
-      extensions: %w[.go],
-      buffer_defaults: { "runprg" => "go run %" })
   end
 end
