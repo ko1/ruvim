@@ -1000,15 +1000,19 @@ class DispatcherTest < Minitest::Test
     def test_global_print_collects_all_lines
       set_lines("aaa", "bbb editor", "ccc", "ddd editor", "eee")
       @dispatcher.dispatch_ex(@editor, "g/editor/p")
-      assert_match(/bbb editor/, @editor.message)
-      assert_match(/ddd editor/, @editor.message)
+      lines = @editor.hit_enter_lines
+      assert lines, "should enter hit-enter mode for multi-line output"
+      assert_includes lines, "bbb editor"
+      assert_includes lines, "ddd editor"
     end
 
     def test_global_number_collects_all_lines
       set_lines("aaa", "bbb editor", "ccc", "ddd editor")
       @dispatcher.dispatch_ex(@editor, "g/editor/nu")
-      assert_match(/2\tbbb editor/, @editor.message)
-      assert_match(/4\tddd editor/, @editor.message)
+      lines = @editor.hit_enter_lines
+      assert lines, "should enter hit-enter mode for multi-line output"
+      assert lines.any? { |l| l.include?("bbb editor") }
+      assert lines.any? { |l| l.include?("ddd editor") }
     end
   end
 

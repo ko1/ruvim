@@ -1150,7 +1150,7 @@ module RuVim
       @echo_accumulator = []
       yield
       unless @echo_accumulator.empty?
-        @message = @echo_accumulator.join("\n")
+        echo_multiline(@echo_accumulator)
       end
     ensure
       @echo_accumulator = nil
