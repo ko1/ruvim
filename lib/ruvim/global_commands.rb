@@ -1518,34 +1518,23 @@ module RuVim
         return
       end
 
-      # Handle print commands by collecting output
-      cmd_stripped = command.strip
-      if cmd_stripped == "p" || cmd_stripped == "print"
-        lines = matching.map { |row| buf.line_at(row) }
-        ctx.editor.echo(lines.join("\n"))
-        return
-      end
-      if cmd_stripped == "nu" || cmd_stripped == "number"
-        lines = matching.map { |row| "#{row + 1}\t#{buf.line_at(row)}" }
-        ctx.editor.echo(lines.join("\n"))
-        return
-      end
+      ctx.editor.with_echo_accumulation do
+        buf.begin_change_group
+        begin
+          offset = 0
+          matching.each do |orig_row|
+            row = orig_row + offset
+            next if row < 0 || row >= buf.line_count
 
-      buf.begin_change_group
-      begin
-        offset = 0
-        matching.each do |orig_row|
-          row = orig_row + offset
-          next if row < 0 || row >= buf.line_count
-
-          prev_count = buf.line_count
-          ctx.window.cursor_y = row
-          ctx.window.cursor_x = 0
-          execute_global_sub_command(ctx, command)
-          offset += buf.line_count - prev_count
+            prev_count = buf.line_count
+            ctx.window.cursor_y = row
+            ctx.window.cursor_x = 0
+            execute_global_sub_command(ctx, command)
+            offset += buf.line_count - prev_count
+          end
+        ensure
+          buf.end_change_group
         end
-      ensure
-        buf.end_change_group
       end
 
       ctx.window.clamp_to_buffer(buf)

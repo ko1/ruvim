@@ -1138,8 +1138,22 @@ module RuVim
 
     def echo(msg)
       @message_kind = :info
-      @message = msg.to_s
+      if @echo_accumulator
+        @echo_accumulator << msg.to_s
+      else
+        @message = msg.to_s
+      end
       @message_deadline = nil
+    end
+
+    def with_echo_accumulation
+      @echo_accumulator = []
+      yield
+      unless @echo_accumulator.empty?
+        @message = @echo_accumulator.join("\n")
+      end
+    ensure
+      @echo_accumulator = nil
     end
 
     def echo_temporary(msg, duration_seconds:)
