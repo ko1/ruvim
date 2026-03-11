@@ -9,7 +9,7 @@ require_relative "commands/yank_paste"
 require_relative "commands/search"
 require_relative "commands/window"
 require_relative "commands/buffer_file"
-require_relative "commands/ex"
+require_relative "commands/runtime"
 
 module RuVim
   class GlobalCommands
@@ -20,7 +20,7 @@ module RuVim
     include Commands::Search
     include Commands::Window
     include Commands::BufferFile
-    include Commands::Ex
+    include Commands::Runtime
     include RuVim::Git::Handler
 
     def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: nil)

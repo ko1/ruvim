@@ -50,12 +50,12 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
 | `global_commands.rb` | Command host (singleton, includes command modules and Git::Handler) |
 | `commands/motion.rb` | Cursor movement, scrolling, word movement, bracket matching |
-| `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects |
+| `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects, range operations |
 | `commands/yank_paste.rb` | Yank, paste, visual yank/delete, register operations |
-| `commands/search.rb` | Search, substitute, global, filter, grep |
+| `commands/search.rb` | Search, substitute, global, filter, grep, quickfix/location list, spell, vimgrep |
 | `commands/window.rb` | Window split/focus/close/resize, tab operations |
-| `commands/buffer_file.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view |
-| `commands/ex.rb` | Ex commands (help, set, bindings, ruby, run, shell, range ops, quickfix, spell) |
+| `commands/buffer_file.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view, read |
+| `commands/runtime.rb` | Runtime/meta commands (help, set, bindings, ruby, run, shell, define command, normal exec) |
 | `screen.rb` | Rendering: window layout, syntax highlight, line numbers, status line, wrap |
 | `dispatcher.rb` | Routes commands; parses Ex ranges/substitute; shell execution |
 | `keymap_manager.rb` | Key-to-command mapping with layers (filetype > buffer > mode > global) |

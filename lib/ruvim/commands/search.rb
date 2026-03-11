@@ -34,7 +34,7 @@ module RuVim
         search_current_word(ctx, exact: false, direction: :backward)
       end
 
-      def ex_substitute(ctx, pattern:, replacement:, flags_str: nil, range_start: nil, range_end: nil, global: false, **)
+      def substitute(ctx, pattern:, replacement:, flags_str: nil, range_start: nil, range_end: nil, global: false, **)
         materialize_intro_buffer_if_needed(ctx)
         flags = parse_substitute_flags(flags_str, default_global: global)
 
@@ -64,7 +64,7 @@ module RuVim
         end
       end
 
-      def ex_global(ctx, pattern:, command:, invert: false, range_start: nil, range_end: nil, **)
+      def global_command(ctx, pattern:, command:, invert: false, range_start: nil, range_end: nil, **)
         materialize_intro_buffer_if_needed(ctx)
         buf = ctx.buffer
         regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: buf)
@@ -105,11 +105,11 @@ module RuVim
         ctx.window.clamp_to_buffer(buf)
       end
 
-      def ex_grep(ctx, argv:, kwargs: {}, **)
+      def grep_external(ctx, argv:, kwargs: {}, **)
         run_external_grep(ctx, argv:, target: :quickfix)
       end
 
-      def ex_lgrep(ctx, argv:, kwargs: {}, **)
+      def lgrep_external(ctx, argv:, kwargs: {}, **)
         run_external_grep(ctx, argv:, target: :location_list)
       end
 
@@ -163,13 +163,148 @@ module RuVim
         editor.echo("filter: #{matching_lines.length} line(s)")
       end
 
-      def ex_filter(ctx, argv:, **)
+      def filter_lines(ctx, argv:, **)
         if argv.any?
           pattern = parse_vimgrep_pattern(argv.join(" "))
           editor = ctx.editor
           editor.set_last_search(pattern: pattern, direction: :forward)
         end
         search_filter(ctx)
+      end
+
+      def vimgrep(ctx, argv:, **)
+        pattern = parse_vimgrep_pattern(argv)
+        regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
+        items = grep_items_for_buffers(ctx.editor.buffers.values.select(&:file_buffer?), regex)
+        if items.empty?
+          ctx.editor.echo_error("Pattern not found: #{pattern}")
+          return
+        end
+
+        ctx.editor.set_quickfix_list(items)
+        ctx.editor.select_quickfix(0)
+        ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
+        ctx.editor.echo("quickfix: #{items.length} item(s)")
+      end
+
+      def lvimgrep(ctx, argv:, **)
+        pattern = parse_vimgrep_pattern(argv)
+        regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
+        items = grep_items_for_buffers([ctx.buffer], regex)
+        if items.empty?
+          ctx.editor.echo_error("Pattern not found: #{pattern}")
+          return
+        end
+
+        ctx.editor.set_location_list(items, window_id: ctx.window.id)
+        ctx.editor.select_location_list(0, window_id: ctx.window.id)
+        ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
+        ctx.editor.echo("location list: #{items.length} item(s)")
+      end
+
+      def quickfix_open(ctx, **)
+        open_list_window(ctx, kind: :quickfix, title: "[Quickfix]", lines: quickfix_buffer_lines(ctx.editor), source_window_id: ctx.window.id)
+      end
+
+      def quickfix_close(ctx, **)
+        close_list_windows(ctx.editor, :quickfix)
+      end
+
+      def quickfix_next(ctx, **)
+        item = ctx.editor.move_quickfix(+1)
+        unless item
+          ctx.editor.echo_error("quickfix list is empty")
+          return
+        end
+        ctx.editor.jump_to_location(item)
+        refresh_list_window(ctx.editor, :quickfix)
+        ctx.editor.echo(quickfix_item_echo(ctx.editor))
+      end
+
+      def quickfix_prev(ctx, **)
+        item = ctx.editor.move_quickfix(-1)
+        unless item
+          ctx.editor.echo_error("quickfix list is empty")
+          return
+        end
+        ctx.editor.jump_to_location(item)
+        refresh_list_window(ctx.editor, :quickfix)
+        ctx.editor.echo(quickfix_item_echo(ctx.editor))
+      end
+
+      def loclist_open(ctx, **)
+        open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id),
+                         source_window_id: ctx.window.id)
+      end
+
+      def loclist_close(ctx, **)
+        close_list_windows(ctx.editor, :location_list)
+      end
+
+      def loclist_next(ctx, **)
+        item = ctx.editor.move_location_list(+1, window_id: ctx.window.id)
+        unless item
+          ctx.editor.echo_error("location list is empty")
+          return
+        end
+        ctx.editor.jump_to_location(item)
+        refresh_list_window(ctx.editor, :location_list)
+        ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
+      end
+
+      def loclist_prev(ctx, **)
+        item = ctx.editor.move_location_list(-1, window_id: ctx.window.id)
+        unless item
+          ctx.editor.echo_error("location list is empty")
+          return
+        end
+        ctx.editor.jump_to_location(item)
+        refresh_list_window(ctx.editor, :location_list)
+        ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
+      end
+
+      def spell_next(ctx, count:, **)
+        return unless spell_enabled?(ctx)
+
+        cnt = normalized_count(count)
+        checker = ctx.editor.spell_checker
+        buf = ctx.buffer
+        win = ctx.window
+        y = win.cursor_y
+        x = win.cursor_x
+
+        cnt.times do
+          found = find_next_misspelled(checker, buf, y, x)
+          unless found
+            ctx.editor.echo_error("No misspelled word found")
+            return
+          end
+          y, x = found
+        end
+        win.cursor_y = y
+        win.cursor_x = x
+      end
+
+      def spell_prev(ctx, count:, **)
+        return unless spell_enabled?(ctx)
+
+        cnt = normalized_count(count)
+        checker = ctx.editor.spell_checker
+        buf = ctx.buffer
+        win = ctx.window
+        y = win.cursor_y
+        x = win.cursor_x
+
+        cnt.times do
+          found = find_prev_misspelled(checker, buf, y, x)
+          unless found
+            ctx.editor.echo_error("No misspelled word found")
+            return
+          end
+          y, x = found
+        end
+        win.cursor_y = y
+        win.cursor_x = x
       end
 
       def submit_search(ctx, pattern:, direction:)
@@ -566,6 +701,142 @@ module RuVim
         else
           raw
         end
+      end
+
+      def quickfix_buffer_lines(editor)
+        items = editor.quickfix_items
+        return ["Quickfix", "", "(empty)"] if items.empty?
+
+        idx = editor.quickfix_index || 0
+        build_list_buffer_lines(editor, items, idx, title: "Quickfix")
+      end
+
+      def location_list_buffer_lines(editor, window_id)
+        items = editor.location_items(window_id)
+        idx = editor.location_list(window_id)[:index] || 0
+        return ["Location List", "", "(empty)"] if items.empty?
+
+        build_list_buffer_lines(editor, items, idx, title: "Location List")
+      end
+
+      def build_list_buffer_lines(editor, items, current_index, title:)
+        [
+          title,
+          "",
+          *items.each_with_index.map do |it, i|
+            b = editor.buffers[it[:buffer_id]]
+            path = b&.display_name || "(missing)"
+            mark = i == current_index ? ">" : " "
+            "#{mark} #{i + 1}: #{path}:#{it[:row] + 1}:#{it[:col] + 1}: #{it[:text]}"
+          end
+        ]
+      end
+
+      def open_list_window(ctx, kind:, title:, lines:, source_window_id:)
+        editor = ctx.editor
+        editor.split_current_window(layout: :horizontal)
+        buffer = editor.add_virtual_buffer(kind:, name: title, lines:, filetype: "qf", readonly: true, modifiable: false)
+        buffer.options["ruvim_list_source_window_id"] = source_window_id
+        editor.switch_to_buffer(buffer.id)
+        editor.echo(title)
+        buffer
+      end
+
+      def close_list_windows(editor, kind)
+        ids = editor.find_window_ids_by_buffer_kind(kind)
+        if ids.empty?
+          editor.echo_error("#{kind} window is not open")
+          return
+        end
+
+        ids.each do |wid|
+          break if editor.window_count <= 1
+          editor.close_window(wid)
+        end
+        editor.echo("#{kind} closed")
+      end
+
+      def refresh_list_window(editor, kind)
+        wids = editor.find_window_ids_by_buffer_kind(kind)
+        return if wids.empty?
+
+        lines = case kind
+                when :quickfix then quickfix_buffer_lines(editor)
+                when :location_list then location_list_buffer_lines(editor, editor.current_window_id)
+                end
+        wids.each do |wid|
+          buf = editor.buffers[editor.windows[wid].buffer_id]
+          next unless buf
+          # Bypass modifiable check — this is an internal refresh of a readonly list buffer
+          buf.instance_variable_set(:@lines, Array(lines).map(&:dup))
+        end
+      end
+
+      def quickfix_item_echo(editor)
+        item = editor.current_quickfix_item
+        list_item_echo(editor, item, editor.quickfix_index, editor.quickfix_items.length, label: "qf")
+      end
+
+      def location_item_echo(editor, window_id)
+        item = editor.current_location_list_item(window_id)
+        list = editor.location_list(window_id)
+        list_item_echo(editor, item, list[:index], list[:items].length, label: "ll")
+      end
+
+      def list_item_echo(editor, item, index, total, label:)
+        return "#{label}: empty" unless item
+
+        b = editor.buffers[item[:buffer_id]]
+        "#{label} #{index.to_i + 1}/#{total}: #{b&.display_name || '(missing)'}:#{item[:row] + 1}:#{item[:col] + 1}"
+      end
+
+      def spell_enabled?(ctx)
+        !!ctx.editor.effective_option("spell", window: ctx.window, buffer: ctx.buffer)
+      end
+
+      def find_next_misspelled(checker, buf, start_y, start_x)
+        line_count = buf.line_count
+        # Search from current line forward
+        (start_y...line_count).each do |y|
+          line = buf.lines[y]
+          misspelled = checker.misspelled_words(line)
+          misspelled.each do |m|
+            next if y == start_y && m[:col] <= start_x
+            return [y, m[:col]]
+          end
+        end
+        # Wrap around from the beginning
+        (0..start_y).each do |y|
+          line = buf.lines[y]
+          misspelled = checker.misspelled_words(line)
+          misspelled.each do |m|
+            next if y == start_y && m[:col] <= start_x
+            return [y, m[:col]]
+          end
+        end
+        nil
+      end
+
+      def find_prev_misspelled(checker, buf, start_y, start_x)
+        # Search from current line backward
+        start_y.downto(0) do |y|
+          line = buf.lines[y]
+          misspelled = checker.misspelled_words(line).reverse
+          misspelled.each do |m|
+            next if y == start_y && m[:col] >= start_x
+            return [y, m[:col]]
+          end
+        end
+        # Wrap around from the end
+        (buf.line_count - 1).downto(start_y) do |y|
+          line = buf.lines[y]
+          misspelled = checker.misspelled_words(line).reverse
+          misspelled.each do |m|
+            next if y == start_y && m[:col] >= start_x
+            return [y, m[:col]]
+          end
+        end
+        nil
       end
     end
   end

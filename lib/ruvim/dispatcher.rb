@@ -26,7 +26,7 @@ module RuVim
         command = raw[1..].strip
         invocation = CommandInvocation.new(id: "__shell__", argv: [command])
         ctx = Context.new(editor:, invocation:)
-        @command_host.ex_shell(ctx, command:)
+        @command_host.shell_command(ctx, command:)
         editor.enter_normal_mode
         return
       end
@@ -43,7 +43,7 @@ module RuVim
         )
         invocation = CommandInvocation.new(id: "__global__", kwargs:)
         ctx = Context.new(editor:, invocation:)
-        @command_host.ex_global(ctx, **kwargs)
+        @command_host.global_command(ctx, **kwargs)
         editor.enter_normal_mode
         return
       end
@@ -56,7 +56,7 @@ module RuVim
         )
         invocation = CommandInvocation.new(id: "__substitute__", kwargs:)
         ctx = Context.new(editor:, invocation:)
-        @command_host.ex_substitute(ctx, **kwargs)
+        @command_host.substitute(ctx, **kwargs)
         editor.enter_normal_mode
         return
       end

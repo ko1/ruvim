@@ -594,7 +594,7 @@ module RuVim
     end
 
     def follow_toggle!
-      @stream_mixer&.ex_follow_toggle
+      @stream_mixer&.follow_toggle
     end
 
     def follow_active?(buf)

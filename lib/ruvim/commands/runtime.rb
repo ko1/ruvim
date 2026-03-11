@@ -5,10 +5,9 @@ require "open3"
 
 module RuVim
   module Commands
-    # Ex commands: help, set, bindings, ruby, run, shell, read, range operations,
-    # quickfix/location list, spell, define command
-    module Ex
-      def ex_help(ctx, argv: [], **)
+    # Runtime/meta commands: help, set, bindings, ruby, run, shell, define command, normal exec
+    module Runtime
+      def show_help(ctx, argv: [], **)
         topic = argv.first.to_s
         registry = RuVim::ExCommandRegistry.instance
 
@@ -49,7 +48,7 @@ module RuVim
           option_help_line(key)
         else
           if (spec = registry.resolve(topic))
-            ex_command_help_line(spec)
+            command_help_line(spec)
           else
             "No help for #{topic}. Try :help or :help commands"
           end
@@ -57,7 +56,7 @@ module RuVim
         ctx.editor.show_help_buffer!(title: "[Help] #{topic}", lines: help_text_to_lines(topic, text))
       end
 
-      def ex_define_command(ctx, argv:, bang:, **)
+      def define_command(ctx, argv:, bang:, **)
         registry = RuVim::ExCommandRegistry.instance
         if argv.empty?
           user_cmds = registry.all.select { |spec| spec.source == :user }
@@ -95,7 +94,7 @@ module RuVim
         ctx.editor.echo("Defined :#{name}")
       end
 
-      def ex_ruby(ctx, argv:, **)
+      def eval_ruby(ctx, argv:, **)
         raise RuVim::CommandError, "Restricted mode: :ruby is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 
         code = argv.join(" ")
@@ -164,7 +163,7 @@ module RuVim
         $stderr = (defined?(original_g_stderr) && original_g_stderr) ? original_g_stderr : STDERR
       end
 
-      def ex_run(ctx, argv:, **)
+      def run_command(ctx, argv:, **)
         editor = ctx.editor
         source_buffer = ctx.buffer
 
@@ -227,7 +226,7 @@ module RuVim
         end
       end
 
-      def ex_shell(ctx, command:, **)
+      def shell_command(ctx, command:, **)
         raise RuVim::CommandError, "Restricted mode: :! is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 
         raise RuVim::CommandError, "Usage: :!<command>" if command.strip.empty?
@@ -264,43 +263,13 @@ module RuVim
         raise RuVim::CommandError, "Shell error: #{e.message}"
       end
 
-      def ex_read(ctx, argv:, kwargs:, **)
-        arg = argv.join(" ")
-        raise RuVim::CommandError, "Usage: :r[ead] [file] or :r[ead] !command" if arg.strip.empty?
-
-        insert_line = kwargs[:range_start] || ctx.window.cursor_y
-        new_lines = if arg.start_with?("!")
-                      command = arg[1..].strip
-                      raise RuVim::CommandError, "Usage: :r !<command>" if command.empty?
-
-                      shell = ENV["SHELL"].to_s
-                      shell = "/bin/sh" if shell.empty?
-                      stdout_text, stderr_text, _status = Open3.capture3(shell, "-c", command)
-                      unless stderr_text.empty?
-                        ctx.editor.echo_error(stderr_text.lines(chomp: true).first)
-                      end
-                      stdout_text.lines(chomp: true)
-                    else
-                      path = File.expand_path(arg.strip)
-                      raise RuVim::CommandError, "File not found: #{arg.strip}" unless File.exist?(path)
-
-                      File.read(path).lines(chomp: true)
-                    end
-
-        return if new_lines.empty?
-
-        ctx.buffer.insert_lines_at(insert_line + 1, new_lines)
-        ctx.window.cursor_y = insert_line + new_lines.length
-        ctx.editor.echo("#{new_lines.length} line(s) inserted")
-      end
-
-      def ex_commands(ctx, **)
+      def list_commands(ctx, **)
         rows = RuVim::ExCommandRegistry.instance.all.map do |spec|
           alias_text = spec.aliases.empty? ? "" : " (#{spec.aliases.join(', ')})"
           source = spec.source == :user ? " [user]" : ""
           name = "#{spec.name}#{alias_text}#{source}"
           desc = spec.desc
-          keys = ex_command_binding_labels(ctx.editor, spec)
+          keys = command_binding_labels(ctx.editor, spec)
           [name, desc, keys]
         end
         name_width = rows.map { |name, _desc, _keys| name.length }.max || 0
@@ -312,7 +281,7 @@ module RuVim
         ctx.editor.show_help_buffer!(title: "[Commands]", lines: ["Ex commands", "", *items])
       end
 
-      def ex_bindings(ctx, argv: [], **)
+      def list_bindings(ctx, argv: [], **)
         keymaps = ctx.editor.keymap_manager
         raise RuVim::CommandError, "Keymap manager is unavailable" unless keymaps
 
@@ -322,342 +291,19 @@ module RuVim
         ctx.editor.show_help_buffer!(title: "[Bindings]", lines:)
       end
 
-      def ex_set(ctx, argv:, **)
-        ex_set_common(ctx, argv, scope: :auto)
+      def set_option(ctx, argv:, **)
+        set_option_common(ctx, argv, scope: :auto)
       end
 
-      def ex_setlocal(ctx, argv:, **)
-        ex_set_common(ctx, argv, scope: :local)
+      def set_option_local(ctx, argv:, **)
+        set_option_common(ctx, argv, scope: :local)
       end
 
-      def ex_setglobal(ctx, argv:, **)
-        ex_set_common(ctx, argv, scope: :global)
+      def set_option_global(ctx, argv:, **)
+        set_option_common(ctx, argv, scope: :global)
       end
 
-      def ex_vimgrep(ctx, argv:, **)
-        pattern = parse_vimgrep_pattern(argv)
-        regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
-        items = grep_items_for_buffers(ctx.editor.buffers.values.select(&:file_buffer?), regex)
-        if items.empty?
-          ctx.editor.echo_error("Pattern not found: #{pattern}")
-          return
-        end
-
-        ctx.editor.set_quickfix_list(items)
-        ctx.editor.select_quickfix(0)
-        ctx.editor.jump_to_location(ctx.editor.current_quickfix_item)
-        ctx.editor.echo("quickfix: #{items.length} item(s)")
-      end
-
-      def ex_lvimgrep(ctx, argv:, **)
-        pattern = parse_vimgrep_pattern(argv)
-        regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: ctx.buffer)
-        items = grep_items_for_buffers([ctx.buffer], regex)
-        if items.empty?
-          ctx.editor.echo_error("Pattern not found: #{pattern}")
-          return
-        end
-
-        ctx.editor.set_location_list(items, window_id: ctx.window.id)
-        ctx.editor.select_location_list(0, window_id: ctx.window.id)
-        ctx.editor.jump_to_location(ctx.editor.current_location_list_item(ctx.window.id))
-        ctx.editor.echo("location list: #{items.length} item(s)")
-      end
-
-      def ex_copen(ctx, **)
-        open_list_window(ctx, kind: :quickfix, title: "[Quickfix]", lines: quickfix_buffer_lines(ctx.editor), source_window_id: ctx.window.id)
-      end
-
-      def ex_cclose(ctx, **)
-        close_list_windows(ctx.editor, :quickfix)
-      end
-
-      def ex_cnext(ctx, **)
-        item = ctx.editor.move_quickfix(+1)
-        unless item
-          ctx.editor.echo_error("quickfix list is empty")
-          return
-        end
-        ctx.editor.jump_to_location(item)
-        refresh_list_window(ctx.editor, :quickfix)
-        ctx.editor.echo(quickfix_item_echo(ctx.editor))
-      end
-
-      def ex_cprev(ctx, **)
-        item = ctx.editor.move_quickfix(-1)
-        unless item
-          ctx.editor.echo_error("quickfix list is empty")
-          return
-        end
-        ctx.editor.jump_to_location(item)
-        refresh_list_window(ctx.editor, :quickfix)
-        ctx.editor.echo(quickfix_item_echo(ctx.editor))
-      end
-
-      def spell_next(ctx, count:, **)
-        return unless spell_enabled?(ctx)
-
-        cnt = normalized_count(count)
-        checker = ctx.editor.spell_checker
-        buf = ctx.buffer
-        win = ctx.window
-        y = win.cursor_y
-        x = win.cursor_x
-
-        cnt.times do
-          found = find_next_misspelled(checker, buf, y, x)
-          unless found
-            ctx.editor.echo_error("No misspelled word found")
-            return
-          end
-          y, x = found
-        end
-        win.cursor_y = y
-        win.cursor_x = x
-      end
-
-      def spell_prev(ctx, count:, **)
-        return unless spell_enabled?(ctx)
-
-        cnt = normalized_count(count)
-        checker = ctx.editor.spell_checker
-        buf = ctx.buffer
-        win = ctx.window
-        y = win.cursor_y
-        x = win.cursor_x
-
-        cnt.times do
-          found = find_prev_misspelled(checker, buf, y, x)
-          unless found
-            ctx.editor.echo_error("No misspelled word found")
-            return
-          end
-          y, x = found
-        end
-        win.cursor_y = y
-        win.cursor_x = x
-      end
-
-      def ex_lopen(ctx, **)
-        open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id),
-                         source_window_id: ctx.window.id)
-      end
-
-      def ex_lclose(ctx, **)
-        close_list_windows(ctx.editor, :location_list)
-      end
-
-      def ex_lnext(ctx, **)
-        item = ctx.editor.move_location_list(+1, window_id: ctx.window.id)
-        unless item
-          ctx.editor.echo_error("location list is empty")
-          return
-        end
-        ctx.editor.jump_to_location(item)
-        refresh_list_window(ctx.editor, :location_list)
-        ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
-      end
-
-      def ex_lprev(ctx, **)
-        item = ctx.editor.move_location_list(-1, window_id: ctx.window.id)
-        unless item
-          ctx.editor.echo_error("location list is empty")
-          return
-        end
-        ctx.editor.jump_to_location(item)
-        refresh_list_window(ctx.editor, :location_list)
-        ctx.editor.echo(location_item_echo(ctx.editor, ctx.window.id))
-      end
-
-      def ex_delete_lines(ctx, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          # Default to current line
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        count = r_end - r_start + 1
-        deleted_text = ctx.buffer.line_block_text(r_start, count)
-        ctx.buffer.begin_change_group
-        count.times { ctx.buffer.delete_line(r_start) }
-        ctx.buffer.end_change_group
-        store_delete_register(ctx, text: deleted_text, type: :linewise)
-        ctx.window.cursor_y = [r_start, ctx.buffer.line_count - 1].min
-        ctx.window.cursor_x = 0
-        ctx.window.clamp_to_buffer(ctx.buffer)
-        ctx.editor.echo("#{count} line(s) deleted")
-      end
-
-      def ex_yank_lines(ctx, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        count = r_end - r_start + 1
-        text = ctx.buffer.line_block_text(r_start, count)
-        store_yank_register(ctx, text:, type: :linewise)
-        ctx.editor.echo("#{count} line(s) yanked")
-      end
-
-      def ex_print_lines(ctx, kwargs: {}, **)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
-        ctx.editor.echo(lines.join("\n"))
-      end
-
-      def ex_number_lines(ctx, kwargs: {}, **)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        lines = (r_start..r_end).map { |row| "#{row + 1}\t#{ctx.buffer.line_at(row)}" }
-        ctx.editor.echo(lines.join("\n"))
-      end
-
-      def ex_move_lines(ctx, argv:, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        dest = argv.join(" ").strip
-        raise RuVim::CommandError, "Argument required" if dest.empty?
-
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        dest_row = resolve_ex_address(dest, ctx)
-
-        count = r_end - r_start + 1
-        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
-
-        ctx.buffer.begin_change_group
-        count.times { ctx.buffer.delete_line(r_start) }
-        insert_at = dest_row >= r_start ? dest_row - count + 1 : dest_row + 1
-        insert_at = [[insert_at, 0].max, ctx.buffer.line_count].min
-        ctx.buffer.insert_lines_at(insert_at, lines)
-        ctx.buffer.end_change_group
-
-        ctx.window.cursor_y = [insert_at + count - 1, ctx.buffer.line_count - 1].min
-        ctx.window.cursor_x = 0
-        ctx.window.clamp_to_buffer(ctx.buffer)
-        ctx.editor.echo("#{count} line(s) moved")
-      end
-
-      def ex_copy_lines(ctx, argv:, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        dest = argv.join(" ").strip
-        raise RuVim::CommandError, "Argument required" if dest.empty?
-
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        dest_row = resolve_ex_address(dest, ctx)
-
-        count = r_end - r_start + 1
-        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
-
-        insert_at = dest_row + 1
-        insert_at = [[insert_at, 0].max, ctx.buffer.line_count].min
-        ctx.buffer.insert_lines_at(insert_at, lines)
-
-        ctx.window.cursor_y = [insert_at + count - 1, ctx.buffer.line_count - 1].min
-        ctx.window.cursor_x = 0
-        ctx.window.clamp_to_buffer(ctx.buffer)
-        ctx.editor.echo("#{count} line(s) copied")
-      end
-
-      def ex_join_lines(ctx, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = ctx.window.cursor_y
-          r_end = [r_start + 1, ctx.buffer.line_count - 1].min
-        end
-        return if r_start >= r_end
-
-        ctx.buffer.begin_change_group
-        row = r_start
-        (r_end - r_start).times do
-          break if row >= ctx.buffer.line_count - 1
-
-          left = ctx.buffer.line_at(row)
-          right = ctx.buffer.line_at(row + 1)
-          join_col = left.length
-          ctx.buffer.delete_char(row, join_col)
-
-          right_trimmed = right.sub(/\A\s+/, "")
-          trimmed_count = right.length - right_trimmed.length
-          if trimmed_count.positive?
-            ctx.buffer.delete_span(row, join_col, row, join_col + trimmed_count)
-          end
-
-          need_space = !left.empty? && !left.match?(/\s\z/) && !right_trimmed.empty?
-          if need_space
-            ctx.buffer.insert_char(row, join_col, " ")
-          end
-        end
-        ctx.buffer.end_change_group
-
-        ctx.window.cursor_y = r_start
-        ctx.window.clamp_to_buffer(ctx.buffer)
-      end
-
-      def ex_shift_right(ctx, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        sw = ctx.editor.effective_option("shiftwidth", buffer: ctx.buffer).to_i
-        sw = 2 if sw <= 0
-        indent = " " * sw
-
-        ctx.buffer.begin_change_group
-        (r_start..r_end).each do |row|
-          ctx.buffer.replace_line!(row, indent + ctx.buffer.line_at(row))
-        end
-        ctx.buffer.end_change_group
-      end
-
-      def ex_shift_left(ctx, kwargs: {}, **)
-        materialize_intro_buffer_if_needed(ctx)
-        r_start = kwargs[:range_start]
-        r_end = kwargs[:range_end]
-        unless r_start && r_end
-          r_start = r_end = ctx.window.cursor_y
-        end
-
-        sw = ctx.editor.effective_option("shiftwidth", buffer: ctx.buffer).to_i
-        sw = 2 if sw <= 0
-
-        ctx.buffer.begin_change_group
-        (r_start..r_end).each do |row|
-          line = ctx.buffer.line_at(row)
-          stripped = line.sub(/\A {1,#{sw}}/, "")
-          ctx.buffer.replace_line!(row, stripped) if stripped != line
-        end
-        ctx.buffer.end_change_group
-      end
-
-      def ex_normal(ctx, argv:, kwargs: {}, **)
+      def execute_normal(ctx, argv:, kwargs: {}, **)
         materialize_intro_buffer_if_needed(ctx)
         keys_str = argv.join(" ")
         raise RuVim::CommandError, "Argument required" if keys_str.empty?
@@ -710,25 +356,6 @@ module RuVim
         command.gsub("%", path)
       end
 
-      def resolve_ex_address(addr_str, ctx)
-        str = addr_str.to_s.strip
-        case str
-        when "$"
-          ctx.buffer.line_count - 1
-        when "."
-          ctx.window.cursor_y
-        when /\A\d+\z/
-          str.to_i - 1
-        when "0"
-          -1
-        else
-          dispatcher = RuVim::Dispatcher.new
-          result = dispatcher.parse_address(str, 0, ctx.editor)
-          raise RuVim::CommandError, "Invalid address: #{addr_str}" unless result
-          result[0]
-        end
-      end
-
       def parse_normal_keys(str)
         keys = []
         i = 0
@@ -748,94 +375,7 @@ module RuVim
         keys
       end
 
-      def quickfix_buffer_lines(editor)
-        items = editor.quickfix_items
-        return ["Quickfix", "", "(empty)"] if items.empty?
-
-        idx = editor.quickfix_index || 0
-        build_list_buffer_lines(editor, items, idx, title: "Quickfix")
-      end
-
-      def location_list_buffer_lines(editor, window_id)
-        items = editor.location_items(window_id)
-        idx = editor.location_list(window_id)[:index] || 0
-        return ["Location List", "", "(empty)"] if items.empty?
-
-        build_list_buffer_lines(editor, items, idx, title: "Location List")
-      end
-
-      def build_list_buffer_lines(editor, items, current_index, title:)
-        [
-          title,
-          "",
-          *items.each_with_index.map do |it, i|
-            b = editor.buffers[it[:buffer_id]]
-            path = b&.display_name || "(missing)"
-            mark = i == current_index ? ">" : " "
-            "#{mark} #{i + 1}: #{path}:#{it[:row] + 1}:#{it[:col] + 1}: #{it[:text]}"
-          end
-        ]
-      end
-
-      def open_list_window(ctx, kind:, title:, lines:, source_window_id:)
-        editor = ctx.editor
-        editor.split_current_window(layout: :horizontal)
-        buffer = editor.add_virtual_buffer(kind:, name: title, lines:, filetype: "qf", readonly: true, modifiable: false)
-        buffer.options["ruvim_list_source_window_id"] = source_window_id
-        editor.switch_to_buffer(buffer.id)
-        editor.echo(title)
-        buffer
-      end
-
-      def close_list_windows(editor, kind)
-        ids = editor.find_window_ids_by_buffer_kind(kind)
-        if ids.empty?
-          editor.echo_error("#{kind} window is not open")
-          return
-        end
-
-        ids.each do |wid|
-          break if editor.window_count <= 1
-          editor.close_window(wid)
-        end
-        editor.echo("#{kind} closed")
-      end
-
-      def refresh_list_window(editor, kind)
-        wids = editor.find_window_ids_by_buffer_kind(kind)
-        return if wids.empty?
-
-        lines = case kind
-                when :quickfix then quickfix_buffer_lines(editor)
-                when :location_list then location_list_buffer_lines(editor, editor.current_window_id)
-                end
-        wids.each do |wid|
-          buf = editor.buffers[editor.windows[wid].buffer_id]
-          next unless buf
-          # Bypass modifiable check — this is an internal refresh of a readonly list buffer
-          buf.instance_variable_set(:@lines, Array(lines).map(&:dup))
-        end
-      end
-
-      def quickfix_item_echo(editor)
-        item = editor.current_quickfix_item
-        list_item_echo(editor, item, editor.quickfix_index, editor.quickfix_items.length, label: "qf")
-      end
-
-      def location_item_echo(editor, window_id)
-        item = editor.current_location_list_item(window_id)
-        list = editor.location_list(window_id)
-        list_item_echo(editor, item, list[:index], list[:items].length, label: "ll")
-      end
-
-      def list_item_echo(editor, item, index, total, label:)
-        return "#{label}: empty" unless item
-
-        b = editor.buffers[item[:buffer_id]]
-        "#{label} #{index.to_i + 1}/#{total}: #{b&.display_name || '(missing)'}:#{item[:row] + 1}:#{item[:col] + 1}"
-      end
-
-      def ex_set_common(ctx, argv, scope:)
+      def set_option_common(ctx, argv, scope:)
         editor = ctx.editor
         if argv.empty?
           items = editor.option_snapshot(window: ctx.window, buffer: ctx.buffer).map do |opt|
@@ -952,7 +492,7 @@ module RuVim
         value.nil? ? "nil" : value.to_s
       end
 
-      def ex_command_help_line(spec)
+      def command_help_line(spec)
         aliases = spec.aliases.empty? ? "" : " aliases=#{spec.aliases.join(',')}"
         nargs = " nargs=#{spec.nargs}"
         bang = spec.bang ? " !" : ""
@@ -1175,11 +715,11 @@ module RuVim
         ""
       end
 
-      def ex_command_binding_labels(editor, ex_spec)
+      def command_binding_labels(editor, ex_spec)
         keymaps = editor.keymap_manager
         return [] unless keymaps
 
-        command_ids = command_ids_for_ex_callable(ex_spec.call)
+        command_ids = command_ids_for_callable(ex_spec.call)
         return [] if command_ids.empty?
 
         entries = keymaps.binding_entries_for_context(editor).select do |entry|
@@ -1188,11 +728,11 @@ module RuVim
         entries.sort_by do |entry|
           [binding_mode_order_index(entry.mode), entry.scope == :global ? 1 : 0, format_binding_tokens(entry.tokens)]
         end.map do |entry|
-          format_ex_command_binding_label(entry)
+          format_command_binding_label(entry)
         end.uniq
       end
 
-      def command_ids_for_ex_callable(callable)
+      def command_ids_for_callable(callable)
         RuVim::CommandRegistry.instance.all.filter_map do |spec|
           spec.id if same_command_callable?(spec.call, callable)
         end
@@ -1205,7 +745,7 @@ module RuVim
         a.equal?(b)
       end
 
-      def format_ex_command_binding_label(entry)
+      def format_command_binding_label(entry)
         lhs = format_binding_tokens(entry.tokens)
         if entry.scope == :global
           "global:#{lhs}"
@@ -1214,55 +754,6 @@ module RuVim
         else
           lhs
         end
-      end
-
-      def spell_enabled?(ctx)
-        !!ctx.editor.effective_option("spell", window: ctx.window, buffer: ctx.buffer)
-      end
-
-      def find_next_misspelled(checker, buf, start_y, start_x)
-        line_count = buf.line_count
-        # Search from current line forward
-        (start_y...line_count).each do |y|
-          line = buf.lines[y]
-          misspelled = checker.misspelled_words(line)
-          misspelled.each do |m|
-            next if y == start_y && m[:col] <= start_x
-            return [y, m[:col]]
-          end
-        end
-        # Wrap around from the beginning
-        (0..start_y).each do |y|
-          line = buf.lines[y]
-          misspelled = checker.misspelled_words(line)
-          misspelled.each do |m|
-            next if y == start_y && m[:col] <= start_x
-            return [y, m[:col]]
-          end
-        end
-        nil
-      end
-
-      def find_prev_misspelled(checker, buf, start_y, start_x)
-        # Search from current line backward
-        start_y.downto(0) do |y|
-          line = buf.lines[y]
-          misspelled = checker.misspelled_words(line).reverse
-          misspelled.each do |m|
-            next if y == start_y && m[:col] >= start_x
-            return [y, m[:col]]
-          end
-        end
-        # Wrap around from the end
-        (buf.line_count - 1).downto(start_y) do |y|
-          line = buf.lines[y]
-          misspelled = checker.misspelled_words(line).reverse
-          misspelled.each do |m|
-            next if y == start_y && m[:col] >= start_x
-            return [y, m[:col]]
-          end
-        end
-        nil
       end
     end
   end

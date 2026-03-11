@@ -177,8 +177,16 @@
   - `commands/search.rb` — 検索、置換、global、フィルタ、grep
   - `commands/window.rb` — ウィンドウ分割/フォーカス/クローズ/リサイズ、タブ操作
   - `commands/buffer_file.rb` — バッファ管理、ファイルI/O、終了、マーク、ジャンプ、arglist、リッチビュー
-  - `commands/ex.rb` — Exコマンド（help, set, bindings, ruby, run, shell, 範囲操作, quickfix, spell）
+  - `commands/runtime.rb` — ランタイム/メタコマンド（help, set, bindings, ruby, run, shell, define command, normal exec）
   - Git::Handler と同じ mixin パターンを横展開
+- `commands/ex.rb` を廃止し、ドメイン別モジュールに再配置
+  - `ex_` プレフィックスを全コマンドメソッドから除去（ドメイン名に変更）
+  - quickfix/location list/spell/vimgrep → `commands/search.rb`
+  - 範囲操作（delete/yank/print/number/move/copy/join/shift） → `commands/edit.rb`
+  - read → `commands/buffer_file.rb`
+  - help/set/bindings/ruby/run/shell/command/normal → `commands/runtime.rb`（新規）
+  - `ex_git`/`ex_gh` → `git_dispatch`/`gh_dispatch`（`git/handler.rb`）
+  - `ex_follow_toggle` → `follow_toggle`（`stream_mixer.rb`）
 - `editor.rb`（1769行→1176行）から5つのモジュールを抽出
   - `editor/options.rb` — オプションシステム（OPTION_DEFS、get/set/effective、型変換）
   - `editor/registers.rb` — レジスタ管理（名前付き、番号付き、クリップボード連携）

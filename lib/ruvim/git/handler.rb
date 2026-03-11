@@ -53,7 +53,7 @@ module RuVim
         ctx.editor.clear_message
       end
 
-      def ex_git(ctx, argv: [], **)
+      def git_dispatch(ctx, argv: [], **)
         raise RuVim::CommandError, "Restricted mode: :git is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 
         sub = argv.first.to_s.downcase
@@ -71,7 +71,7 @@ module RuVim
         public_send(method, ctx, argv: argv[1..], kwargs: {}, bang: false, count: 1)
       end
 
-      def ex_gh(ctx, argv: [], kwargs: {}, **)
+      def gh_dispatch(ctx, argv: [], kwargs: {}, **)
         raise RuVim::CommandError, "Restricted mode: :gh is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
 
         sub = argv.first.to_s.downcase

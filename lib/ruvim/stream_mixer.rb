@@ -100,7 +100,7 @@ module RuVim
         changed
       end
 
-      def ex_follow_toggle
+      def follow_toggle
         buf = @editor.current_buffer
         raise RuVim::CommandError, "No file associated with buffer" unless buf.path
 

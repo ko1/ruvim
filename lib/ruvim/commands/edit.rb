@@ -328,7 +328,214 @@ module RuVim
         true
       end
 
+      def range_delete(ctx, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          # Default to current line
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        count = r_end - r_start + 1
+        deleted_text = ctx.buffer.line_block_text(r_start, count)
+        ctx.buffer.begin_change_group
+        count.times { ctx.buffer.delete_line(r_start) }
+        ctx.buffer.end_change_group
+        store_delete_register(ctx, text: deleted_text, type: :linewise)
+        ctx.window.cursor_y = [r_start, ctx.buffer.line_count - 1].min
+        ctx.window.cursor_x = 0
+        ctx.window.clamp_to_buffer(ctx.buffer)
+        ctx.editor.echo("#{count} line(s) deleted")
+      end
+
+      def range_yank(ctx, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        count = r_end - r_start + 1
+        text = ctx.buffer.line_block_text(r_start, count)
+        store_yank_register(ctx, text:, type: :linewise)
+        ctx.editor.echo("#{count} line(s) yanked")
+      end
+
+      def range_print(ctx, kwargs: {}, **)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
+        ctx.editor.echo(lines.join("\n"))
+      end
+
+      def range_number(ctx, kwargs: {}, **)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        lines = (r_start..r_end).map { |row| "#{row + 1}\t#{ctx.buffer.line_at(row)}" }
+        ctx.editor.echo(lines.join("\n"))
+      end
+
+      def range_move(ctx, argv:, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        dest = argv.join(" ").strip
+        raise RuVim::CommandError, "Argument required" if dest.empty?
+
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        dest_row = resolve_range_address(dest, ctx)
+
+        count = r_end - r_start + 1
+        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
+
+        ctx.buffer.begin_change_group
+        count.times { ctx.buffer.delete_line(r_start) }
+        insert_at = dest_row >= r_start ? dest_row - count + 1 : dest_row + 1
+        insert_at = [[insert_at, 0].max, ctx.buffer.line_count].min
+        ctx.buffer.insert_lines_at(insert_at, lines)
+        ctx.buffer.end_change_group
+
+        ctx.window.cursor_y = [insert_at + count - 1, ctx.buffer.line_count - 1].min
+        ctx.window.cursor_x = 0
+        ctx.window.clamp_to_buffer(ctx.buffer)
+        ctx.editor.echo("#{count} line(s) moved")
+      end
+
+      def range_copy(ctx, argv:, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        dest = argv.join(" ").strip
+        raise RuVim::CommandError, "Argument required" if dest.empty?
+
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        dest_row = resolve_range_address(dest, ctx)
+
+        count = r_end - r_start + 1
+        lines = (r_start..r_end).map { |row| ctx.buffer.line_at(row) }
+
+        insert_at = dest_row + 1
+        insert_at = [[insert_at, 0].max, ctx.buffer.line_count].min
+        ctx.buffer.insert_lines_at(insert_at, lines)
+
+        ctx.window.cursor_y = [insert_at + count - 1, ctx.buffer.line_count - 1].min
+        ctx.window.cursor_x = 0
+        ctx.window.clamp_to_buffer(ctx.buffer)
+        ctx.editor.echo("#{count} line(s) copied")
+      end
+
+      def range_join(ctx, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = ctx.window.cursor_y
+          r_end = [r_start + 1, ctx.buffer.line_count - 1].min
+        end
+        return if r_start >= r_end
+
+        ctx.buffer.begin_change_group
+        row = r_start
+        (r_end - r_start).times do
+          break if row >= ctx.buffer.line_count - 1
+
+          left = ctx.buffer.line_at(row)
+          right = ctx.buffer.line_at(row + 1)
+          join_col = left.length
+          ctx.buffer.delete_char(row, join_col)
+
+          right_trimmed = right.sub(/\A\s+/, "")
+          trimmed_count = right.length - right_trimmed.length
+          if trimmed_count.positive?
+            ctx.buffer.delete_span(row, join_col, row, join_col + trimmed_count)
+          end
+
+          need_space = !left.empty? && !left.match?(/\s\z/) && !right_trimmed.empty?
+          if need_space
+            ctx.buffer.insert_char(row, join_col, " ")
+          end
+        end
+        ctx.buffer.end_change_group
+
+        ctx.window.cursor_y = r_start
+        ctx.window.clamp_to_buffer(ctx.buffer)
+      end
+
+      def range_shift_right(ctx, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        sw = ctx.editor.effective_option("shiftwidth", buffer: ctx.buffer).to_i
+        sw = 2 if sw <= 0
+        indent = " " * sw
+
+        ctx.buffer.begin_change_group
+        (r_start..r_end).each do |row|
+          ctx.buffer.replace_line!(row, indent + ctx.buffer.line_at(row))
+        end
+        ctx.buffer.end_change_group
+      end
+
+      def range_shift_left(ctx, kwargs: {}, **)
+        materialize_intro_buffer_if_needed(ctx)
+        r_start = kwargs[:range_start]
+        r_end = kwargs[:range_end]
+        unless r_start && r_end
+          r_start = r_end = ctx.window.cursor_y
+        end
+
+        sw = ctx.editor.effective_option("shiftwidth", buffer: ctx.buffer).to_i
+        sw = 2 if sw <= 0
+
+        ctx.buffer.begin_change_group
+        (r_start..r_end).each do |row|
+          line = ctx.buffer.line_at(row)
+          stripped = line.sub(/\A {1,#{sw}}/, "")
+          ctx.buffer.replace_line!(row, stripped) if stripped != line
+        end
+        ctx.buffer.end_change_group
+      end
+
       private
+
+      def resolve_range_address(addr_str, ctx)
+        str = addr_str.to_s.strip
+        case str
+        when "$"
+          ctx.buffer.line_count - 1
+        when "."
+          ctx.window.cursor_y
+        when /\A\d+\z/
+          str.to_i - 1
+        when "0"
+          -1
+        else
+          dispatcher = RuVim::Dispatcher.new
+          result = dispatcher.parse_address(str, 0, ctx.editor)
+          raise RuVim::CommandError, "Invalid address: #{addr_str}" unless result
+          result[0]
+        end
+      end
 
       def char_at_cursor_for_delete(buffer, row, col)
         line = buffer.line_at(row)

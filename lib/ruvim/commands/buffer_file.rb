@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "open3"
+
 module RuVim
   module Commands
     # Buffer management, file I/O, quit, marks, jumps, arglist, rich view
@@ -249,9 +251,39 @@ module RuVim
         ctx.editor.echo("buffer #{target_id} deleted")
       end
 
-      def ex_rich(ctx, argv: [], **)
+      def rich_command(ctx, argv: [], **)
         format = argv.first
         RuVim::RichView.toggle!(ctx.editor, format: format)
+      end
+
+      def read_into_buffer(ctx, argv:, kwargs:, **)
+        arg = argv.join(" ")
+        raise RuVim::CommandError, "Usage: :r[ead] [file] or :r[ead] !command" if arg.strip.empty?
+
+        insert_line = kwargs[:range_start] || ctx.window.cursor_y
+        new_lines = if arg.start_with?("!")
+                      command = arg[1..].strip
+                      raise RuVim::CommandError, "Usage: :r !<command>" if command.empty?
+
+                      shell = ENV["SHELL"].to_s
+                      shell = "/bin/sh" if shell.empty?
+                      stdout_text, stderr_text, _status = Open3.capture3(shell, "-c", command)
+                      unless stderr_text.empty?
+                        ctx.editor.echo_error(stderr_text.lines(chomp: true).first)
+                      end
+                      stdout_text.lines(chomp: true)
+                    else
+                      path = File.expand_path(arg.strip)
+                      raise RuVim::CommandError, "File not found: #{arg.strip}" unless File.exist?(path)
+
+                      File.read(path).lines(chomp: true)
+                    end
+
+        return if new_lines.empty?
+
+        ctx.buffer.insert_lines_at(insert_line + 1, new_lines)
+        ctx.window.cursor_y = insert_line + new_lines.length
+        ctx.editor.echo("#{new_lines.length} line(s) inserted")
       end
 
       def rich_toggle(ctx, **)
