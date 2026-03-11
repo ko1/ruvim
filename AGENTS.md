@@ -40,7 +40,14 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `editor.rb` | Editor state: buffers, windows, options, registers, marks, modes |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
-| `global_commands.rb` | All built-in command implementations (cursor, edit, search, visual, etc.) |
+| `global_commands.rb` | Command host (singleton, includes command modules and Git::Handler) |
+| `commands/motion.rb` | Cursor movement, scrolling, word movement, bracket matching |
+| `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects |
+| `commands/yank_paste.rb` | Yank, paste, visual yank/delete, register operations |
+| `commands/search.rb` | Search, substitute, global, filter, grep |
+| `commands/window.rb` | Window split/focus/close/resize, tab operations |
+| `commands/buffer_file.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view |
+| `commands/ex.rb` | Ex commands (help, set, bindings, ruby, run, shell, range ops, quickfix, spell) |
 | `screen.rb` | Rendering: window layout, syntax highlight, line numbers, status line, wrap |
 | `dispatcher.rb` | Routes commands; parses Ex ranges/substitute; shell execution |
 | `keymap_manager.rb` | Key-to-command mapping with layers (filetype > buffer > mode > global) |
