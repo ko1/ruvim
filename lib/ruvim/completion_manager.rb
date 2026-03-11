@@ -592,7 +592,7 @@ module RuVim
 
       def gh_subcommand_candidates(prefix)
         @gh_subcommands ||= begin
-          builtin = Commands::Git::Handler::GH_SUBCOMMANDS.keys
+          builtin = Commands::Gh::HandlerMethods::GH_SUBCOMMANDS.keys
           external = parse_gh_help_subcommands
           (builtin + external).uniq.sort
         end

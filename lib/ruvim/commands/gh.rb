@@ -130,6 +130,37 @@ module RuVim
       end
 
       module HandlerMethods
+        GH_SUBCOMMANDS = {
+          "link"   => :gh_link,
+          "browse" => :gh_browse,
+          "pr"     => :gh_pr,
+        }.freeze
+
+        def gh_dispatch(ctx, argv: [], kwargs: {}, **)
+          raise RuVim::CommandError, "Restricted mode: :gh is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
+
+          sub = argv.first.to_s.downcase
+          if sub.empty?
+            ctx.editor.echo("GitHub subcommands: #{GH_SUBCOMMANDS.keys.join(', ')}")
+            return
+          end
+
+          method = GH_SUBCOMMANDS[sub]
+          unless method
+            executor = ctx.editor.shell_executor
+            if executor
+              command = (["gh"] + argv).join(" ")
+              status = executor.call(command)
+              ctx.editor.echo("shell exit #{status.exitstatus}")
+            else
+              ctx.editor.echo_error("Unknown gh subcommand: #{sub}")
+            end
+            return
+          end
+
+          public_send(method, ctx, argv: argv[1..], kwargs: kwargs, bang: false, count: 1)
+        end
+
         def gh_link(ctx, argv: [], kwargs: {}, **)
           url, warning = gh_resolve_url(ctx, argv: argv, kwargs: kwargs, command: "gh link")
           return unless url

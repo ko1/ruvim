@@ -40,13 +40,6 @@ module RuVim
         include Branch::HandlerMethods
         include Commit::HandlerMethods
         include Grep::HandlerMethods
-        include Gh::HandlerMethods
-
-        GH_SUBCOMMANDS = {
-          "link"   => :gh_link,
-          "browse" => :gh_browse,
-          "pr"     => :gh_pr,
-        }.freeze
 
         def enter_git_command_mode(ctx, **)
           ctx.editor.enter_command_line_mode(":")
@@ -70,24 +63,6 @@ module RuVim
           end
 
           public_send(method, ctx, argv: argv[1..], kwargs: {}, bang: false, count: 1)
-        end
-
-        def gh_dispatch(ctx, argv: [], kwargs: {}, **)
-          raise RuVim::CommandError, "Restricted mode: :gh is disabled" if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
-
-          sub = argv.first.to_s.downcase
-          if sub.empty?
-            ctx.editor.echo("GitHub subcommands: #{GH_SUBCOMMANDS.keys.join(', ')}")
-            return
-          end
-
-          method = GH_SUBCOMMANDS[sub]
-          unless method
-            run_shell_fallback(ctx, "gh", argv)
-            return
-          end
-
-          public_send(method, ctx, argv: argv[1..], kwargs: kwargs, bang: false, count: 1)
         end
 
         def git_close_buffer(ctx, **)
