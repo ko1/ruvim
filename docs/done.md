@@ -222,4 +222,7 @@
   - `lang/*` の全モジュールを `module X` から `class X < Base` に変換（27ファイル）
   - `class << self` を `def self.method` に変換（親クラス定数の可視性問題を解決）
   - `Buffer` が `lang_module` を保持し、Screen が毎行の Registry lookup を回避
+  - class method (`def self.method`) からインスタンスメソッド (`def method`) に変換
+  - Registry が class ではなくキャッシュ済みインスタンスを返すように変更
+  - Typescript < Javascript、Cpp < C、Erb < Html の継承で委譲メソッドを削除
 

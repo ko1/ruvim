@@ -15,7 +15,7 @@ module RuVim
       NUMBER_RE = /(?<=[\s:\-\[,]|^)-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?\s*$/
       BLOCK_SCALAR_RE = /\A\s*[|>][+-]?\s*$/
 
-      def self.calculate_indent(lines, target_row, shiftwidth)
+      def calculate_indent(lines, target_row, shiftwidth)
       return 0 if target_row == 0
 
       prev_row = target_row - 1
@@ -31,15 +31,15 @@ module RuVim
       prev_indent
       end
 
-      def self.indent_trigger?(line)
+      def indent_trigger?(line)
       line.to_s.rstrip.match?(/:\s*$/) || line.to_s.rstrip.match?(/[|>][+-]?\s*$/)
       end
 
-      def self.dedent_trigger(_char)
+      def dedent_trigger(_char)
       nil
       end
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
       apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)

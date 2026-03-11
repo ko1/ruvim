@@ -13,7 +13,7 @@ module RuVim
       STRING_SINGLE_RE = /'(?:\\.|[^'\\])*'/
       AUTO_VAR_RE = /\$[@<*^?%]/
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, TARGET_RE, "\e[1;33m")
       apply_regex(cols, text, VARIABLE_DEF_RE, KEYWORD_COLOR)

@@ -31,7 +31,7 @@ module RuVim
       BLOCK_COMMENT_RE = %r{/\*.*?\*/}
       PARAMETER_RE = /[:@$]\w+/
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
       apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)

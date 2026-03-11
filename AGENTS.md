@@ -74,19 +74,19 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
 | `lang/registry.rb` | Central lang registry (filetype detection, buffer_defaults lookup); autoloads all lang/* modules on demand |
-| `lang/base.rb` | Base lang class: apply_regex, color constants, no-op indent/dedent/on_save defaults |
+| `lang/base.rb` | Base lang class: apply_regex, color constants, no-op indent/dedent/on_save instance method defaults |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
 | `lang/json.rb` | JSON syntax highlighting via regex; auto-indent |
 | `lang/scheme.rb` | Scheme syntax highlighting via regex |
 | `lang/c.rb` | C syntax highlighting, smart indent, on_save gcc check |
-| `lang/cpp.rb` | C++ syntax highlighting (extends C), access specifier indent, on_save g++ check |
+| `lang/cpp.rb` | C++ syntax highlighting (inherits C), access specifier indent, on_save g++ check |
 | `lang/diff.rb` | Diff syntax highlighting (add/delete/hunk/header colors) |
 | `lang/yaml.rb` | YAML syntax highlighting, auto-indent |
 | `lang/sh.rb` | Shell/Bash syntax highlighting, auto-indent |
 | `lang/python.rb` | Python syntax highlighting (builtins, decorators), auto-indent |
 | `lang/javascript.rb` | JavaScript syntax highlighting, auto-indent |
-| `lang/typescript.rb` | TypeScript syntax highlighting (extends JS), auto-indent |
+| `lang/typescript.rb` | TypeScript syntax highlighting (inherits Javascript), auto-indent |
 | `lang/html.rb` | HTML syntax highlighting (tags, attributes, entities) |
 | `lang/toml.rb` | TOML syntax highlighting (tables, keys, datetime) |
 | `lang/go.rb` | Go syntax highlighting, auto-indent |

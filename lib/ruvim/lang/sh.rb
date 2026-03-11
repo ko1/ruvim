@@ -31,7 +31,7 @@ module RuVim
 
       BUFFER_DEFAULTS = { "runprg" => "bash %" }.freeze
 
-      def self.calculate_indent(lines, target_row, shiftwidth)
+      def calculate_indent(lines, target_row, shiftwidth)
       depth = 0
       (0...target_row).each do |row|
         line = lines[row].to_s.strip
@@ -47,16 +47,16 @@ module RuVim
       depth * shiftwidth
       end
 
-      def self.indent_trigger?(line)
+      def indent_trigger?(line)
       stripped = line.to_s.rstrip
       stripped.match?(/\b(?:then|else|elif|do)\s*$/) || stripped.match?(/\{\s*$/)
       end
 
-      def self.dedent_trigger(char)
+      def dedent_trigger(char)
       DEDENT_TRIGGERS[char]
       end
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
       apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)

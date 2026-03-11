@@ -7,7 +7,7 @@ module RuVim
 
       BUFFER_DEFAULTS = { "spell" => true }.freeze
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       if text.start_with?("#")
         text.length.times { |i| cols[i] = COMMENT_COLOR }

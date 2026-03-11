@@ -12,7 +12,7 @@ module RuVim
       DOCTYPE_RE = /<!DOCTYPE\b[^>]*/i
       ENTITY_RE = /&\w+;|&#\d+;|&#x[\da-fA-F]+;/
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, TAG_RE, KEYWORD_COLOR)
       apply_regex(cols, text, TAG_CLOSE_RE, KEYWORD_COLOR)

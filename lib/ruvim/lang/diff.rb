@@ -9,7 +9,7 @@ module RuVim
       HEADER_COLOR = "\e[1m"   # bold
       META_COLOR   = "\e[33m"  # yellow
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       color = line_color(text)
       return cols unless color
@@ -18,7 +18,7 @@ module RuVim
       cols
       end
 
-      def self.line_color(text)
+      def line_color(text)
       return nil if text.empty?
 
       case text

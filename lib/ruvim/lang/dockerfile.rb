@@ -15,7 +15,7 @@ module RuVim
       COMMENT_RE = /\A\s*#.*/
       FLAG_RE = /--[\w\-]+=?/
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, INSTRUCTION_RE, KEYWORD_COLOR)
       apply_regex(cols, text, FLAG_RE, CONSTANT_COLOR)

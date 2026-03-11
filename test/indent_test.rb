@@ -2,7 +2,7 @@ require_relative "test_helper"
 
 class JsonIndentTest < Minitest::Test
   def calc(lines, target_row, sw = 2)
-    RuVim::Lang::Json.calculate_indent(lines, target_row, sw)
+    RuVim::Lang::Json.new.calculate_indent(lines, target_row, sw)
   end
 
   def test_first_line_is_zero
@@ -66,29 +66,29 @@ class JsonIndentTest < Minitest::Test
   end
 
   def test_indent_trigger_open_brace
-    assert RuVim::Lang::Json.indent_trigger?("{")
-    assert RuVim::Lang::Json.indent_trigger?('  "key": {')
-    assert RuVim::Lang::Json.indent_trigger?('  "key": [')
+    assert RuVim::Lang::Json.new.indent_trigger?("{")
+    assert RuVim::Lang::Json.new.indent_trigger?('  "key": {')
+    assert RuVim::Lang::Json.new.indent_trigger?('  "key": [')
   end
 
   def test_indent_trigger_no_trigger
-    refute RuVim::Lang::Json.indent_trigger?('  "key": "value"')
-    refute RuVim::Lang::Json.indent_trigger?("}")
+    refute RuVim::Lang::Json.new.indent_trigger?('  "key": "value"')
+    refute RuVim::Lang::Json.new.indent_trigger?("}")
   end
 
   def test_dedent_trigger_close_brace
-    assert_kind_of Regexp, RuVim::Lang::Json.dedent_trigger("}")
-    assert_kind_of Regexp, RuVim::Lang::Json.dedent_trigger("]")
+    assert_kind_of Regexp, RuVim::Lang::Json.new.dedent_trigger("}")
+    assert_kind_of Regexp, RuVim::Lang::Json.new.dedent_trigger("]")
   end
 
   def test_dedent_trigger_no_trigger
-    assert_nil RuVim::Lang::Json.dedent_trigger("a")
+    assert_nil RuVim::Lang::Json.new.dedent_trigger("a")
   end
 end
 
 class RubyIndentTest < Minitest::Test
   def calc(lines, target_row, sw = 2)
-    RuVim::Lang::Ruby.calculate_indent(lines, target_row, sw)
+    RuVim::Lang::Ruby.new.calculate_indent(lines, target_row, sw)
   end
 
   def test_first_line_is_zero
@@ -288,7 +288,7 @@ end
 
 class CIndentTest < Minitest::Test
   def calc(lines, target_row, sw = 2)
-    RuVim::Lang::C.calculate_indent(lines, target_row, sw)
+    RuVim::Lang::C.new.calculate_indent(lines, target_row, sw)
   end
 
   def test_first_line_is_zero
@@ -349,27 +349,27 @@ class CIndentTest < Minitest::Test
   end
 
   def test_indent_trigger_open_brace
-    assert RuVim::Lang::C.indent_trigger?("int main() {")
-    assert RuVim::Lang::C.indent_trigger?("if (x) {")
+    assert RuVim::Lang::C.new.indent_trigger?("int main() {")
+    assert RuVim::Lang::C.new.indent_trigger?("if (x) {")
   end
 
   def test_indent_trigger_no_trigger
-    refute RuVim::Lang::C.indent_trigger?("return 0;")
-    refute RuVim::Lang::C.indent_trigger?("}")
+    refute RuVim::Lang::C.new.indent_trigger?("return 0;")
+    refute RuVim::Lang::C.new.indent_trigger?("}")
   end
 
   def test_dedent_trigger_close_brace
-    assert_kind_of Regexp, RuVim::Lang::C.dedent_trigger("}")
+    assert_kind_of Regexp, RuVim::Lang::C.new.dedent_trigger("}")
   end
 
   def test_dedent_trigger_no_trigger
-    assert_nil RuVim::Lang::C.dedent_trigger("a")
+    assert_nil RuVim::Lang::C.new.dedent_trigger("a")
   end
 end
 
 class CppIndentTest < Minitest::Test
   def calc(lines, target_row, sw = 2)
-    RuVim::Lang::Cpp.calculate_indent(lines, target_row, sw)
+    RuVim::Lang::Cpp.new.calculate_indent(lines, target_row, sw)
   end
 
   def test_class_body
@@ -413,12 +413,12 @@ class CppIndentTest < Minitest::Test
   end
 
   def test_indent_trigger
-    assert RuVim::Lang::Cpp.indent_trigger?("class Foo {")
-    assert RuVim::Lang::Cpp.indent_trigger?("namespace ns {")
+    assert RuVim::Lang::Cpp.new.indent_trigger?("class Foo {")
+    assert RuVim::Lang::Cpp.new.indent_trigger?("namespace ns {")
   end
 
   def test_dedent_trigger
-    assert_kind_of Regexp, RuVim::Lang::Cpp.dedent_trigger("}")
-    assert_nil RuVim::Lang::Cpp.dedent_trigger("x")
+    assert_kind_of Regexp, RuVim::Lang::Cpp.new.dedent_trigger("}")
+    assert_nil RuVim::Lang::Cpp.new.dedent_trigger("x")
   end
 end

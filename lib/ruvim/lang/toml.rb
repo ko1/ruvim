@@ -13,7 +13,7 @@ module RuVim
       DATETIME_RE = /\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?/
       COMMENT_RE = /#.*/
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       apply_regex(cols, text, ARRAY_TABLE_RE, "\e[1;36m")
       apply_regex(cols, text, TABLE_RE, "\e[1;36m")

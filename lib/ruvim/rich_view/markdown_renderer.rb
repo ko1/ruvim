@@ -3,6 +3,8 @@
 module RuVim
   module RichView
     module MarkdownRenderer
+      MD = Lang::Markdown.new
+
       module_function
 
       def delimiter_for(_format)
@@ -33,8 +35,8 @@ module RuVim
       end
 
       def cursor_display_col(raw_line, cursor_x, visible_lines:, delimiter:)
-        if Lang::Markdown.table_line?(raw_line)
-          table_lines = visible_lines.select { |l| Lang::Markdown.table_line?(l) }
+        if MD.table_line?(raw_line)
+          table_lines = visible_lines.select { |l| MD.table_line?(l) }
           group = build_table_group(table_lines)
           if group
             return table_cursor_display_col(raw_line, cursor_x, group)
@@ -49,30 +51,30 @@ module RuVim
         stripped = line.to_s.strip
 
         # Code fence open/close
-        if !state.in_code_block && Lang::Markdown.fence_line?(stripped)
+        if !state.in_code_block && MD.fence_line?(stripped)
           return "\e[90m#{line}\e[m"
         end
 
         if state.in_code_block
-          if Lang::Markdown.fence_line?(stripped)
+          if MD.fence_line?(stripped)
             return "\e[90m#{line}\e[m"
           end
           return "\e[38;5;223m#{line}\e[m"
         end
 
         # HR
-        if Lang::Markdown.horizontal_rule?(stripped)
+        if MD.horizontal_rule?(stripped)
           return render_hr(line)
         end
 
         # Heading
-        level = Lang::Markdown.heading_level(line)
+        level = MD.heading_level(line)
         if level > 0
           return render_heading(line, level)
         end
 
         # Block quote
-        if Lang::Markdown.block_quote?(line)
+        if MD.block_quote?(line)
           return "\e[36m#{apply_inline(line)}\e[m"
         end
 
@@ -132,10 +134,10 @@ module RuVim
         groups = {}
         i = 0
         while i < lines.length
-          if Lang::Markdown.table_line?(lines[i])
+          if MD.table_line?(lines[i])
             start = i
             table_lines = []
-            while i < lines.length && Lang::Markdown.table_line?(lines[i])
+            while i < lines.length && MD.table_line?(lines[i])
               table_lines << lines[i]
               i += 1
             end
@@ -151,7 +153,7 @@ module RuVim
       def build_table_group(table_lines)
         return nil if table_lines.nil? || table_lines.empty?
 
-        cells = table_lines.map { |l| Lang::Markdown.parse_table_cells(l) }
+        cells = table_lines.map { |l| MD.parse_table_cells(l) }
         max_cols = cells.map(&:length).max
         return nil if max_cols.nil? || max_cols.zero?
 
@@ -167,7 +169,7 @@ module RuVim
       end
 
       def render_table_line(line, stripped, group)
-        if Lang::Markdown.table_separator?(stripped)
+        if MD.table_separator?(stripped)
           render_table_separator(group)
         else
           render_table_data_row(line, group)
@@ -182,7 +184,7 @@ module RuVim
 
       def render_table_data_row(line, group)
         col_widths = group[:col_widths]
-        cells = Lang::Markdown.parse_table_cells(line)
+        cells = MD.parse_table_cells(line)
         padded = cells.each_with_index.map do |cell, i|
           target = col_widths[i] || 0
           pad_cell(cell, target)
@@ -204,7 +206,7 @@ module RuVim
 
       def table_cursor_display_col(raw_line, cursor_x, group)
         col_widths = group[:col_widths]
-        cells = Lang::Markdown.parse_table_cells(raw_line)
+        cells = MD.parse_table_cells(raw_line)
 
         # Map cursor_x (in raw line) to display col in formatted line
         # Raw line: "| cell1 | cell2 |"

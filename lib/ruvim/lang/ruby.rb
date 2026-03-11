@@ -110,7 +110,7 @@ module RuVim
 
       BUFFER_DEFAULTS = { "runprg" => "ruby -w %" }.freeze
 
-      def self.calculate_indent(lines, target_row, shiftwidth)
+      def calculate_indent(lines, target_row, shiftwidth)
       depth = 0
       (0...target_row).each do |row|
         line = lines[row]
@@ -166,7 +166,7 @@ module RuVim
       end
 
       # Returns true if the line should increase indent for the next line
-      def self.indent_trigger?(line)
+      def indent_trigger?(line)
       stripped = line.to_s.rstrip.lstrip
       first_word = stripped[/\A(\w+)/, 1].to_s
       return true if %w[def class module if unless while until for begin case].include?(first_word)
@@ -183,11 +183,11 @@ module RuVim
       }.freeze
 
       # Returns the dedent pattern for the given character, or nil
-      def self.dedent_trigger(char)
+      def dedent_trigger(char)
       DEDENT_TRIGGERS[char]
       end
 
-      def self.on_save(ctx, path)
+      def on_save(ctx, path)
       return unless path && File.exist?(path)
       return if ctx.editor.respond_to?(:restricted_mode?) && ctx.editor.restricted_mode?
       output, status = Open3.capture2e("ruby", "-wc", path)
@@ -210,7 +210,7 @@ module RuVim
       end
       end
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       Prism.lex(text).value.each do |entry|
         token = entry[0]

@@ -28,7 +28,7 @@ module RuVim
 
       BUFFER_DEFAULTS = { "runprg" => "gosh %" }.freeze
 
-      def self.color_columns(text)
+      def color_columns(text)
       cols = {}
       # Order matters: comment overrides all, then strings, then others
       apply_regex(cols, text, CHAR_RE, STRING_COLOR)

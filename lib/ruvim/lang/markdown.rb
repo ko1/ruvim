@@ -78,33 +78,33 @@ module RuVim
 
       # --- Detection helpers ---
 
-      def self.heading_level(line)
+      def heading_level(line)
         m = line.to_s.match(HEADING_RE)
         m ? m[2].length : 0
       end
 
-      def self.fence_line?(stripped)
+      def fence_line?(stripped)
         stripped.to_s.match?(FENCE_RE)
       end
 
-      def self.horizontal_rule?(stripped)
+      def horizontal_rule?(stripped)
         stripped.to_s.match?(HR_RE)
       end
 
-      def self.block_quote?(line)
+      def block_quote?(line)
         line.to_s.match?(BLOCK_QUOTE_RE)
       end
 
-      def self.table_line?(line)
+      def table_line?(line)
         stripped = line.to_s.strip
         stripped.start_with?("|") && stripped.end_with?("|") && stripped.length > 1
       end
 
-      def self.table_separator?(stripped)
+      def table_separator?(stripped)
         stripped.to_s.match?(TABLE_SEPARATOR_RE)
       end
 
-      def self.parse_table_cells(line)
+      def parse_table_cells(line)
         stripped = line.to_s.strip
         inner = stripped[1...-1] || ""
         inner.split("|", -1).map(&:strip)
@@ -112,7 +112,7 @@ module RuVim
 
       # --- Syntax highlight: color_columns ---
 
-      def self.color_columns(text)
+      def color_columns(text)
         cols = {}
         return cols if text.nil? || text.empty?
 
@@ -155,10 +155,10 @@ module RuVim
       end
 
 
-      def self.fill_line(cols, text, color)
+      def fill_line(cols, text, color)
         text.length.times { |i| cols[i] = color }
       end
-      private_class_method :fill_line
+      private :fill_line
     end
   end
 end
