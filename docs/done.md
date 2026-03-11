@@ -197,4 +197,8 @@
   - `key_handler/pending_state.rb` — 保留状態マシン（operator, register, mark, jump, replace, find）
   - `key_handler/macro_dot.rb` — マクロ録音/再生、ドットリピート
   - `key_handler/insert_mode.rb` — 挿入モードキー処理、オートインデント、バックスペース、タブ
+- `git/` → `commands/git/`、`gh/link.rb` → `commands/gh.rb` に移動
+  - 名前空間を `RuVim::Git` → `RuVim::Commands::Git`、`RuVim::Gh::Link` → `RuVim::Commands::Gh` に変更
+  - `gh/` ディレクトリ（単一ファイル）を `commands/gh.rb` にフラット化
+  - `repo_root` を `Commands::Git.repo_root` として `module_function` で公開
 

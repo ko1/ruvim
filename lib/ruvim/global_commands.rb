@@ -21,7 +21,7 @@ module RuVim
     include Commands::Window
     include Commands::BufferFile
     include Commands::Runtime
-    include RuVim::Git::Handler
+    include Commands::Git::Handler
 
     def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: nil)
       case spec_call

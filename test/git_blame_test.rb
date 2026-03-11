@@ -43,7 +43,7 @@ class GitBlameTest < Minitest::Test
       \thello world
     PORCELAIN
 
-    entries = RuVim::Git::Blame.parse_porcelain(porcelain)
+    entries = RuVim::Commands::Git::Blame.parse_porcelain(porcelain)
     assert_equal 1, entries.length
     e = entries.first
     assert_equal "abc1234a", e[:short_hash]
@@ -71,7 +71,7 @@ class GitBlameTest < Minitest::Test
       \tline two
     PORCELAIN
 
-    entries = RuVim::Git::Blame.parse_porcelain(porcelain)
+    entries = RuVim::Commands::Git::Blame.parse_porcelain(porcelain)
     assert_equal 2, entries.length
     assert_equal "line one", entries[0][:text]
     assert_equal "line two", entries[1][:text]
@@ -84,7 +84,7 @@ class GitBlameTest < Minitest::Test
       { short_hash: "abc12345", author: "Alice", date: "2023-11-14", text: "hello", orig_line: 1, hash: "abc12345" * 5 },
       { short_hash: "def67890", author: "Bob",   date: "2023-11-15", text: "world", orig_line: 2, hash: "def67890" * 5 },
     ]
-    lines, labels = RuVim::Git::Blame.format_lines(entries)
+    lines, labels = RuVim::Commands::Git::Blame.format_lines(entries)
     assert_equal 2, lines.length
     assert_equal "hello", lines[0]
     assert_equal "world", lines[1]
@@ -149,22 +149,22 @@ class GitBlameTest < Minitest::Test
   # --- Status filename parsing ---
 
   def test_parse_status_modified_line
-    assert_equal "lib/ruvim/app.rb", RuVim::Git::Status.parse_filename("\tmodified:   lib/ruvim/app.rb")
+    assert_equal "lib/ruvim/app.rb", RuVim::Commands::Git::Status.parse_filename("\tmodified:   lib/ruvim/app.rb")
   end
 
   def test_parse_status_new_file_line
-    assert_equal "foo.rb", RuVim::Git::Status.parse_filename("\tnew file:   foo.rb")
+    assert_equal "foo.rb", RuVim::Commands::Git::Status.parse_filename("\tnew file:   foo.rb")
   end
 
   def test_parse_status_untracked_line
-    assert_equal "bar.txt", RuVim::Git::Status.parse_filename("\tbar.txt")
+    assert_equal "bar.txt", RuVim::Commands::Git::Status.parse_filename("\tbar.txt")
   end
 
   def test_parse_status_header_returns_nil
-    assert_nil RuVim::Git::Status.parse_filename("Changes not staged for commit:")
-    assert_nil RuVim::Git::Status.parse_filename("  (use \"git add <file>...\")")
-    assert_nil RuVim::Git::Status.parse_filename("On branch master")
-    assert_nil RuVim::Git::Status.parse_filename("")
+    assert_nil RuVim::Commands::Git::Status.parse_filename("Changes not staged for commit:")
+    assert_nil RuVim::Commands::Git::Status.parse_filename("  (use \"git add <file>...\")")
+    assert_nil RuVim::Commands::Git::Status.parse_filename("On branch master")
+    assert_nil RuVim::Commands::Git::Status.parse_filename("")
   end
 
   # --- Integration with App (using git repo) ---
@@ -371,7 +371,7 @@ class GitBlameTest < Minitest::Test
       " line3",
     ]
     # On hunk header line → file at start of hunk
-    file, line = RuVim::Git::Diff.parse_location(lines, 3)
+    file, line = RuVim::Commands::Git::Diff.parse_location(lines, 3)
     assert_equal "lib/foo.rb", file
     assert_equal 1, line
   end
@@ -387,7 +387,7 @@ class GitBlameTest < Minitest::Test
       " line2",
     ]
     # On " line2" (index 6): new-side lines are " line1"(+1), "+added"(+2), " line2"(+3)
-    file, line = RuVim::Git::Diff.parse_location(lines, 6)
+    file, line = RuVim::Commands::Git::Diff.parse_location(lines, 6)
     assert_equal "lib/foo.rb", file
     assert_equal 3, line
   end
@@ -402,7 +402,7 @@ class GitBlameTest < Minitest::Test
       "+added",
       " line2",
     ]
-    file, line = RuVim::Git::Diff.parse_location(lines, 5)
+    file, line = RuVim::Commands::Git::Diff.parse_location(lines, 5)
     assert_equal "lib/foo.rb", file
     assert_equal 2, line
   end
@@ -418,7 +418,7 @@ class GitBlameTest < Minitest::Test
       " line2",
     ]
     # Deleted line → jump to the next new-side line position
-    file, line = RuVim::Git::Diff.parse_location(lines, 5)
+    file, line = RuVim::Commands::Git::Diff.parse_location(lines, 5)
     assert_equal "lib/foo.rb", file
     assert_equal 2, line
   end
@@ -432,13 +432,13 @@ class GitBlameTest < Minitest::Test
       "@@ -1,3 +1,3 @@",
     ]
     # On "diff --git" line → file, line 1
-    file, line = RuVim::Git::Diff.parse_location(lines, 0)
+    file, line = RuVim::Commands::Git::Diff.parse_location(lines, 0)
     assert_equal "lib/foo.rb", file
     assert_equal 1, line
   end
 
   def test_git_diff_parse_location_returns_nil_for_empty
-    assert_nil RuVim::Git::Diff.parse_location([], 0)
+    assert_nil RuVim::Commands::Git::Diff.parse_location([], 0)
   end
 
   def test_git_diff_enter_opens_file
@@ -542,9 +542,9 @@ class GitBlameTest < Minitest::Test
   end
 
   def test_git_branch_parse_name
-    assert_equal "master", RuVim::Git::Branch.parse_branch_name("* master\t2025-03-06\tInitial")
-    assert_equal "feature", RuVim::Git::Branch.parse_branch_name("  feature\t2025-03-05\tAdd feature")
-    assert_nil RuVim::Git::Branch.parse_branch_name("")
+    assert_equal "master", RuVim::Commands::Git::Branch.parse_branch_name("* master\t2025-03-06\tInitial")
+    assert_equal "feature", RuVim::Commands::Git::Branch.parse_branch_name("  feature\t2025-03-05\tAdd feature")
+    assert_nil RuVim::Commands::Git::Branch.parse_branch_name("")
   end
 
   def test_git_branch_enter_populates_checkout_command
@@ -604,7 +604,7 @@ class GitBlameTest < Minitest::Test
       File.write(File.join(dir, "test_file.txt"), "modified\n")
       Dir.chdir(dir) { system("git add test_file.txt", exception: true) }
 
-      lines, root, err = RuVim::Git::Commit.prepare(File.join(dir, "test_file.txt"))
+      lines, root, err = RuVim::Commands::Git::Commit.prepare(File.join(dir, "test_file.txt"))
       assert_nil err
       assert_equal dir, File.realpath(root)
       assert_equal "", lines.first  # Empty line for message
@@ -614,13 +614,13 @@ class GitBlameTest < Minitest::Test
 
   def test_git_commit_extract_message
     lines = ["Fix the bug", "", "Detailed description", "# comment line", "# another"]
-    msg = RuVim::Git::Commit.extract_message(lines)
+    msg = RuVim::Commands::Git::Commit.extract_message(lines)
     assert_equal "Fix the bug\n\nDetailed description", msg
   end
 
   def test_git_commit_extract_message_empty
     lines = ["# comment only", "# another"]
-    msg = RuVim::Git::Commit.extract_message(lines)
+    msg = RuVim::Commands::Git::Commit.extract_message(lines)
     assert_equal "", msg
   end
 

@@ -3,8 +3,8 @@
 require "open3"
 
 module RuVim
-  module Gh
-    module Link
+  module Commands
+    module Gh
       module_function
 
       # Parse a git remote URL and return the GitHub HTTPS base URL.
@@ -83,7 +83,7 @@ module RuVim
       # Resolve GitHub link for a file path at given line(s).
       # Returns [url, warning, error_message].
       def resolve(file_path, line_start, line_end = nil, remote_name: nil)
-        root, err = RuVim::Git.repo_root(file_path)
+        root, err = Commands::Git.repo_root(file_path)
         return [nil, nil, err] unless root
 
         found_remote, base_url = find_github_remote(root, remote_name)
@@ -117,7 +117,7 @@ module RuVim
       # Resolve GitHub PR URL for the current repo.
       # Returns [url, error_message].
       def resolve_pr(file_path)
-        root, err = RuVim::Git.repo_root(file_path)
+        root, err = Commands::Git.repo_root(file_path)
         return [nil, err] unless root
 
         _, base_url = find_github_remote(root)
@@ -135,7 +135,7 @@ module RuVim
           return unless url
 
           # Copy to clipboard via OSC 52
-          $stdout.write(Link.osc52_copy_sequence(url))
+          $stdout.write(Gh.osc52_copy_sequence(url))
           $stdout.flush
 
           msg = warning ? "#{url} #{warning}" : url
@@ -157,7 +157,7 @@ module RuVim
 
         def gh_pr(ctx, **)
           path = ctx.buffer.path || Dir.pwd
-          url, err = Link.resolve_pr(path)
+          url, err = Gh.resolve_pr(path)
           unless url
             ctx.editor.echo_error("gh pr: #{err}")
             return
@@ -193,7 +193,7 @@ module RuVim
 
           remote_name = argv.first
 
-          url, warning, err = Link.resolve(path, line_start, line_end, remote_name: remote_name)
+          url, warning, err = Gh.resolve(path, line_start, line_end, remote_name: remote_name)
           unless url
             ctx.editor.echo_error("#{command}: #{err}")
             return nil

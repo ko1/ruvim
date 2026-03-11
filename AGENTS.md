@@ -101,15 +101,15 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/gitcommit.rb` | Git commit message syntax highlighting, spell default |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
-| `git/blame.rb` | Git blame: parser, runner, command handlers |
-| `git/status.rb` | Git status: runner, filename parser, command handlers |
-| `git/diff.rb` | Git diff: runner, command handlers |
-| `git/log.rb` | Git log: runner, command handlers |
-| `git/branch.rb` | Git branch: listing, checkout, command handlers |
-| `git/commit.rb` | Git commit: message buffer, execute, command handlers |
-| `git/grep.rb` | Git grep: search, location parser, command handlers |
-| `git/handler.rb` | Git/GitHub module (repo_root), dispatcher, close, shared helpers |
-| `gh/link.rb` | GitHub link: URL generation, OSC 52 clipboard, command handlers |
+| `commands/git/blame.rb` | Git blame: parser, runner, command handlers |
+| `commands/git/status.rb` | Git status: runner, filename parser, command handlers |
+| `commands/git/diff.rb` | Git diff: runner, command handlers |
+| `commands/git/log.rb` | Git log: runner, command handlers |
+| `commands/git/branch.rb` | Git branch: listing, checkout, command handlers |
+| `commands/git/commit.rb` | Git commit: message buffer, execute, command handlers |
+| `commands/git/grep.rb` | Git grep: search, location parser, command handlers |
+| `commands/git/handler.rb` | Git/GitHub module (repo_root), dispatcher, close, shared helpers |
+| `commands/gh.rb` | GitHub link/browse/PR: URL generation, OSC 52 clipboard, command handlers |
 | `file_watcher.rb` | File change monitoring (inotify with fiddle fallback to polling) |
 | `clipboard.rb` | System clipboard access (xclip, pbpaste, etc.) |
 | `browser.rb` | URL open (open/xdg-open/wslview/PowerShell) |
