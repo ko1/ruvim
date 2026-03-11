@@ -17,10 +17,10 @@ module RuVim
     )
     def initialize(path: nil, paths: nil, stdin: STDIN, ui_stdin: nil, stdin_stream_mode: false, stdout: STDOUT, pre_config_actions: [], startup_actions: [], clean: false, skip_user_config: false, config_path: nil, readonly: false, diff_mode: false, quickfix_errorfile: nil, session_file: nil, nomodifiable: false, follow: false, restricted: false, verbose_level: 0, verbose_io: STDERR, startup_time_path: nil, startup_open_layout: nil, startup_open_count: nil)
       startup_paths = Array(paths || path).compact
-      @ui_stdin = ui_stdin || stdin
-      @stdin_stream_mode = !!stdin_stream_mode
-      @terminal = Terminal.new(stdin: @ui_stdin, stdout:)
-      @input = Input.new(@ui_stdin)
+      stdin_stream = !!stdin_stream_mode
+      effective_stdin = ui_stdin || stdin
+      @terminal = Terminal.new(stdin: effective_stdin, stdout:)
+      @input = Input.new(effective_stdin)
       @screen = Screen.new(terminal: @terminal)
       @dispatcher = Dispatcher.new
       @keymaps = KeymapManager.new
@@ -42,12 +42,11 @@ module RuVim
         open_layout: startup_open_layout,
         open_count: startup_open_count
       )
-      @restricted_mode = restricted
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
 
       @editor = Editor.new(
-        restricted_mode: @restricted_mode,
+        restricted_mode: restricted,
         keymap_manager: @keymaps
       )
       @stream_mixer = StreamMixer.new(editor: @editor, signal_w: @signal_w)
@@ -94,7 +93,7 @@ module RuVim
       install_signal_handlers
       startup_mark("signals.installed")
 
-      if @stdin_stream_mode && startup_paths.empty?
+      if stdin_stream && startup_paths.empty?
         verbose_log(1, "startup: stdin stream buffer")
         @stream_mixer.prepare_stdin_stream_buffer!(stdin)
       elsif startup_paths.empty?
@@ -514,7 +513,7 @@ module RuVim
     end
 
     def load_user_config!
-      return if @clean_mode || @restricted_mode
+      return if @clean_mode || @editor.restricted_mode?
       return if @startup.skip_user_config
 
       if @startup.config_path
@@ -527,7 +526,7 @@ module RuVim
     end
 
     def load_current_ftplugin!
-      return if @clean_mode || @restricted_mode
+      return if @clean_mode || @editor.restricted_mode?
       return unless @config_loader
 
       @config_loader.load_ftplugin!(@editor, @editor.current_buffer)
