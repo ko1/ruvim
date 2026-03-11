@@ -855,6 +855,21 @@ module RuVim
       @stream_mixer&.follow_active?(buf) || false
     end
 
+    def start_follow!(buf)
+      @stream_mixer&.start_follow!(buf)
+    end
+
+    def start_follow_current_buffer!
+      buf = current_buffer
+      return unless buf&.file_buffer?
+      return if follow_active?(buf)
+
+      win = current_window
+      win.cursor_y = buf.line_count - 1
+      win.clamp_to_buffer(buf)
+      start_follow!(buf)
+    end
+
     def stop_follow!(buf)
       @stream_mixer&.stop_follow!(buf)
     end
@@ -874,6 +889,17 @@ module RuVim
       switch_to_buffer(buffer.id)
       echo("[New File]") unless path && File.exist?(path)
       buffer
+    end
+
+    def evict_bootstrap_buffer!
+      bid = buffer_ids.find do |id|
+        b = @buffers[id]
+        b.path.nil? && !b.modified? && b.line_count <= 1 && b.kind == :file
+      end
+      return unless bid
+
+      @buffers.delete(bid)
+      @next_buffer_id = 1
     end
 
     def ensure_bootstrap_buffer!

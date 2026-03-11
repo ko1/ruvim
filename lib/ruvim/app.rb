@@ -353,7 +353,7 @@ module RuVim
       register_ex_unless(ex, "<", call: :ex_shift_left, desc: "Shift lines left", nargs: 0)
       register_ex_unless(ex, "normal", call: :ex_normal, aliases: %w[norm], desc: "Execute normal mode commands", nargs: :any, raw_args: true)
       register_ex_unless(ex, "rich", call: :ex_rich, desc: "Open/close Rich View", nargs: :maybe_one)
-      register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.invoke_app_action(:follow_toggle) }, desc: "Toggle file follow mode", nargs: 0)
+      register_ex_unless(ex, "follow", call: ->(ctx, **) { ctx.editor.follow_toggle! }, desc: "Toggle file follow mode", nargs: 0)
       register_ex_unless(ex, "nohlsearch", call: ->(ctx, **) { ctx.editor.suppress_hlsearch! }, aliases: %w[noh nohl nohlsearc nohlsear nohlsea nohlse nohls], desc: "Temporarily clear search highlight", nargs: 0)
       register_ex_unless(ex, "filter", call: :ex_filter, desc: "Filter lines matching search pattern", nargs: :any)
       register_internal_unless(cmd, "search.filter", call: :search_filter, desc: "Filter lines matching search pattern")
@@ -584,37 +584,19 @@ module RuVim
     end
 
     def apply_startup_buffer_flags!
-      apply_startup_readonly! if @startup.readonly
-      apply_startup_nomodifiable! if @startup.nomodifiable
-      apply_startup_follow! if @startup.follow
-    end
-
-    def apply_startup_readonly!
       buf = @editor.current_buffer
       return unless buf&.file_buffer?
 
-      buf.readonly = true
-      @editor.echo("readonly: #{buf.display_name}")
-    end
-
-    def apply_startup_follow!
-      buf = @editor.current_buffer
-      return unless buf&.file_buffer?
-      return if @stream_mixer.follow_active?(buf)
-
-      win = @editor.current_window
-      win.cursor_y = buf.line_count - 1
-      win.clamp_to_buffer(buf)
-      @stream_mixer.start_follow!(buf)
-    end
-
-    def apply_startup_nomodifiable!
-      buf = @editor.current_buffer
-      return unless buf&.file_buffer?
-
-      buf.modifiable = false
-      buf.readonly = true
-      @editor.echo("nomodifiable: #{buf.display_name}")
+      if @startup.readonly
+        buf.readonly = true
+        @editor.echo("readonly: #{buf.display_name}")
+      end
+      if @startup.nomodifiable
+        buf.modifiable = false
+        buf.readonly = true
+        @editor.echo("nomodifiable: #{buf.display_name}")
+      end
+      @editor.start_follow_current_buffer! if @startup.follow
     end
 
     def apply_startup_compat_mode_messages!
@@ -638,7 +620,7 @@ module RuVim
       list = Array(paths).compact
       return if list.empty?
 
-      evict_bootstrap_buffer!
+      @editor.evict_bootstrap_buffer!
       @editor.set_arglist(list)
 
       first, *rest = list
@@ -660,20 +642,9 @@ module RuVim
       else
         rest.each do |p|
           buf = @editor.add_buffer_from_file(p)
-          @stream_mixer.start_follow!(buf) if @startup.follow
+          @editor.start_follow!(buf) if @startup.follow
         end
       end
-    end
-
-    def evict_bootstrap_buffer!
-      bid = @editor.buffer_ids.find do |id|
-        b = @editor.buffers[id]
-        b.path.nil? && !b.modified? && b.line_count <= 1 && b.kind == :file
-      end
-      return unless bid
-
-      @editor.buffers.delete(bid)
-      @editor.instance_variable_set(:@next_buffer_id, 1)
     end
 
     def open_path_in_split!(path, layout:)
