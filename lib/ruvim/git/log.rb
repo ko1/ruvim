@@ -33,7 +33,7 @@ module RuVim
           ctx.editor.echo("[Git Log] loading...")
 
           cmd = ["git", "log", *argv]
-          ctx.editor.git_stream_handler&.call(buf.id, cmd, root)
+          ctx.editor.run_stream_handler&.call(buf, cmd, chdir: root)
         end
       end
     end

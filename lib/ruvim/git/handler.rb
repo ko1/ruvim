@@ -90,9 +90,9 @@ module RuVim
       end
 
       def git_close_buffer(ctx, **)
-        buf_id = ctx.buffer.id
-        ctx.editor.git_stream_stop_handler&.call(buf_id)
-        ctx.editor.delete_buffer(buf_id)
+        buf = ctx.buffer
+        buf.stream&.stop!
+        ctx.editor.delete_buffer(buf.id)
       end
 
       private

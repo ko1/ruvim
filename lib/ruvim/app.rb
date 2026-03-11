@@ -67,8 +67,6 @@ module RuVim
       @editor.open_path_handler = @stream_mixer.method(:open_path_with_large_file_support)
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
-      @editor.git_stream_handler = @stream_mixer.method(:start_git_stream_command)
-      @editor.git_stream_stop_handler = @stream_mixer.method(:stop_git_stream!)
       @editor.run_stream_handler = @stream_mixer.method(:start_command_stream!)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)

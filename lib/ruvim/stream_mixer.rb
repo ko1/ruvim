@@ -42,20 +42,16 @@ module RuVim
         )
       end
 
-      def start_command_stream!(buf, command)
+      def start_command_stream!(buf, command, chdir: nil)
         ensure_event_queue!
-        buf.stream = Stream::Run.new(
-          command: command, buffer_id: buf.id, queue: @stream_event_queue,
-          stop_handler: -> { stop_buffer_stream!(buf) }, &method(:notify_signal_wakeup)
-        )
-      end
-
-      def start_git_stream_command(buffer_id, cmd, root)
-        ensure_event_queue!
-        buf = @editor.buffers[buffer_id]
-        return unless buf
-
-        buf.stream = Stream::Git.new(cmd: cmd, root: root, buffer_id: buffer_id, queue: @stream_event_queue, &method(:notify_signal_wakeup))
+        stop = -> { stop_buffer_stream!(buf) }
+        buf.stream = if chdir
+          Stream::Git.new(cmd: command, root: chdir, buffer_id: buf.id, queue: @stream_event_queue,
+            stop_handler: stop, &method(:notify_signal_wakeup))
+        else
+          Stream::Run.new(command: command, buffer_id: buf.id, queue: @stream_event_queue,
+            stop_handler: stop, &method(:notify_signal_wakeup))
+        end
       end
 
       def stop_buffer_stream!(buf)
@@ -65,11 +61,6 @@ module RuVim
         @editor.echo("#{buf.display_name} stopped")
         notify_signal_wakeup
         true
-      end
-
-      def stop_git_stream!(buffer_id)
-        buf = @editor.buffers[buffer_id]
-        buf&.stream&.stop!
       end
 
       def drain_events!
