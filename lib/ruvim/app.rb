@@ -539,10 +539,10 @@ module RuVim
         @dispatcher.dispatch_ex(@editor, action[:value].to_s)
       when :line
         verbose_log(2, "#{log_prefix} line: #{action[:value]}")
-        move_cursor_to_line(action[:value].to_i)
+        @editor.move_cursor_to_line(action[:value].to_i)
       when :line_end
         verbose_log(2, "#{log_prefix} line_end")
-        move_cursor_to_line(@editor.current_buffer.line_count)
+        @editor.move_cursor_to_line(@editor.current_buffer.line_count)
       end
     end
 
@@ -685,16 +685,6 @@ module RuVim
     def open_path_in_tab!(path)
       @editor.tabnew(path:)
       apply_startup_buffer_flags!
-    end
-
-    def move_cursor_to_line(line_number)
-      win = @editor.current_window
-      buf = @editor.current_buffer
-      return unless win && buf
-
-      target = [[line_number - 1, 0].max, buf.line_count - 1].min
-      win.cursor_y = target
-      win.clamp_to_buffer(buf)
     end
 
     def notify_signal_wakeup

@@ -859,6 +859,16 @@ module RuVim
       @stream_mixer&.stop_follow!(buf)
     end
 
+    def move_cursor_to_line(line_number)
+      win = current_window
+      buf = current_buffer
+      return unless win && buf
+
+      target = [[line_number - 1, 0].max, buf.line_count - 1].min
+      win.cursor_y = target
+      win.clamp_to_buffer(buf)
+    end
+
     def open_path_sync(path)
       buffer = add_buffer_from_file(path)
       switch_to_buffer(buffer.id)
