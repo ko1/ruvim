@@ -19,7 +19,6 @@ module RuVim
       startup_paths = Array(paths || path).compact
       @ui_stdin = ui_stdin || stdin
       @stdin_stream_mode = !!stdin_stream_mode
-      @editor = Editor.new
       @terminal = Terminal.new(stdin: @ui_stdin, stdout:)
       @input = Input.new(@ui_stdin)
       @screen = Screen.new(terminal: @terminal)
@@ -47,7 +46,12 @@ module RuVim
       @verbose_level = verbose_level.to_i
       @verbose_io = verbose_io
 
+      @editor = Editor.new(
+        restricted_mode: @restricted_mode,
+        keymap_manager: @keymaps
+      )
       @stream_mixer = StreamMixer.new(editor: @editor, signal_w: @signal_w)
+      @editor.stream_mixer = @stream_mixer
       @completion = CompletionManager.new(
         editor: @editor,
         terminal: @terminal,
@@ -62,10 +66,6 @@ module RuVim
         completion: @completion,
         stream_mixer: @stream_mixer
       )
-
-      @editor.restricted_mode = @restricted_mode
-      @editor.stream_mixer = @stream_mixer
-      @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)

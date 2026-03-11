@@ -63,9 +63,16 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows, :layout_tree
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :keymap_manager, :app_action_handler, :shell_executor, :stream_mixer, :confirm_key_reader, :normal_key_feeder
 
-    def initialize
+    # Editor state
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint
+
+    # External dependencies (injected by App, settable for tests)
+    attr_accessor :keymap_manager, :app_action_handler, :shell_executor, :stream_mixer, :confirm_key_reader, :normal_key_feeder
+
+    def initialize(restricted_mode: false, stream_mixer: nil, keymap_manager: nil,
+                   app_action_handler: nil, shell_executor: nil, confirm_key_reader: nil,
+                   normal_key_feeder: nil)
       @buffers = {}
       @windows = {}
       @layout_tree = nil
@@ -82,12 +89,15 @@ module RuVim
       @message_kind = :info
       @message_deadline = nil
       @pending_count = nil
-      @restricted_mode = false
+      @restricted_mode = restricted_mode
       @current_window_view_height_hint = 1
       @running = true
-      @stream_mixer = nil
-      @keymap_manager = nil
-      @app_action_handler = nil
+      @stream_mixer = stream_mixer
+      @keymap_manager = keymap_manager
+      @app_action_handler = app_action_handler
+      @shell_executor = shell_executor
+      @confirm_key_reader = confirm_key_reader
+      @normal_key_feeder = normal_key_feeder
       @global_options = default_global_options
       @command_line = CommandLine.new
       @last_search = nil
