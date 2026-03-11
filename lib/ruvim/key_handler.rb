@@ -603,13 +603,24 @@ module RuVim
 
       # --- List/quickfix/filter enter handlers ---
 
+      BUFFER_KIND_ENTER_COMMANDS = {
+        git_status: "git.status.open_file",
+        git_diff:   "git.diff.open_file",
+        git_log:    "git.diff.open_file",
+        git_grep:   "git.grep.open_file",
+        git_branch: "git.branch.checkout",
+      }.freeze
+
       def handle_list_window_enter
         buffer = @editor.current_buffer
         return handle_filter_buffer_enter if buffer.kind == :filter
-        return handle_git_status_enter if buffer.kind == :git_status
-        return handle_git_diff_enter if buffer.kind == :git_diff || buffer.kind == :git_log
-        return handle_git_grep_enter if buffer.kind == :git_grep
-        return handle_git_branch_enter if buffer.kind == :git_branch
+
+        enter_command = BUFFER_KIND_ENTER_COMMANDS[buffer.kind]
+        if enter_command
+          @dispatcher.dispatch(@editor, CommandInvocation.new(id: enter_command))
+          return true
+        end
+
         return false unless buffer.kind == :quickfix || buffer.kind == :location_list
 
         item_index = @editor.current_window.cursor_y - 2
@@ -674,26 +685,6 @@ module RuVim
           @editor.current_window.cursor_y = [target_row, target_buf.lines.length - 1].min
           @editor.current_window.cursor_x = 0
         end
-        true
-      end
-
-      def handle_git_status_enter
-        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.status.open_file"))
-        true
-      end
-
-      def handle_git_diff_enter
-        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.diff.open_file"))
-        true
-      end
-
-      def handle_git_grep_enter
-        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.grep.open_file"))
-        true
-      end
-
-      def handle_git_branch_enter
-        @dispatcher.dispatch(@editor, CommandInvocation.new(id: "git.branch.checkout"))
         true
       end
 

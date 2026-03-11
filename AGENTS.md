@@ -28,6 +28,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | File | Description |
 |------|-------------|
 | `app.rb` | Main application: initialization, run loop, config, startup |
+| `app/defaults.rb` | Built-in command/Ex registration and default key bindings |
 | `key_handler.rb` | Key input dispatch, mode handling, normal/visual/command-line/rich modes |
 | `key_handler/pending_state.rb` | Pending state machines (operator, register, mark, jump, replace, find) |
 | `key_handler/macro_dot.rb` | Macro recording/playback, dot repeat |
@@ -46,6 +47,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `editor/marks_jumps.rb` | Marks, jump list, jump_to_location |
 | `editor/quickfix.rb` | Quickfix and location list management |
 | `editor/layout_tree.rb` | Layout tree helpers (split, remove, rects, leaves) |
+| `editor/filetype.rb` | Filetype detection (basename, extension, shebang) and assignment |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
 | `global_commands.rb` | Command host (singleton, includes command modules, Git::Handler, Gh::Handler) |

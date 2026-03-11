@@ -206,4 +206,7 @@
   - `commands/runtime.rb` → `commands/meta.rb`（メタコマンドとして明確化）
   - `Gh::HandlerMethods` → `Gh::Handler`（Git::Handler と対称な構造に統一）
   - `repo_root` を `Commands::Git.repo_root` として `module_function` で公開
+- `app.rb` から `register_builtins!` + `bind_default_keys!` を `app/defaults.rb` に切り出し（約310行）
+- `key_handler.rb` の git 系 Enter ハンドラを `BUFFER_KIND_ENTER_COMMANDS` テーブルに統合
+- `editor.rb` から filetype 検出ロジックを `editor/filetype.rb` に切り出し
 
