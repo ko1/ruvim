@@ -58,7 +58,6 @@ module RuVim
       @key_handler = KeyHandler.new(
         editor: @editor,
         dispatcher: @dispatcher,
-        keymaps: @keymaps,
         completion: @completion
       )
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)

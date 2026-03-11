@@ -15,10 +15,9 @@ module RuVim
 
       attr_accessor :paste_batch
 
-      def initialize(editor:, dispatcher:, keymaps:, completion:)
+      def initialize(editor:, dispatcher:, completion:)
         @editor = editor
         @dispatcher = dispatcher
-        @keymaps = keymaps
         @completion = completion
 
         @pending_key_deadline = nil
@@ -293,7 +292,7 @@ module RuVim
       end
 
       def resolve_normal_key_sequence
-        match = @keymaps.resolve_with_context(:normal, @pending_keys, editor: @editor)
+        match = @editor.keymap_manager.resolve_with_context(:normal, @pending_keys, editor: @editor)
         case match.status
         when :pending, :ambiguous
           if match.status == :ambiguous && match.invocation
