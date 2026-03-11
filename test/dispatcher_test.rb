@@ -884,4 +884,117 @@ class DispatcherTest < Minitest::Test
       assert_equal "/tmp/nonexistent_path_test:42", @editor.current_buffer.path
     end
   end
+
+  # ---- parse_global ----
+
+  class ParseGlobalTest < Minitest::Test
+    def setup
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def test_g_slash_pattern_slash_command
+      result = @dispatcher.parse_global("g/TODO/d")
+      assert_equal "TODO", result[:pattern]
+      assert_equal "d", result[:command]
+      refute result[:invert]
+    end
+
+    def test_v_slash_pattern_slash_command
+      result = @dispatcher.parse_global("v/TODO/d")
+      assert_equal "TODO", result[:pattern]
+      assert_equal "d", result[:command]
+      assert result[:invert]
+    end
+
+    def test_global_with_substitute_command
+      result = @dispatcher.parse_global("g/foo/s/bar/baz/g")
+      assert_equal "foo", result[:pattern]
+      assert_equal "s/bar/baz/g", result[:command]
+    end
+
+    def test_global_without_command_defaults_to_print
+      result = @dispatcher.parse_global("g/pattern/")
+      assert_equal "pattern", result[:pattern]
+      assert_equal "p", result[:command]
+    end
+
+    def test_global_with_bang_inverts
+      result = @dispatcher.parse_global("g!/pattern/d")
+      assert_equal "pattern", result[:pattern]
+      assert_equal "d", result[:command]
+      assert result[:invert]
+    end
+
+    def test_non_global_returns_nil
+      assert_nil @dispatcher.parse_global("set number")
+      assert_nil @dispatcher.parse_global("d")
+    end
+  end
+
+  # ---- :global / :vglobal integration ----
+
+  class GlobalCommandTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new(clean: true)
+      @editor = @app.instance_variable_get(:@editor)
+      @editor.materialize_intro_buffer!
+      @dispatcher = RuVim::Dispatcher.new
+    end
+
+    def set_lines(*lines)
+      buf = @editor.current_buffer
+      buf.replace_all_lines!(lines)
+      buf.instance_variable_set(:@modified, false)
+    end
+
+    def test_global_delete_matching_lines
+      set_lines("keep", "DEBUG foo", "keep2", "DEBUG bar", "keep3")
+      @dispatcher.dispatch_ex(@editor, "g/DEBUG/d")
+      assert_equal %w[keep keep2 keep3], @editor.current_buffer.lines
+    end
+
+    def test_vglobal_delete_non_matching_lines
+      set_lines("keep", "remove", "keep2", "remove2", "keep3")
+      @dispatcher.dispatch_ex(@editor, "v/keep/d")
+      assert_equal %w[keep keep2 keep3], @editor.current_buffer.lines
+    end
+
+    def test_global_with_range
+      set_lines("a", "DEBUG 1", "b", "DEBUG 2", "c")
+      @dispatcher.dispatch_ex(@editor, "2,4g/DEBUG/d")
+      assert_equal %w[a b c], @editor.current_buffer.lines
+    end
+
+    def test_global_substitute
+      set_lines("hello world", "foo bar", "hello foo")
+      @dispatcher.dispatch_ex(@editor, "g/hello/s/hello/hi/")
+      assert_equal ["hi world", "foo bar", "hi foo"], @editor.current_buffer.lines
+    end
+
+    def test_global_no_match_shows_message
+      set_lines("aaa", "bbb", "ccc")
+      @dispatcher.dispatch_ex(@editor, "g/zzz/d")
+      assert_match(/not found/i, @editor.message)
+    end
+
+    def test_global_undo_is_single_unit
+      set_lines("a", "DEBUG 1", "b", "DEBUG 2", "c")
+      @dispatcher.dispatch_ex(@editor, "g/DEBUG/d")
+      assert_equal %w[a b c], @editor.current_buffer.lines
+      @editor.current_buffer.undo!
+      assert_equal ["a", "DEBUG 1", "b", "DEBUG 2", "c"], @editor.current_buffer.lines
+    end
+
+    def test_vglobal_with_v_command
+      set_lines("keep", "remove1", "keep2", "remove2")
+      @dispatcher.dispatch_ex(@editor, "v/keep/d")
+      assert_equal %w[keep keep2], @editor.current_buffer.lines
+    end
+
+    def test_global_delete_all_lines_leaves_empty_buffer
+      set_lines("a", "b", "c")
+      @dispatcher.dispatch_ex(@editor, "g/./d")
+      assert_equal [""], @editor.current_buffer.lines
+    end
+  end
 end

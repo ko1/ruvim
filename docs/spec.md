@@ -395,6 +395,8 @@ RuVim::ExCommandRegistry.instance.register(
 - `*`, `#` : カーソル下の単語を前/後方検索（単語境界つき）
 - `g*`, `g#` : カーソル下の単語を前/後方検索（部分一致）
 - `:{range}s/pat/repl/[flags]` : substitute（フラグ: `g`, `i`, `I`, `n`, `e`, `c` 対応）
+- `:[range]g/pattern/command` : global（マッチ行に Ex コマンドを実行）
+- `:[range]v/pattern/command` : vglobal（非マッチ行に Ex コマンドを実行）
 
 ### 仕様メモ
 

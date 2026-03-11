@@ -137,7 +137,7 @@
   - `Ctrl-]`, `Ctrl-t`, `:tag`, `:tselect`
   - tags file 読み込み + jump stack
 - Ex の追加制御コマンド
-  - `:global` / `:vglobal`
+  - `[DONE]` `:global` / `:vglobal`
   - `:normal` / `:normal!`
 - folds（最小）
   - `za`, `zc`, `zo`

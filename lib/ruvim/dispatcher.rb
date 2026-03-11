@@ -35,6 +35,19 @@ module RuVim
       range_result = parse_range(raw, editor)
       rest = range_result ? range_result[:rest] : raw
 
+      # Try global/vglobal on rest
+      if (glob = parse_global(rest))
+        kwargs = glob.merge(
+          range_start: range_result&.dig(:range_start),
+          range_end: range_result&.dig(:range_end)
+        )
+        invocation = CommandInvocation.new(id: "__global__", kwargs:)
+        ctx = Context.new(editor:, invocation:)
+        @command_host.ex_global(ctx, **kwargs)
+        editor.enter_normal_mode
+        return
+      end
+
       # Try substitute on rest
       if (sub = parse_substitute(rest))
         kwargs = sub.merge(
@@ -108,6 +121,47 @@ module RuVim
         replacement: rep,
         flags_str: flags_str
       }
+    rescue StandardError
+      nil
+    end
+
+    # Parse a global command: g/pattern/command or v/pattern/command
+    # Also handles g!/pattern/command (same as v)
+    # Returns {pattern:, command:, invert:} or nil
+    def parse_global(line)
+      raw = line.strip
+      invert = false
+
+      if raw.match?(/\Avglobal[^a-zA-Z]/) || raw.match?(/\Avglobal!\z/)
+        invert = true
+        pos = 7
+      elsif raw.match?(/\Av[^a-zA-Z]/)
+        invert = true
+        pos = 1
+      elsif raw.match?(/\Aglobal![^a-zA-Z]/) || raw.match?(/\Aglobal!\z/)
+        invert = true
+        pos = 7
+      elsif raw.match?(/\Aglobal[^a-zA-Z]/)
+        pos = 6
+      elsif raw.match?(/\Ag![^a-zA-Z]/)
+        invert = true
+        pos = 2
+      elsif raw.match?(/\Ag[^a-zA-Z]/)
+        pos = 1
+      else
+        return nil
+      end
+
+      delim = raw[pos]
+      return nil if delim.nil? || delim =~ /\s/
+
+      pat, end_pos = parse_delimited_segment(raw, pos + 1, delim)
+      return nil unless pat
+
+      cmd = raw[end_pos..].to_s.strip
+      cmd = "p" if cmd.empty?
+
+      { pattern: pat, command: cmd, invert: invert }
     rescue StandardError
       nil
     end

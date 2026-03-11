@@ -1499,6 +1499,45 @@ module RuVim
       end
     end
 
+    def ex_global(ctx, pattern:, command:, invert: false, range_start: nil, range_end: nil, **)
+      materialize_intro_buffer_if_needed(ctx)
+      buf = ctx.buffer
+      regex = compile_search_regex(pattern, editor: ctx.editor, window: ctx.window, buffer: buf)
+
+      r_start = range_start || 0
+      r_end = range_end || (buf.line_count - 1)
+
+      # Collect matching line numbers first (lines may shift during execution)
+      matching = (r_start..r_end).select do |row|
+        matched = regex.match?(buf.line_at(row))
+        invert ? !matched : matched
+      end
+
+      if matching.empty?
+        ctx.editor.echo("Pattern not found: #{pattern}")
+        return
+      end
+
+      buf.begin_change_group
+      begin
+        offset = 0
+        matching.each do |orig_row|
+          row = orig_row + offset
+          next if row < 0 || row >= buf.line_count
+
+          prev_count = buf.line_count
+          ctx.window.cursor_y = row
+          ctx.window.cursor_x = 0
+          execute_global_sub_command(ctx, command)
+          offset += buf.line_count - prev_count
+        end
+      ensure
+        buf.end_change_group
+      end
+
+      ctx.window.clamp_to_buffer(buf)
+    end
+
     def ex_grep(ctx, argv:, kwargs: {}, **)
       run_external_grep(ctx, argv:, target: :quickfix)
     end
@@ -1630,6 +1669,11 @@ module RuVim
     include RuVim::Git::Handler
 
     private
+
+    def execute_global_sub_command(ctx, command)
+      dispatcher = RuVim::Dispatcher.new
+      dispatcher.dispatch_ex(ctx.editor, command)
+    end
 
     def reindent_range(ctx, start_row, end_row)
       buf = ctx.buffer
