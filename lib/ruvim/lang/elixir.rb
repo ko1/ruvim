@@ -80,6 +80,6 @@ module RuVim
     Registry.register("elixir", mod: Elixir,
       extensions: %w[.ex .exs],
       shebangs: %w[elixir iex],
-      runprg: "elixir %")
+      buffer_defaults: { "runprg" => "elixir %" })
   end
 end

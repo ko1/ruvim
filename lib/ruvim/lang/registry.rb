@@ -17,9 +17,8 @@ module RuVim
         # @param basename_prefix [String, nil] prefix match for basename (e.g. "Dockerfile")
         # @param shebangs [Array<String, Regexp>] shebang command matchers
         # @param aliases [Array<String>] additional filetype names that map to the same module
-        # @param runprg [String, nil] default run command (% = filename)
         def register(filetype, mod:, extensions: [], basenames: [], basename_prefix: nil,
-                     shebangs: [], aliases: [], runprg: nil, buffer_defaults: {})
+                     shebangs: [], aliases: [], buffer_defaults: {})
           entry = {
             filetype: filetype,
             mod: mod,
@@ -28,7 +27,6 @@ module RuVim
             basename_prefix: basename_prefix,
             shebangs: shebangs,
             aliases: aliases,
-            runprg: runprg,
             buffer_defaults: buffer_defaults
           }.freeze
           @entries[filetype] = entry
@@ -40,12 +38,6 @@ module RuVim
         def resolve_module(ft)
           entry = @entries[ft]
           entry ? entry[:mod] : Lang::Base
-        end
-
-        # Look up runprg by filetype string. Returns nil if not registered.
-        def runprg_for(ft)
-          entry = @entries[ft]
-          entry&.[](:runprg)
         end
 
         # Look up buffer defaults by filetype string. Returns {} if not registered.

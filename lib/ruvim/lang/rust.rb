@@ -90,6 +90,6 @@ module RuVim
 
     Registry.register("rust", mod: Rust,
       extensions: %w[.rs],
-      runprg: "rustc -o /tmp/a.out % && /tmp/a.out")
+      buffer_defaults: { "runprg" => "rustc -o /tmp/a.out % && /tmp/a.out" })
   end
 end

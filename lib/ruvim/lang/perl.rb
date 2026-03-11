@@ -86,6 +86,6 @@ module RuVim
     Registry.register("perl", mod: Perl,
       extensions: %w[.pl .pm .t],
       shebangs: [/\Aperl(?:\d+(?:\.\d+)*)?\z/],
-      runprg: "perl %")
+      buffer_defaults: { "runprg" => "perl %" })
   end
 end

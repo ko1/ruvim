@@ -78,6 +78,6 @@ module RuVim
 
     Registry.register("go", mod: Go,
       extensions: %w[.go],
-      runprg: "go run %")
+      buffer_defaults: { "runprg" => "go run %" })
   end
 end

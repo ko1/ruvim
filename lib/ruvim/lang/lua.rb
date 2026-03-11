@@ -71,6 +71,6 @@ module RuVim
     Registry.register("lua", mod: Lua,
       extensions: %w[.lua],
       shebangs: ["lua", /\Alua\d*\z/],
-      runprg: "lua %")
+      buffer_defaults: { "runprg" => "lua %" })
   end
 end

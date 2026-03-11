@@ -1234,17 +1234,9 @@ module RuVim
     end
 
     def apply_filetype_defaults(buffer, ft)
-      unless buffer.options.key?("runprg")
-        runprg = filetype_default_runprg(ft)
-        buffer.options["runprg"] = runprg if runprg
-      end
       Lang::Registry.buffer_defaults_for(ft).each do |key, value|
         buffer.options[key] = value unless buffer.options.key?(key)
       end
-    end
-
-    def filetype_default_runprg(ft)
-      Lang::Registry.runprg_for(ft)
     end
 
     def resolved_undodir

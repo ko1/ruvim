@@ -76,7 +76,7 @@ module RuVim
       extensions: %w[.js .mjs .cjs],
       aliases: %w[javascriptreact],
       shebangs: %w[node nodejs deno],
-      runprg: "node %")
+      buffer_defaults: { "runprg" => "node %" })
     Registry.register("javascriptreact", mod: Javascript,
       extensions: %w[.jsx])
   end

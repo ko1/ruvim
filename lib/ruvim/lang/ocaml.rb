@@ -72,6 +72,6 @@ module RuVim
     Registry.register("ocaml", mod: Ocaml,
       extensions: %w[.ml .mli],
       shebangs: %w[ocaml],
-      runprg: "ocaml %")
+      buffer_defaults: { "runprg" => "ocaml %" })
   end
 end

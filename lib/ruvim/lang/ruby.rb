@@ -238,6 +238,6 @@ module RuVim
       extensions: %w[.rb .rake .ru],
       basenames: %w[Gemfile Rakefile Guardfile Vagrantfile],
       shebangs: [/\Aruby(?:\d+(?:\.\d+)*)?\z/],
-      runprg: "ruby -w %")
+      buffer_defaults: { "runprg" => "ruby -w %" })
   end
 end

@@ -80,6 +80,6 @@ module RuVim
     Registry.register("python", mod: Python,
       extensions: %w[.py],
       shebangs: [/\Apython(?:\d+(?:\.\d+)*)?\z/],
-      runprg: "python3 %")
+      buffer_defaults: { "runprg" => "python3 %" })
   end
 end

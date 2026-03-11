@@ -102,6 +102,6 @@ module RuVim
 
     Registry.register("cpp", mod: Cpp,
       extensions: %w[.cpp .cc .cxx .hpp],
-      runprg: "g++ -Wall -o /tmp/a.out % && /tmp/a.out")
+      buffer_defaults: { "runprg" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out" })
   end
 end

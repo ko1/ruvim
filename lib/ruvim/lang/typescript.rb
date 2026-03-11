@@ -46,7 +46,7 @@ module RuVim
     Registry.register("typescript", mod: Typescript,
       extensions: %w[.ts],
       aliases: %w[typescriptreact],
-      runprg: "npx tsx %")
+      buffer_defaults: { "runprg" => "npx tsx %" })
     Registry.register("typescriptreact", mod: Typescript,
       extensions: %w[.tsx])
   end

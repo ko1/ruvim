@@ -71,6 +71,6 @@ module RuVim
     Registry.register("sh", mod: Sh,
       extensions: %w[.sh .bash .zsh],
       shebangs: %w[bash sh zsh ksh dash],
-      runprg: "bash %")
+      buffer_defaults: { "runprg" => "bash %" })
   end
 end

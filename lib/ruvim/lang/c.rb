@@ -111,6 +111,6 @@ module RuVim
 
     Registry.register("c", mod: C,
       extensions: %w[.c .h],
-      runprg: "gcc -Wall -o /tmp/a.out % && /tmp/a.out")
+      buffer_defaults: { "runprg" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out" })
   end
 end

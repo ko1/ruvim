@@ -44,6 +44,6 @@ module RuVim
     Registry.register("scheme", mod: Scheme,
       extensions: %w[.scm .ss .sld],
       shebangs: %w[gosh],
-      runprg: "gosh %")
+      buffer_defaults: { "runprg" => "gosh %" })
   end
 end
