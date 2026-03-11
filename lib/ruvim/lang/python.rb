@@ -31,7 +31,11 @@ module RuVim
       "f" => /\A(\s*)elif\z/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "python3 %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "python3 %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       return 0 if target_row == 0

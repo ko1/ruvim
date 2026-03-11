@@ -28,7 +28,11 @@ module RuVim
 
       ACCESS_RE = /\A\s*(?:public|private|protected)\s*:/
 
-      BUFFER_DEFAULTS = { "runprg" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "g++ -Wall -o /tmp/a.out % && /tmp/a.out" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
         depth = 0

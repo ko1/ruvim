@@ -27,7 +27,11 @@ module RuVim
       "e" => /\A(\s*)(?:else|elseif)\z/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "lua %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "lua %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

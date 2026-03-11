@@ -45,11 +45,8 @@ module RuVim
         end
 
         # Look up buffer defaults by filetype string.
-        # Reads BUFFER_DEFAULTS from the lang class. Returns {} if not defined.
         def buffer_defaults_for(ft)
-          inst = resolve_module(ft)
-          klass = inst.class
-          klass.const_defined?(:BUFFER_DEFAULTS, false) ? klass::BUFFER_DEFAULTS : {}
+          resolve_module(ft).buffer_defaults
         end
 
         def default_instance
@@ -115,7 +112,7 @@ module RuVim
       end
 
       # Built-in filetype registrations.
-      # Detection metadata only — buffer_defaults are in each lang module's BUFFER_DEFAULTS constant.
+      # Detection metadata only — buffer_defaults are in each lang class's buffer_defaults method.
       register("text",    mod: :Base, extensions: %w[.txt])
       register("css",     mod: :Base, extensions: %w[.css])
       register("erlang",  mod: :Base, extensions: %w[.erl])

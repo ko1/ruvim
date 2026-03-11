@@ -5,7 +5,11 @@ module RuVim
     class Gitcommit < Base
       COMMENT_COLOR = "\e[90m"  # gray
 
-      BUFFER_DEFAULTS = { "spell" => true }.freeze
+      def buffer_defaults
+
+        { "spell" => true }
+
+      end
 
       def color_columns(text)
       cols = {}

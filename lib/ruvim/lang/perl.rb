@@ -36,7 +36,11 @@ module RuVim
       "}" => /\A(\s*)\}/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "perl %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "perl %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

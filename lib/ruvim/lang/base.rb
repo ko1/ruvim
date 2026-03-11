@@ -37,6 +37,10 @@ module RuVim
       def on_save(_ctx, _path)
         # no-op
       end
+
+      def buffer_defaults
+        {}
+      end
     end
   end
 end

@@ -36,7 +36,11 @@ module RuVim
       "r" => /\A(\s*)after\z/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "elixir %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "elixir %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

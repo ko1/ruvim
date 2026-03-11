@@ -108,7 +108,11 @@ module RuVim
       # Modifier keywords that do NOT open indentation
       MODIFIER_RE = /\b(?:if|unless|while|until|rescue)\b/
 
-      BUFFER_DEFAULTS = { "runprg" => "ruby -w %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "ruby -w %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

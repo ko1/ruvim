@@ -29,7 +29,11 @@ module RuVim
       "e" => /\A(\s*)(?:done|else)\z/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "ocaml %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "ocaml %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

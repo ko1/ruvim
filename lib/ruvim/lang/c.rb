@@ -38,7 +38,11 @@ module RuVim
       "}" => /\A(\s*)\}/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "gcc -Wall -o /tmp/a.out % && /tmp/a.out" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

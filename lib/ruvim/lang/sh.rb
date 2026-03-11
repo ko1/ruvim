@@ -29,7 +29,11 @@ module RuVim
       "f" => /\A(\s*)elif\z/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "bash %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "bash %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

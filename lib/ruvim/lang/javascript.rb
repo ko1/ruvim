@@ -30,7 +30,11 @@ module RuVim
       ")" => /\A(\s*)\)/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "node %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "node %" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

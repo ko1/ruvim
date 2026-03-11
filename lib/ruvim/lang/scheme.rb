@@ -26,7 +26,11 @@ module RuVim
       BOOLEAN_RE = /#[tf]\b/
       NUMBER_RE = /(?<=[\s(])[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?(?=[\s()\]]|$)/
 
-      BUFFER_DEFAULTS = { "runprg" => "gosh %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "gosh %" }
+
+      end
 
       def color_columns(text)
       cols = {}

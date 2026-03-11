@@ -43,7 +43,11 @@ module RuVim
       ")" => /\A(\s*)\)/
       }.freeze
 
-      BUFFER_DEFAULTS = { "runprg" => "rustc -o /tmp/a.out % && /tmp/a.out" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "rustc -o /tmp/a.out % && /tmp/a.out" }
+
+      end
 
       def calculate_indent(lines, target_row, shiftwidth)
       depth = 0

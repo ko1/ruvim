@@ -15,7 +15,11 @@ module RuVim
 
       KEYWORD_RE = /\b(?:#{ALL_KEYWORDS.join("|")})\b/
 
-      BUFFER_DEFAULTS = { "runprg" => "npx tsx %" }.freeze
+      def buffer_defaults
+
+        { "runprg" => "npx tsx %" }
+
+      end
 
       def color_columns(text)
         cols = {}
