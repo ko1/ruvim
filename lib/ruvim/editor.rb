@@ -57,7 +57,9 @@ module RuVim
       "undodir" => { default_scope: :global, type: :string, default: nil },
       "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
       "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
-      "runprg" => { default_scope: :buffer, type: :string, default: nil }
+      "runprg" => { default_scope: :buffer, type: :string, default: nil },
+      "spell" => { default_scope: :buffer, type: :bool, default: false },
+      "spelllang" => { default_scope: :buffer, type: :string, default: "en" }
     }.freeze
 
     attr_reader :buffers, :windows, :layout_tree
@@ -108,6 +110,11 @@ module RuVim
       @hit_enter_lines = nil
       @run_history = {}  # buffer_id => last run command (unexpanded)
       @run_output_buffer_id = nil
+      @spell_checker = nil
+    end
+
+    def spell_checker
+      @spell_checker ||= SpellChecker.new
     end
 
     def running?
@@ -1230,6 +1237,9 @@ module RuVim
       unless buffer.options.key?("runprg")
         runprg = filetype_default_runprg(ft)
         buffer.options["runprg"] = runprg if runprg
+      end
+      Lang::Registry.buffer_defaults_for(ft).each do |key, value|
+        buffer.options[key] = value unless buffer.options.key?(key)
       end
     end
 

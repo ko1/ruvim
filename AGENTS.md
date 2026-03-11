@@ -56,7 +56,8 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
 | `highlighter.rb` | Syntax highlighting dispatcher (delegates to lang modules) |
-| `lang/registry.rb` | Central lang registry (filetype detection, module/runprg lookup) |
+| `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
+| `lang/registry.rb` | Central lang registry (filetype detection, module/runprg/buffer_defaults lookup) |
 | `lang/base.rb` | Default lang module (no-op fallback for indent/dedent) |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
 | `lang/ruby.rb` | Ruby syntax highlighting via Prism lexer; auto-indent calculation |
@@ -82,6 +83,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `lang/lua.rb` | Lua syntax highlighting (builtins), auto-indent |
 | `lang/ocaml.rb` | OCaml syntax highlighting (type vars, block comments), auto-indent |
 | `lang/erb.rb` | ERB syntax highlighting (HTML + Ruby delimiters/comments) |
+| `lang/gitcommit.rb` | Git commit message syntax highlighting, spell default |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
 | `git/blame.rb` | Git blame: parser, runner, command handlers |
@@ -122,7 +124,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 
 ### Tests (test/)
 
-- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`, `undo_file_test`
+- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`, `undo_file_test`, `spell_checker_test`
 - Lang: `lang_test` (syntax highlighting & filetype detection for all 23 languages)
 - Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`, `git_grep_test`, `gh_link_test`, `run_command_test`, `stream_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)

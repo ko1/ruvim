@@ -369,6 +369,9 @@ module RuVim
       register_internal_unless(cmd, "quickfix.prev", call: :ex_cprev, desc: "Prev quickfix item")
       register_internal_unless(cmd, "quickfix.open", call: :ex_copen, desc: "Open quickfix list")
 
+      register_internal_unless(cmd, "spell.next", call: :spell_next, desc: "Next misspelled word")
+      register_internal_unless(cmd, "spell.prev", call: :spell_prev, desc: "Previous misspelled word")
+
       register_internal_unless(cmd, "git.blame", call: :git_blame, desc: "Open git blame buffer")
       register_internal_unless(cmd, "git.blame.prev", call: :git_blame_prev, desc: "Blame at parent commit")
       register_internal_unless(cmd, "git.blame.back", call: :git_blame_back, desc: "Restore previous blame")
@@ -487,6 +490,8 @@ module RuVim
       @keymaps.bind(:normal, "Q", "quickfix.open")
       @keymaps.bind(:normal, ["]", "q"], "quickfix.next")
       @keymaps.bind(:normal, ["[", "q"], "quickfix.prev")
+      @keymaps.bind(:normal, ["]", "s"], "spell.next")
+      @keymaps.bind(:normal, ["[", "s"], "spell.prev")
       @keymaps.bind(:normal, ["<PageUp>"], "cursor.page_up.default")
       @keymaps.bind(:normal, ["<PageDown>"], "cursor.page_down.default")
       @keymaps.bind(:normal, "\e", "ui.clear_message")

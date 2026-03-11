@@ -347,6 +347,7 @@ module RuVim
       text_for_highlight = source_line[source_col_offset..].to_s
       search_cols = search_highlight_source_cols(editor, text_for_highlight, source_col_offset: source_col_offset)
       syntax_cols = syntax_highlight_source_cols(editor, window, buffer, text_for_highlight, source_col_offset: source_col_offset)
+      spell_cols = spell_highlight_source_cols(editor, window, buffer, text_for_highlight, source_col_offset: source_col_offset)
       list_enabled = !!editor.effective_option("list", window:, buffer:)
       listchars = parse_listchars(editor.effective_option("listchars", window:, buffer:))
       tab_seen = {}
@@ -361,7 +362,7 @@ module RuVim
       # Fast path: no highlighting needed — bulk output glyphs
       if !current_line && !visual && !cursorline_enabled &&
          !list_enabled && search_cols.empty? &&
-         syntax_cols.empty? && colorcolumns.empty?
+         syntax_cols.empty? && spell_cols.empty? && colorcolumns.empty?
         cells.each do |cell|
           highlighted << cell.glyph
           display_pos += [cell.display_width, 1].max
@@ -384,7 +385,13 @@ module RuVim
           elsif cursorline_enabled
             highlighted << "#{cursorline_bg_seq(editor)}#{ch}\e[m"
           elsif (syntax_color = syntax_cols[buffer_col])
-            highlighted << "#{syntax_color}#{ch}\e[m"
+            if spell_cols[buffer_col]
+              highlighted << "#{syntax_color}\e[4;31m#{ch}\e[m"
+            else
+              highlighted << "#{syntax_color}#{ch}\e[m"
+            end
+          elsif spell_cols[buffer_col]
+            highlighted << "\e[4;31m#{ch}\e[m"
           else
             highlighted << ch
           end
@@ -1235,6 +1242,12 @@ module RuVim
       end
     rescue StandardError
       {}
+    end
+
+    def spell_highlight_source_cols(editor, window, buffer, source_line_text, source_col_offset:)
+      return {} unless editor.effective_option("spell", window:, buffer:)
+
+      editor.spell_checker.spell_highlight_cols(source_line_text, source_col_offset: source_col_offset)
     end
 
     def cached_syntax_color_columns(filetype, source_line_text)

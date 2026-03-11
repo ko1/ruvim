@@ -136,6 +136,14 @@
 - `-q {errorfile}`（quickfix 読み込み起動）
 - `-S [session]`（session 読み込み）
 
+## Vim 互換性の精度向上
+
+- `:substitute` フラグ拡張（`g`, `i`, `I`, `n`, `e`, `c` 全対応）
+- quickfix / location list バッファで `Enter` ジャンプ（qf 行フォーマット → location 解決、cursor 行の項目へ移動）
+- スペルチェック（`spell` option）— Pure Ruby 実装、`/usr/share/dict/words` 辞書、赤下線ハイライト、`]s`/`[s` ナビゲーション
+- `gitcommit` filetype — コメント行のシンタックスハイライト、`spell` デフォルト有効
+- `Lang::Registry` に `buffer_defaults` 機構を追加（filetype ごとのデフォルト option 設定）
+
 ## セキュリティ修正
 
 - `:grep` / `:lgrep` のシェルインジェクション対策（argv 配列実行 + `Dir.glob` 展開）

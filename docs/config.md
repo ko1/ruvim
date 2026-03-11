@@ -265,6 +265,17 @@ setglobal "tabstop=8"
   - ftplugin 読み込み対象、filetype-local keymap、簡易 syntax highlight の判定に使います。
   - 手動で変更した場合の ftplugin 再適用は現状未対応です。
 
+- `spell` (`bool`, default `false`) [`DONE`]
+  - スペルチェックを有効にします。
+  - ミスした単語は赤の下線でハイライト表示されます。
+  - `]s` / `[s` で次/前のミスにジャンプできます。
+  - `gitcommit` filetype ではデフォルトで有効です。
+  - 辞書は `/usr/share/dict/words` を使用します（Pure Ruby 実装）。
+
+- `spelllang` (`string`, default `"en"`) [`定義のみ`]
+  - スペルチェック言語を指定します。
+  - 現状は値を保持できるだけで、辞書の切り替えには未接続です。
+
 ### Global options（永続 undo）
 
 - `undofile` (`bool`, default `true`) [`DONE`]

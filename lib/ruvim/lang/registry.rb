@@ -19,7 +19,7 @@ module RuVim
         # @param aliases [Array<String>] additional filetype names that map to the same module
         # @param runprg [String, nil] default run command (% = filename)
         def register(filetype, mod:, extensions: [], basenames: [], basename_prefix: nil,
-                     shebangs: [], aliases: [], runprg: nil)
+                     shebangs: [], aliases: [], runprg: nil, buffer_defaults: {})
           entry = {
             filetype: filetype,
             mod: mod,
@@ -28,7 +28,8 @@ module RuVim
             basename_prefix: basename_prefix,
             shebangs: shebangs,
             aliases: aliases,
-            runprg: runprg
+            runprg: runprg,
+            buffer_defaults: buffer_defaults
           }.freeze
           @entries[filetype] = entry
           aliases.each { |a| @entries[a] = entry }
@@ -45,6 +46,12 @@ module RuVim
         def runprg_for(ft)
           entry = @entries[ft]
           entry&.[](:runprg)
+        end
+
+        # Look up buffer defaults by filetype string. Returns {} if not registered.
+        def buffer_defaults_for(ft)
+          entry = @entries[ft]
+          entry&.[](:buffer_defaults) || {}
         end
 
         # Detect filetype from file extension.

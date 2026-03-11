@@ -64,6 +64,7 @@ module RuVim
             kind: :git_commit,
             name: "[Commit Message]",
             lines: lines,
+            filetype: "gitcommit",
             readonly: false,
             modifiable: true
           )

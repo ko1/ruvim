@@ -107,6 +107,8 @@
 - `Q` : quickfix list を開く（`:copen` 相当）
 - `]q` : 次の quickfix item へジャンプ（`:cnext` 相当）
 - `[q` : 前の quickfix item へジャンプ（`:cprev` 相当）
+- `]s` : 次のスペルミスへジャンプ（`:set spell` 有効時）
+- `[s` : 前のスペルミスへジャンプ（`:set spell` 有効時）
 - `Enter` : quickfix / location list バッファ上では選択項目へジャンプ（一覧ウィンドウから元の編集ウィンドウへ戻る）
 
 ### count 対応（現状）

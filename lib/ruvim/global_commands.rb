@@ -1438,6 +1438,52 @@ module RuVim
       ctx.editor.echo(quickfix_item_echo(ctx.editor))
     end
 
+    # ── spell navigation ──
+
+    def spell_next(ctx, count:, **)
+      return unless spell_enabled?(ctx)
+
+      cnt = normalized_count(count)
+      checker = ctx.editor.spell_checker
+      buf = ctx.buffer
+      win = ctx.window
+      y = win.cursor_y
+      x = win.cursor_x
+
+      cnt.times do
+        found = find_next_misspelled(checker, buf, y, x)
+        unless found
+          ctx.editor.echo_error("No misspelled word found")
+          return
+        end
+        y, x = found
+      end
+      win.cursor_y = y
+      win.cursor_x = x
+    end
+
+    def spell_prev(ctx, count:, **)
+      return unless spell_enabled?(ctx)
+
+      cnt = normalized_count(count)
+      checker = ctx.editor.spell_checker
+      buf = ctx.buffer
+      win = ctx.window
+      y = win.cursor_y
+      x = win.cursor_x
+
+      cnt.times do
+        found = find_prev_misspelled(checker, buf, y, x)
+        unless found
+          ctx.editor.echo_error("No misspelled word found")
+          return
+        end
+        y, x = found
+      end
+      win.cursor_y = y
+      win.cursor_x = x
+    end
+
     def ex_lopen(ctx, **)
       open_list_window(ctx, kind: :location_list, title: "[Location List]", lines: location_list_buffer_lines(ctx.editor, ctx.window.id),
                        source_window_id: ctx.window.id)
@@ -3833,6 +3879,57 @@ module RuVim
         ctx.editor.current_window.buffer_id = buffer.id
         buffer.id
       end
+    end
+
+    # ── spell helpers ──
+
+    def spell_enabled?(ctx)
+      !!ctx.editor.effective_option("spell", window: ctx.window, buffer: ctx.buffer)
+    end
+
+    def find_next_misspelled(checker, buf, start_y, start_x)
+      line_count = buf.line_count
+      # Search from current line forward
+      (start_y...line_count).each do |y|
+        line = buf.lines[y]
+        misspelled = checker.misspelled_words(line)
+        misspelled.each do |m|
+          next if y == start_y && m[:col] <= start_x
+          return [y, m[:col]]
+        end
+      end
+      # Wrap around from the beginning
+      (0..start_y).each do |y|
+        line = buf.lines[y]
+        misspelled = checker.misspelled_words(line)
+        misspelled.each do |m|
+          next if y == start_y && m[:col] <= start_x
+          return [y, m[:col]]
+        end
+      end
+      nil
+    end
+
+    def find_prev_misspelled(checker, buf, start_y, start_x)
+      # Search from current line backward
+      start_y.downto(0) do |y|
+        line = buf.lines[y]
+        misspelled = checker.misspelled_words(line).reverse
+        misspelled.each do |m|
+          next if y == start_y && m[:col] >= start_x
+          return [y, m[:col]]
+        end
+      end
+      # Wrap around from the end
+      (buf.line_count - 1).downto(start_y) do |y|
+        line = buf.lines[y]
+        misspelled = checker.misspelled_words(line).reverse
+        misspelled.each do |m|
+          next if y == start_y && m[:col] >= start_x
+          return [y, m[:col]]
+        end
+      end
+      nil
     end
   end
 end
