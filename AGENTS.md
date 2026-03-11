@@ -28,7 +28,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | File | Description |
 |------|-------------|
 | `app.rb` | Main application: initialization, run loop, config, startup |
-| `app/defaults.rb` | Built-in command/Ex registration and default key bindings |
+| `app_defaults.rb` | Built-in command/Ex registration and default key bindings |
 | `key_handler.rb` | Key input dispatch, mode handling, normal/visual/command-line/rich modes |
 | `key_handler/pending_state.rb` | Pending state machines (operator, register, mark, jump, replace, find) |
 | `key_handler/macro_dot.rb` | Macro recording/playback, dot repeat |

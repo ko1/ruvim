@@ -6,7 +6,7 @@ require_relative "file_watcher"
 require_relative "stream_mixer"
 require_relative "completion_manager"
 require_relative "key_handler"
-require_relative "app/defaults"
+require_relative "app_defaults"
 
 module RuVim
   class App
