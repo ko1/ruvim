@@ -64,10 +64,9 @@ module RuVim
       )
 
       @editor.restricted_mode = @restricted_mode
-      @editor.open_path_handler = @stream_mixer.method(:open_path_with_large_file_support)
+      @editor.stream_mixer = @stream_mixer
       @editor.keymap_manager = @keymaps
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
-      @editor.run_stream_handler = @stream_mixer.method(:start_command_stream!)
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)
         @screen.invalidate_cache!

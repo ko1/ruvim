@@ -1249,12 +1249,11 @@ module RuVim
         win.row_offset = 0
       end
 
-      # Start streaming (handler creates Stream::Run and sets buf.stream)
-      handler = editor.run_stream_handler
-      if handler
-        handler.call(output_buf, expanded)
+      # Start streaming
+      if editor.stream_mixer
+        editor.stream_mixer.start_command_stream!(output_buf, expanded)
       else
-        # Fallback for tests without stream handler: synchronous execution
+        # Fallback for tests without stream_mixer: synchronous execution
         shell = ENV["SHELL"].to_s
         shell = "/bin/sh" if shell.empty?
         output, _status = Open3.capture2e(shell, "-c", expanded)

@@ -63,7 +63,7 @@ module RuVim
     }.freeze
 
     attr_reader :buffers, :windows, :layout_tree
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :open_path_handler, :keymap_manager, :app_action_handler, :shell_executor, :run_stream_handler, :confirm_key_reader, :normal_key_feeder
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :keymap_manager, :app_action_handler, :shell_executor, :stream_mixer, :confirm_key_reader, :normal_key_feeder
 
     def initialize
       @buffers = {}
@@ -85,7 +85,7 @@ module RuVim
       @restricted_mode = false
       @current_window_view_height_hint = 1
       @running = true
-      @open_path_handler = nil
+      @stream_mixer = nil
       @keymap_manager = nil
       @app_action_handler = nil
       @global_options = default_global_options
@@ -810,9 +810,8 @@ module RuVim
       loc = RuVim::GlobalCommands.parse_path_with_location(path)
       actual_path = loc[:path]
 
-      handler = @open_path_handler
-      result = if handler
-                 handler.call(actual_path)
+      result = if @stream_mixer
+                 @stream_mixer.open_path_with_large_file_support(actual_path)
                else
                  open_path_sync(actual_path)
                end
