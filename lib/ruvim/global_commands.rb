@@ -1518,6 +1518,19 @@ module RuVim
         return
       end
 
+      # Handle print commands by collecting output
+      cmd_stripped = command.strip
+      if cmd_stripped == "p" || cmd_stripped == "print"
+        lines = matching.map { |row| buf.line_at(row) }
+        ctx.editor.echo(lines.join("\n"))
+        return
+      end
+      if cmd_stripped == "nu" || cmd_stripped == "number"
+        lines = matching.map { |row| "#{row + 1}\t#{buf.line_at(row)}" }
+        ctx.editor.echo(lines.join("\n"))
+        return
+      end
+
       buf.begin_change_group
       begin
         offset = 0

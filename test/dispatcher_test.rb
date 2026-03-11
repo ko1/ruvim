@@ -996,6 +996,20 @@ class DispatcherTest < Minitest::Test
       @dispatcher.dispatch_ex(@editor, "g/./d")
       assert_equal [""], @editor.current_buffer.lines
     end
+
+    def test_global_print_collects_all_lines
+      set_lines("aaa", "bbb editor", "ccc", "ddd editor", "eee")
+      @dispatcher.dispatch_ex(@editor, "g/editor/p")
+      assert_match(/bbb editor/, @editor.message)
+      assert_match(/ddd editor/, @editor.message)
+    end
+
+    def test_global_number_collects_all_lines
+      set_lines("aaa", "bbb editor", "ccc", "ddd editor")
+      @dispatcher.dispatch_ex(@editor, "g/editor/nu")
+      assert_match(/2\tbbb editor/, @editor.message)
+      assert_match(/4\tddd editor/, @editor.message)
+    end
   end
 
   # ---- Ex commands: :print, :number, :move, :copy, :join, :>/<, :normal ----
