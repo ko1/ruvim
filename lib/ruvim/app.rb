@@ -96,7 +96,7 @@ module RuVim
 
       if @stdin_stream_mode && startup_paths.empty?
         verbose_log(1, "startup: stdin stream buffer")
-        @stdin_stream_buf = @stream_mixer.prepare_stdin_stream_buffer!(stdin)
+        @stream_mixer.prepare_stdin_stream_buffer!(stdin)
       elsif startup_paths.empty?
         verbose_log(1, "startup: intro")
         @editor.show_intro_buffer_if_applicable!
@@ -112,7 +112,7 @@ module RuVim
       verbose_log(1, "startup: run_startup_actions count=#{Array(startup_actions).length}")
       run_startup_actions!(startup_actions)
       startup_mark("startup_actions.done")
-      @stream_mixer.start_pending_stdin! if @stdin_stream_buf
+      @stream_mixer.start_pending_stdin!
       write_startuptime_log!
       @startup = nil
     end
