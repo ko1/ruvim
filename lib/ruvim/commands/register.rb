@@ -3,7 +3,7 @@
 module RuVim
   module Commands
     # Yank, paste, visual yank/delete, register operations
-    module YankPaste
+    module Register
       def yank_line(ctx, count:, **)
         count = normalized_count(count)
         start = ctx.window.cursor_y

@@ -5,7 +5,7 @@ require "open3"
 
 require_relative "commands/motion"
 require_relative "commands/edit"
-require_relative "commands/yank_paste"
+require_relative "commands/register"
 require_relative "commands/search"
 require_relative "commands/window"
 require_relative "commands/buffer_file"
@@ -16,7 +16,7 @@ module RuVim
     include Singleton
     include Commands::Motion
     include Commands::Edit
-    include Commands::YankPaste
+    include Commands::Register
     include Commands::Search
     include Commands::Window
     include Commands::BufferFile

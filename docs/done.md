@@ -173,7 +173,7 @@
 - `global_commands.rb`（3931行）を7つのドメイン別モジュールに分割
   - `commands/motion.rb` — カーソル移動、スクロール、ワード移動、括弧マッチ
   - `commands/edit.rb` — 挿入モード、削除、変更、結合、置換、インデント、undo/redo、テキストオブジェクト
-  - `commands/yank_paste.rb` — ヤンク、ペースト、ビジュアルヤンク/削除、レジスタ操作
+  - `commands/register.rb` — ヤンク、ペースト、ビジュアルヤンク/削除、レジスタ操作
   - `commands/search.rb` — 検索、置換、global、フィルタ、grep
   - `commands/window.rb` — ウィンドウ分割/フォーカス/クローズ/リサイズ、タブ操作
   - `commands/buffer_file.rb` — バッファ管理、ファイルI/O、終了、マーク、ジャンプ、arglist、リッチビュー

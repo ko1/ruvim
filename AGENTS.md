@@ -51,7 +51,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `global_commands.rb` | Command host (singleton, includes command modules and Git::Handler) |
 | `commands/motion.rb` | Cursor movement, scrolling, word movement, bracket matching |
 | `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects, range operations |
-| `commands/yank_paste.rb` | Yank, paste, visual yank/delete, register operations |
+| `commands/register.rb` | Yank, paste, visual yank/delete, register operations |
 | `commands/search.rb` | Search, substitute, global, filter, grep, quickfix/location list, spell, vimgrep |
 | `commands/window.rb` | Window split/focus/close/resize, tab operations |
 | `commands/buffer_file.rb` | Buffer management, file I/O, quit, marks, jumps, arglist, rich view, read |
