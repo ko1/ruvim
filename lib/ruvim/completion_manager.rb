@@ -6,9 +6,8 @@ require "open3"
 
 module RuVim
   class CompletionManager
-      def initialize(editor:, terminal:, verbose_logger: nil)
+      def initialize(editor:, verbose_logger: nil)
         @editor = editor
-        @terminal = terminal
         @verbose_logger = verbose_logger
         @cmdline_history = Hash.new { |h, k| h[k] = [] }
         @cmdline_history_index = nil
@@ -399,12 +398,7 @@ module RuVim
       end
 
       def command_line_completion_menu_width
-        return 80 unless defined?(@terminal) && @terminal && @terminal.respond_to?(:winsize)
-
-        _rows, cols = @terminal.winsize
-        [cols.to_i, 1].max
-      rescue StandardError
-        80
+        @editor.screen_columns
       end
 
       def common_prefix(strings)

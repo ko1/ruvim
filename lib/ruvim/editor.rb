@@ -65,10 +65,10 @@ module RuVim
     attr_reader :buffers, :windows, :layout_tree
 
     # Editor state
-    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint
+    attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :screen_columns
 
     # External dependencies (injected by App, settable for tests)
-    attr_accessor :keymap_manager, :app_action_handler, :shell_executor, :stream_mixer, :confirm_key_reader, :normal_key_feeder
+    attr_accessor :keymap_manager, :app_action_handler, :shell_executor, :suspend_handler, :stream_mixer, :confirm_key_reader, :normal_key_feeder
 
     def initialize(restricted_mode: false, stream_mixer: nil, keymap_manager: nil,
                    app_action_handler: nil, shell_executor: nil, confirm_key_reader: nil,
@@ -91,6 +91,7 @@ module RuVim
       @pending_count = nil
       @restricted_mode = restricted_mode
       @current_window_view_height_hint = 1
+      @screen_columns = 80
       @running = true
       @stream_mixer = stream_mixer
       @keymap_manager = keymap_manager

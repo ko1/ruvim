@@ -15,14 +15,11 @@ module RuVim
 
       attr_accessor :paste_batch
 
-      def initialize(editor:, dispatcher:, keymaps:, terminal:, screen:, completion:, stream_mixer:)
+      def initialize(editor:, dispatcher:, keymaps:, completion:)
         @editor = editor
         @dispatcher = dispatcher
         @keymaps = keymaps
-        @terminal = terminal
-        @screen = screen
         @completion = completion
-        @stream_mixer = stream_mixer
 
         @pending_key_deadline = nil
         @pending_ambiguous_invocation = nil
@@ -165,7 +162,7 @@ module RuVim
             repeat_token: (kwargs[:repeat_token] || kwargs["repeat_token"]).to_s
           )
         when :follow_toggle
-          @stream_mixer.ex_follow_toggle
+          @editor.stream_mixer.ex_follow_toggle
         when :normal_ctrl_c
           handle_normal_ctrl_c
         else
@@ -185,8 +182,8 @@ module RuVim
         @macro_record_pending = false
         @macro_play_pending = false
         buf = @editor.current_buffer
-        if buf && @stream_mixer.follow_active?(buf)
-          @stream_mixer.stop_follow!(buf)
+        if buf && @editor.stream_mixer&.follow_active?(buf)
+          @editor.stream_mixer.stop_follow!(buf)
         else
           @editor.clear_message
         end
@@ -622,8 +619,8 @@ module RuVim
       end
 
       def suspend_to_shell
-        @terminal.suspend_for_tstp
-        @screen.invalidate_cache! if @screen.respond_to?(:invalidate_cache!)
+        handler = @editor.suspend_handler
+        handler&.call
       rescue StandardError => e
         @editor.echo_error("suspend failed: #{e.message}")
       end

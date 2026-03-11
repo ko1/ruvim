@@ -20,6 +20,7 @@ module RuVim
       @rich_render_info = nil
 
       rows, cols = @terminal.winsize
+      editor.screen_columns = [cols.to_i, 1].max
       text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
       text_rows = [text_rows, 1].max
       text_cols = [text_cols, 1].max

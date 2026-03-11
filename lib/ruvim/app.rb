@@ -53,19 +53,19 @@ module RuVim
       @editor.stream_mixer = @stream_mixer
       @completion = CompletionManager.new(
         editor: @editor,
-        terminal: @terminal,
         verbose_logger: method(:verbose_log)
       )
       @key_handler = KeyHandler.new(
         editor: @editor,
         dispatcher: @dispatcher,
         keymaps: @keymaps,
-        terminal: @terminal,
-        screen: @screen,
-        completion: @completion,
-        stream_mixer: @stream_mixer
+        completion: @completion
       )
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
+      @editor.suspend_handler = -> {
+        @terminal.suspend_for_tstp
+        @screen.invalidate_cache!
+      }
       @editor.shell_executor = ->(command) {
         result = @terminal.suspend_for_shell(command)
         @screen.invalidate_cache!
