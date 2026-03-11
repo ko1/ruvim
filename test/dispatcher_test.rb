@@ -754,6 +754,20 @@ class DispatcherTest < Minitest::Test
       assert_equal 1, result[:line]
       assert_equal 0, result[:col]
     end
+
+    def test_trailing_colon
+      result = @gc.send(:parse_gf_target, "foo.rb:10:")
+      assert_equal "foo.rb", result[:path]
+      assert_equal 10, result[:line]
+      assert_nil result[:col]
+    end
+
+    def test_trailing_colon_with_spaces
+      result = @gc.send(:parse_gf_target, "foo.rb:10: ")
+      assert_equal "foo.rb", result[:path]
+      assert_equal 10, result[:line]
+      assert_nil result[:col]
+    end
   end
 
   # ---- parse_path_with_location ----
@@ -806,6 +820,30 @@ class DispatcherTest < Minitest::Test
       result = RuVim::GlobalCommands.parse_path_with_location(nil)
       assert_equal "", result[:path]
       assert_nil result[:line]
+    end
+
+    def test_trailing_colon
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "hello.rb")
+        File.write(path, "line1\nline2\nline3\n")
+
+        result = RuVim::GlobalCommands.parse_path_with_location("#{path}:2:")
+        assert_equal path, result[:path]
+        assert_equal 2, result[:line]
+        assert_nil result[:col]
+      end
+    end
+
+    def test_trailing_colon_with_spaces
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "hello.rb")
+        File.write(path, "line1\nline2\nline3\n")
+
+        result = RuVim::GlobalCommands.parse_path_with_location("#{path}:2: ")
+        assert_equal path, result[:path]
+        assert_equal 2, result[:line]
+        assert_nil result[:col]
+      end
     end
   end
 

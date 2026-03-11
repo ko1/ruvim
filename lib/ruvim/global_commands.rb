@@ -2751,7 +2751,7 @@ module RuVim
     end
 
     def parse_gf_target(token)
-      raw = token.to_s
+      raw = token.to_s.sub(/:\s*\z/, "")
       if (m = /\A(.+):(\d+):(\d+)\z/.match(raw))
         return { path: m[1], line: m[2].to_i, col: m[3].to_i } unless m[1].end_with?(":")
       end
@@ -2762,7 +2762,7 @@ module RuVim
     end
 
     def self.parse_path_with_location(str)
-      raw = str.to_s
+      raw = str.to_s.sub(/:\s*\z/, "")
       # Try path:line:col
       if (m = /\A(.+):(\d+):(\d+)\z/.match(raw))
         path = m[1]
