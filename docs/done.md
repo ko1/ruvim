@@ -179,4 +179,14 @@
   - `commands/buffer_file.rb` — バッファ管理、ファイルI/O、終了、マーク、ジャンプ、arglist、リッチビュー
   - `commands/ex.rb` — Exコマンド（help, set, bindings, ruby, run, shell, 範囲操作, quickfix, spell）
   - Git::Handler と同じ mixin パターンを横展開
+- `editor.rb`（1769行→1176行）から5つのモジュールを抽出
+  - `editor/options.rb` — オプションシステム（OPTION_DEFS、get/set/effective、型変換）
+  - `editor/registers.rb` — レジスタ管理（名前付き、番号付き、クリップボード連携）
+  - `editor/marks_jumps.rb` — マーク、ジャンプリスト、jump_to_location
+  - `editor/quickfix.rb` — quickfix / location list 管理
+  - `editor/layout_tree.rb` — レイアウトツリーヘルパー（split, remove, rects, leaves）
+- `key_handler.rb`（1510行→816行）から3つのモジュールを抽出
+  - `key_handler/pending_state.rb` — 保留状態マシン（operator, register, mark, jump, replace, find）
+  - `key_handler/macro_dot.rb` — マクロ録音/再生、ドットリピート
+  - `key_handler/insert_mode.rb` — 挿入モードキー処理、オートインデント、バックスペース、タブ
 

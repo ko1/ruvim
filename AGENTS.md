@@ -28,7 +28,10 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | File | Description |
 |------|-------------|
 | `app.rb` | Main application: initialization, run loop, config, startup |
-| `key_handler.rb` | Key input dispatch, mode handling, pending states, insert editing |
+| `key_handler.rb` | Key input dispatch, mode handling, normal/visual/command-line/rich modes |
+| `key_handler/pending_state.rb` | Pending state machines (operator, register, mark, jump, replace, find) |
+| `key_handler/macro_dot.rb` | Macro recording/playback, dot repeat |
+| `key_handler/insert_mode.rb` | Insert mode key handling, autoindent, backspace, tab |
 | `completion_manager.rb` | Command-line/insert completion, history, incsearch preview |
 | `stream_mixer.rb` | Stream coordinator: event queue, drain, editor integration |
 | `stream.rb` | Stream base class (state, live?, status, stop!) |
@@ -37,7 +40,12 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `stream/follow.rb` | Stream::Follow — file watcher (inotify/polling) |
 | `stream/file_load.rb` | Stream::FileLoad — async large file loading |
 | `stream/git.rb` | Stream::Git — git command output via IO.popen |
-| `editor.rb` | Editor state: buffers, windows, options, registers, marks, modes |
+| `editor.rb` | Editor state: buffers, windows, modes, visual, rich, tabpages, filetype |
+| `editor/options.rb` | Option system (OPTION_DEFS, get/set/effective, coercion) |
+| `editor/registers.rb` | Register management (named, numbered, clipboard integration) |
+| `editor/marks_jumps.rb` | Marks, jump list, jump_to_location |
+| `editor/quickfix.rb` | Quickfix and location list management |
+| `editor/layout_tree.rb` | Layout tree helpers (split, remove, rects, leaves) |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
 | `global_commands.rb` | Command host (singleton, includes command modules and Git::Handler) |

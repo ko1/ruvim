@@ -1,66 +1,18 @@
 # frozen_string_literal: true
 
+require_relative "editor/options"
+require_relative "editor/registers"
+require_relative "editor/marks_jumps"
+require_relative "editor/quickfix"
+require_relative "editor/layout_tree"
+
 module RuVim
   class Editor
-    OPTION_DEFS = {
-      "number" => { default_scope: :window, type: :bool, default: false },
-      "relativenumber" => { default_scope: :window, type: :bool, default: false },
-      "wrap" => { default_scope: :window, type: :bool, default: true },
-      "linebreak" => { default_scope: :window, type: :bool, default: false },
-      "breakindent" => { default_scope: :window, type: :bool, default: false },
-      "cursorline" => { default_scope: :window, type: :bool, default: false },
-      "scrolloff" => { default_scope: :window, type: :int, default: 0 },
-      "sidescrolloff" => { default_scope: :window, type: :int, default: 0 },
-      "numberwidth" => { default_scope: :window, type: :int, default: 4 },
-      "colorcolumn" => { default_scope: :window, type: :string, default: nil },
-      "signcolumn" => { default_scope: :window, type: :string, default: "auto" },
-      "list" => { default_scope: :window, type: :bool, default: false },
-      "listchars" => { default_scope: :window, type: :string, default: "tab:>-,trail:-,nbsp:+" },
-      "showbreak" => { default_scope: :window, type: :string, default: ">" },
-      "showmatch" => { default_scope: :global, type: :bool, default: false },
-      "matchtime" => { default_scope: :global, type: :int, default: 5 },
-      "whichwrap" => { default_scope: :global, type: :string, default: "" },
-      "virtualedit" => { default_scope: :global, type: :string, default: "" },
-      "ignorecase" => { default_scope: :global, type: :bool, default: false },
-      "smartcase" => { default_scope: :global, type: :bool, default: false },
-      "hlsearch" => { default_scope: :global, type: :bool, default: true },
-      "incsearch" => { default_scope: :global, type: :bool, default: false },
-      "splitbelow" => { default_scope: :global, type: :bool, default: false },
-      "splitright" => { default_scope: :global, type: :bool, default: false },
-      "hidden" => { default_scope: :global, type: :bool, default: false },
-      "autowrite" => { default_scope: :global, type: :bool, default: false },
-      "clipboard" => { default_scope: :global, type: :string, default: "" },
-      "timeoutlen" => { default_scope: :global, type: :int, default: 1000 },
-      "ttimeoutlen" => { default_scope: :global, type: :int, default: 50 },
-      "backspace" => { default_scope: :global, type: :string, default: "indent,eol,start" },
-      "completeopt" => { default_scope: :global, type: :string, default: "menu,menuone,noselect" },
-      "pumheight" => { default_scope: :global, type: :int, default: 10 },
-      "wildmode" => { default_scope: :global, type: :string, default: "full" },
-      "wildignore" => { default_scope: :global, type: :string, default: "" },
-      "wildignorecase" => { default_scope: :global, type: :bool, default: false },
-      "wildmenu" => { default_scope: :global, type: :bool, default: false },
-      "termguicolors" => { default_scope: :global, type: :bool, default: false },
-      "path" => { default_scope: :buffer, type: :string, default: nil },
-      "suffixesadd" => { default_scope: :buffer, type: :string, default: nil },
-      "textwidth" => { default_scope: :buffer, type: :int, default: 0 },
-      "formatoptions" => { default_scope: :buffer, type: :string, default: nil },
-      "expandtab" => { default_scope: :buffer, type: :bool, default: false },
-      "shiftwidth" => { default_scope: :buffer, type: :int, default: 2 },
-      "softtabstop" => { default_scope: :buffer, type: :int, default: 0 },
-      "autoindent" => { default_scope: :buffer, type: :bool, default: true },
-      "smartindent" => { default_scope: :buffer, type: :bool, default: true },
-      "iskeyword" => { default_scope: :buffer, type: :string, default: nil },
-      "tabstop" => { default_scope: :buffer, type: :int, default: 2 },
-      "filetype" => { default_scope: :buffer, type: :string, default: nil },
-      "onsavehook" => { default_scope: :buffer, type: :bool, default: true },
-      "undofile" => { default_scope: :global, type: :bool, default: true },
-      "undodir" => { default_scope: :global, type: :string, default: nil },
-      "grepprg" => { default_scope: :global, type: :string, default: "grep -nH" },
-      "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
-      "runprg" => { default_scope: :buffer, type: :string, default: nil },
-      "spell" => { default_scope: :buffer, type: :bool, default: false },
-      "spelllang" => { default_scope: :buffer, type: :string, default: "en" }
-    }.freeze
+    include Options
+    include Registers
+    include MarksJumps
+    include Quickfix
+    include LayoutTree
 
     attr_reader :buffers, :windows, :layout_tree
 
@@ -213,77 +165,6 @@ module RuVim
       true
     end
 
-    def option_def(name)
-      OPTION_DEFS[name.to_s]
-    end
-
-    def option_default_scope(name)
-      option_def(name)&.fetch(:default_scope, :global) || :global
-    end
-
-    def effective_option(name, window: nil, buffer: nil)
-      key = name.to_s
-      w = window || current_window
-      b = buffer || current_buffer
-      if w && w.options.key?(key)
-        w.options[key]
-      elsif b && b.options.key?(key)
-        b.options[key]
-      else
-        @global_options[key]
-      end
-    end
-
-    def get_option(name, scope: :effective, window: nil, buffer: nil)
-      key = name.to_s
-      case scope
-      when :global
-        @global_options[key]
-      when :buffer
-        (buffer || current_buffer)&.options&.[](key)
-      when :window
-        (window || current_window)&.options&.[](key)
-      else
-        effective_option(key, window: window, buffer: buffer)
-      end
-    end
-
-    def set_option(name, value, scope: :auto, window: nil, buffer: nil)
-      key = name.to_s
-      value = coerce_option_value(key, value)
-      actual_scope = (scope == :auto ? option_default_scope(key) : scope)
-      case actual_scope
-      when :global
-        @global_options[key] = value
-      when :buffer
-        b = buffer || current_buffer
-        raise RuVim::CommandError, "No current buffer" unless b
-        b.options[key] = value
-      when :window
-        w = window || current_window
-        raise RuVim::CommandError, "No current window" unless w
-        w.options[key] = value
-      else
-        raise RuVim::CommandError, "Unknown option scope: #{actual_scope}"
-      end
-      value
-    end
-
-    def option_snapshot(window: nil, buffer: nil)
-      w = window || current_window
-      b = buffer || current_buffer
-      keys = (OPTION_DEFS.keys + @global_options.keys + (b&.options&.keys || []) + (w&.options&.keys || [])).uniq.sort
-      keys.map do |k|
-        {
-          name: k,
-          effective: get_option(k, scope: :effective, window: w, buffer: b),
-          global: get_option(k, scope: :global, window: w, buffer: b),
-          buffer: get_option(k, scope: :buffer, window: w, buffer: b),
-          window: get_option(k, scope: :window, window: w, buffer: b)
-        }
-      end
-    end
-
     def detect_filetype(path)
       p = path.to_s
       return nil if p.empty?
@@ -299,73 +180,6 @@ module RuVim
       return ext_ft if ext_ft
 
       detect_filetype_from_shebang(p)
-    end
-
-    def registers
-      @registers
-    end
-
-    def set_register(name = "\"", text:, type: :charwise)
-      key = name.to_s
-      return { text: text, type: type } if key == "_"
-
-      payload = write_register_payload(key, text: text, type: type)
-      write_clipboard_register(key, payload)
-      if key == "\""
-        if (default_clip = clipboard_default_register_key)
-          mirror = write_register_payload(default_clip, text: payload[:text], type: payload[:type])
-          write_clipboard_register(default_clip, mirror)
-        end
-      end
-      @registers["\""] = payload unless key == "\""
-      payload
-    end
-
-    def store_operator_register(name = "\"", text:, type:, kind:)
-      key = (name || "\"")
-      payload = { text: text, type: type }
-      return payload if key == "_"
-
-      written = set_register(key, text: payload[:text], type: payload[:type])
-      op_payload = dup_register_payload(written)
-
-      case kind
-      when :yank
-        @registers["0"] = dup_register_payload(op_payload)
-      when :delete, :change
-        rotate_delete_registers!(op_payload)
-      end
-
-      written
-    end
-
-    def get_register(name = "\"")
-      key = name.to_s.downcase
-      if key == "\""
-        if (default_clip = clipboard_default_register_key)
-          if (payload = read_clipboard_register(default_clip))
-            @registers["\""] = dup_register_payload(payload)
-            return @registers["\""]
-          end
-        end
-      end
-      return read_clipboard_register(key) if clipboard_register?(key)
-
-      @registers[key]
-    end
-
-    def set_active_register(name)
-      @active_register_name = name.to_s
-    end
-
-    def active_register_name
-      @active_register_name
-    end
-
-    def consume_active_register(default = "\"")
-      name = @active_register_name || default
-      @active_register_name = nil
-      name
     end
 
     def visual_state
@@ -416,74 +230,6 @@ module RuVim
 
     def macro_keys(name)
       @macros[name.to_s.downcase]
-    end
-
-    def current_location
-      { buffer_id: current_buffer.id, row: current_window.cursor_y, col: current_window.cursor_x }
-    end
-
-    def set_mark(name, window = current_window)
-      mark = name.to_s
-      return false unless mark.match?(/\A[A-Za-z]\z/)
-
-      loc = { buffer_id: window.buffer_id, row: window.cursor_y, col: window.cursor_x }
-      if mark.match?(/\A[a-z]\z/)
-        @local_marks[window.buffer_id][mark] = loc
-      else
-        @global_marks[mark] = loc
-      end
-      true
-    end
-
-    def mark_location(name, buffer_id: current_buffer.id)
-      mark = name.to_s
-      return nil unless mark.match?(/\A[A-Za-z]\z/)
-
-      if mark.match?(/\A[a-z]\z/)
-        @local_marks[buffer_id][mark]
-      else
-        @global_marks[mark]
-      end
-    end
-
-    def push_jump_location(location = current_location)
-      loc = normalize_location(location)
-      return nil unless loc
-
-      if @jump_index && @jump_index < @jumplist.length - 1
-        @jumplist = @jumplist[0..@jump_index]
-      end
-      @jumplist << loc unless same_location?(@jumplist.last, loc)
-      @jump_index = @jumplist.length - 1 unless @jumplist.empty?
-      loc
-    end
-
-    def jump_older(linewise: false)
-      return nil if @jumplist.empty?
-
-      if @jump_index.nil?
-        push_jump_location(current_location)
-      else
-        @jump_index = [@jump_index - 1, 0].max
-      end
-      jump_to_location(@jumplist[@jump_index], linewise:)
-    end
-
-    def jump_newer(linewise: false)
-      return nil if @jumplist.empty? || @jump_index.nil?
-
-      next_idx = @jump_index + 1
-      return nil if next_idx >= @jumplist.length
-
-      @jump_index = next_idx
-      jump_to_location(@jumplist[@jump_index], linewise:)
-    end
-
-    def jump_to_mark(name, linewise: false)
-      loc = mark_location(name)
-      return nil unless loc
-
-      jump_to_location(loc, linewise:)
     end
 
     def visual_active?
@@ -1042,91 +788,6 @@ module RuVim
       tree_leaves(@layout_tree).length
     end
 
-    def quickfix_items
-      @quickfix_list[:items]
-    end
-
-    def quickfix_index
-      @quickfix_list[:index]
-    end
-
-    def set_quickfix_list(items)
-      ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
-      @quickfix_list = { items: ary, index: nil }
-      @quickfix_list
-    end
-
-    def current_quickfix_item
-      idx = @quickfix_list[:index]
-      idx ? @quickfix_list[:items][idx] : nil
-    end
-
-    def move_quickfix(step)
-      items = @quickfix_list[:items]
-      return nil if items.empty?
-
-      cur = @quickfix_list[:index]
-      @quickfix_list[:index] = if cur.nil?
-                                  step.to_i > 0 ? 0 : items.length - 1
-                                else
-                                  (cur + step.to_i) % items.length
-                                end
-      current_quickfix_item
-    end
-
-    def select_quickfix(index)
-      items = @quickfix_list[:items]
-      return nil if items.empty?
-
-      i = [[index.to_i, 0].max, items.length - 1].min
-      @quickfix_list[:index] = i
-      current_quickfix_item
-    end
-
-    def location_list(window_id = current_window_id)
-      @location_lists[window_id]
-    end
-
-    def location_items(window_id = current_window_id)
-      location_list(window_id)[:items]
-    end
-
-    def set_location_list(items, window_id: current_window_id)
-      ary = Array(items).map { |it| normalize_location(it)&.merge(text: (it[:text] || it["text"]).to_s) }.compact
-      @location_lists[window_id] = { items: ary, index: nil }
-      @location_lists[window_id]
-    end
-
-    def current_location_list_item(window_id = current_window_id)
-      list = location_list(window_id)
-      idx = list[:index]
-      idx ? list[:items][idx] : nil
-    end
-
-    def move_location_list(step, window_id: current_window_id)
-      list = location_list(window_id)
-      items = list[:items]
-      return nil if items.empty?
-
-      cur = list[:index]
-      list[:index] = if cur.nil?
-                       step.to_i > 0 ? 0 : items.length - 1
-                     else
-                       (cur + step.to_i) % items.length
-                     end
-      current_location_list_item(window_id)
-    end
-
-    def select_location_list(index, window_id: current_window_id)
-      list = location_list(window_id)
-      items = list[:items]
-      return nil if items.empty?
-
-      i = [[index.to_i, 0].max, items.length - 1].min
-      list[:index] = i
-      current_location_list_item(window_id)
-    end
-
     # Check if the path from root to the current window passes through
     # a split node matching the direction's axis. Used by focus_or_split
     # to decide whether to split or stay put at edges.
@@ -1326,6 +987,51 @@ module RuVim
       buffer.save_undo_file(resolved_undodir)
     end
 
+    def arglist
+      @arglist.dup
+    end
+
+    def arglist_index
+      @arglist_index
+    end
+
+    def set_arglist(paths)
+      @arglist = Array(paths).dup
+      @arglist_index = 0
+    end
+
+    def arglist_current
+      @arglist[@arglist_index] if @arglist_index < @arglist.length
+    end
+
+    def arglist_next(count = 1)
+      new_index = @arglist_index + count
+      if new_index >= @arglist.length
+        raise RuVim::CommandError, "Already at last argument"
+      end
+      @arglist_index = new_index
+      @arglist[@arglist_index]
+    end
+
+    def arglist_prev(count = 1)
+      new_index = @arglist_index - count
+      if new_index < 0
+        raise RuVim::CommandError, "Already at first argument"
+      end
+      @arglist_index = new_index
+      @arglist[@arglist_index]
+    end
+
+    def arglist_first
+      @arglist_index = 0
+      @arglist[@arglist_index] if @arglist.length > 0
+    end
+
+    def arglist_last
+      @arglist_index = [@arglist.length - 1, 0].max
+      @arglist[@arglist_index] if @arglist.length > 0
+    end
+
     private
 
     def resolve_lang_module(ft)
@@ -1378,61 +1084,6 @@ module RuVim
       File.basename(prog)
     end
 
-    def default_global_options
-      OPTION_DEFS.each_with_object({}) { |(k, v), h| h[k] = v[:default] }
-    end
-
-    def coerce_option_value(name, value)
-      defn = option_def(name)
-      return value unless defn
-
-      case defn[:type]
-      when :bool
-        !!value
-      when :int
-        iv = value.is_a?(Integer) ? value : Integer(value)
-        raise RuVim::CommandError, "#{name} must be >= 0" if iv.negative?
-        iv
-      when :string
-        value.nil? ? nil : value.to_s
-      else
-        value
-      end
-    rescue ArgumentError, TypeError
-      raise RuVim::CommandError, "Invalid value for #{name}: #{value.inspect}"
-    end
-
-    def write_register_payload(key, text:, type:)
-      if key.match?(/\A[A-Z]\z/)
-        base = key.downcase
-        prev = @registers[base]
-        payload = { text: "#{prev ? prev[:text] : ""}#{text}", type: type }
-        @registers[base] = payload
-      else
-        payload = { text: text, type: type }
-        @registers[key.downcase] = payload
-      end
-      payload
-    end
-
-    def rotate_delete_registers!(payload)
-      9.downto(2) do |i|
-        prev = @registers[(i - 1).to_s]
-        if prev
-          @registers[i.to_s] = dup_register_payload(prev)
-        else
-          @registers.delete(i.to_s)
-        end
-      end
-      @registers["1"] = dup_register_payload(payload)
-    end
-
-    def dup_register_payload(payload)
-      return nil unless payload
-
-      { text: payload[:text].dup, type: payload[:type] }
-    end
-
     def assign_detected_filetype(buffer)
       ft = detect_filetype(buffer.path)
       assign_filetype(buffer, ft) if ft && !ft.empty?
@@ -1456,92 +1107,6 @@ module RuVim
       ]
     end
 
-    public
-
-    def jump_to_location(loc, linewise: false)
-      location = normalize_location(loc)
-      return nil unless location
-      return nil unless @buffers.key?(location[:buffer_id])
-
-      switch_to_buffer(location[:buffer_id]) if current_buffer.id != location[:buffer_id]
-      current_window.cursor_y = location[:row]
-      current_window.cursor_x = linewise ? 0 : location[:col]
-      current_window.clamp_to_buffer(current_buffer)
-      current_window.cursor_x = first_nonblank_col(current_buffer, current_window.cursor_y) if linewise
-      current_window.clamp_to_buffer(current_buffer)
-      current_location
-    end
-
-    def arglist
-      @arglist.dup
-    end
-
-    def arglist_index
-      @arglist_index
-    end
-
-    def set_arglist(paths)
-      @arglist = Array(paths).dup
-      @arglist_index = 0
-    end
-
-    def arglist_current
-      @arglist[@arglist_index] if @arglist_index < @arglist.length
-    end
-
-    def arglist_next(count = 1)
-      new_index = @arglist_index + count
-      if new_index >= @arglist.length
-        raise RuVim::CommandError, "Already at last argument"
-      end
-      @arglist_index = new_index
-      @arglist[@arglist_index]
-    end
-
-    def arglist_prev(count = 1)
-      new_index = @arglist_index - count
-      if new_index < 0
-        raise RuVim::CommandError, "Already at first argument"
-      end
-      @arglist_index = new_index
-      @arglist[@arglist_index]
-    end
-
-    def arglist_first
-      @arglist_index = 0
-      @arglist[@arglist_index] if @arglist.length > 0
-    end
-
-    def arglist_last
-      @arglist_index = [@arglist.length - 1, 0].max
-      @arglist[@arglist_index] if @arglist.length > 0
-    end
-
-    private
-
-    def first_nonblank_col(buffer, row)
-      line = buffer.line_at(row)
-      line.index(/\S/) || 0
-    end
-
-    def normalize_location(loc)
-      return nil unless loc
-
-      {
-        buffer_id: Integer(loc[:buffer_id] || loc["buffer_id"]),
-        row: [Integer(loc[:row] || loc["row"]), 0].max,
-        col: [Integer(loc[:col] || loc["col"]), 0].max
-      }
-    rescue StandardError
-      nil
-    end
-
-    def same_location?(a, b)
-      return false unless a && b
-
-      a[:buffer_id] == b[:buffer_id] && a[:row] == b[:row] && a[:col] == b[:col]
-    end
-
     def dup_macro_key(key)
       case key
       when String
@@ -1551,34 +1116,6 @@ module RuVim
       else
         key
       end
-    end
-
-    def clipboard_register?(key)
-      key == "+" || key == "*"
-    end
-
-    def clipboard_default_register_key
-      spec = @global_options["clipboard"].to_s
-      parts = spec.split(",").map { |s| s.strip.downcase }.reject(&:empty?)
-      return "+" if parts.include?("unnamedplus")
-      return "*" if parts.include?("unnamed")
-
-      nil
-    end
-
-    def write_clipboard_register(key, payload)
-      return unless clipboard_register?(key.downcase)
-
-      RuVim::Clipboard.write(payload[:text])
-    end
-
-    def read_clipboard_register(key)
-      text = RuVim::Clipboard.read
-      if text
-        payload = { text: text, type: text.end_with?("\n") ? :linewise : :charwise }
-        @registers[key] = payload
-      end
-      @registers[key]
     end
 
     def ensure_initial_tabpage!
@@ -1634,136 +1171,6 @@ module RuVim
       yield
     ensure
       @suspend_tab_autosave = prev
-    end
-
-    # --- Layout tree helpers ---
-
-    def tree_leaves(node)
-      return [] if node.nil?
-      return [node[:id]] if node[:type] == :window
-
-      node[:children].flat_map { |c| tree_leaves(c) }
-    end
-
-    def tree_deep_dup(node)
-      return nil if node.nil?
-      return { type: :window, id: node[:id] } if node[:type] == :window
-
-      { type: node[:type], children: node[:children].map { |c| tree_deep_dup(c) } }
-    end
-
-    # Split a leaf node into a new split node. If the parent is already the same
-    # split type, merge into the parent instead of nesting.
-    def tree_split_leaf(node, target_id, split_type, new_leaf, place)
-      if node[:type] == :window
-        if node[:id] == target_id
-          children = place == :before ? [new_leaf, node] : [node, new_leaf]
-          return { type: split_type, children: children }
-        end
-        return node
-      end
-
-      new_children = node[:children].flat_map do |child|
-        result = tree_split_leaf(child, target_id, split_type, new_leaf, place)
-        # If the child was replaced with the same split type as this node, merge
-        if result[:type] == node[:type] && result != child
-          result[:children]
-        else
-          [result]
-        end
-      end
-
-      { type: node[:type], children: new_children }
-    end
-
-    def tree_remove(node, target_id)
-      return nil if node.nil?
-      return nil if node[:type] == :window && node[:id] == target_id
-      return node if node[:type] == :window
-
-      new_children = node[:children].filter_map { |c| tree_remove(c, target_id) }
-      return nil if new_children.empty?
-      return new_children.first if new_children.length == 1
-
-      { type: node[:type], children: new_children }
-    end
-
-    # Check if the path from root to the target window passes through
-    # a split node of the given type. Returns true if any ancestor of the
-    # target window in the tree has type == split_type.
-    def tree_path_has_split_type?(node, target_id, split_type)
-      return false if node.nil?
-      return false if node[:type] == :window
-      # Check if target is in any child subtree
-      node[:children].each do |child|
-        if tree_subtree_contains?(child, target_id)
-          return true if node[:type] == split_type
-          return tree_path_has_split_type?(child, target_id, split_type)
-        end
-      end
-      false
-    end
-
-    def tree_subtree_contains?(node, target_id)
-      return false if node.nil?
-      return node[:id] == target_id if node[:type] == :window
-      node[:children].any? { |c| tree_subtree_contains?(c, target_id) }
-    end
-
-    # Compute normalized rects (0.0–1.0 coordinate space) for direction finding.
-    # Separators are ignored here — this is purely for adjacency/direction logic.
-    def find_parent_split(node, target_id, dir)
-      return nil unless node.is_a?(Hash) && node[:children]
-
-      wanted_type = case dir
-                    when :height_increase, :height_decrease then :hsplit
-                    when :width_increase, :width_decrease then :vsplit
-                    end
-
-      node[:children].each_with_index do |child, i|
-        if child[:type] == :window && child[:id] == target_id
-          return [node[:type], node, i] if node[:type] == wanted_type
-        elsif child[:children]
-          result = find_parent_split(child, target_id, dir)
-          return result if result
-        end
-      end
-
-      nil
-    end
-
-    def clear_weights(node)
-      return unless node.is_a?(Hash)
-
-      node.delete(:weights) if node.key?(:weights)
-      node[:children]&.each { |c| clear_weights(c) }
-    end
-
-    def tree_compute_rects(node, top:, left:, height:, width:)
-      return {} if node.nil?
-
-      if node[:type] == :window
-        return { node[:id] => { top: top, left: left, height: height, width: width } }
-      end
-
-      children = node[:children]
-      n = children.length
-      rects = {}
-
-      case node[:type]
-      when :vsplit
-        w_each = width / n.to_f
-        children.each_with_index do |child, i|
-          rects.merge!(tree_compute_rects(child, top: top, left: left + i * w_each, height: height, width: w_each))
-        end
-      when :hsplit
-        h_each = height / n.to_f
-        children.each_with_index do |child, i|
-          rects.merge!(tree_compute_rects(child, top: top + i * h_each, left: left, height: h_each, width: width))
-        end
-      end
-
-      rects
     end
   end
 end
