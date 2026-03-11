@@ -14,6 +14,10 @@ module RuVim
       ].freeze
 
       attr_accessor :paste_batch
+      attr_reader :completion
+
+      def load_history!  = @completion.load_history!
+      def save_history!  = @completion.save_history!
 
       def initialize(editor:, dispatcher:, completion:)
         @editor = editor

@@ -402,7 +402,7 @@ class AppStartupTest < Minitest::Test
       ENV["HOME"] = dir
 
       app1 = RuVim::App.new(clean: true)
-      completion1 = app1.instance_variable_get(:@completion)
+      completion1 = app1.instance_variable_get(:@key_handler).completion
       completion1.push_history(":", "set number")
       completion1.push_history("/", "foo")
       completion1.push_history("?", "bar")
@@ -412,7 +412,7 @@ class AppStartupTest < Minitest::Test
       assert_equal true, File.file?(path)
 
       app2 = RuVim::App.new(clean: true)
-      hist = app2.instance_variable_get(:@completion).instance_variable_get(:@cmdline_history)
+      hist = app2.instance_variable_get(:@key_handler).completion.instance_variable_get(:@cmdline_history)
       assert_equal ["set number"], hist[":"]
       assert_equal ["foo"], hist["/"]
       assert_equal ["bar"], hist["?"]
@@ -430,7 +430,7 @@ class AppStartupTest < Minitest::Test
       ENV["HOME"] = dir
 
       app = RuVim::App.new(clean: true)
-      assert_equal File.join(dir, ".ruvim", "history.json"), app.instance_variable_get(:@completion).send(:history_file_path)
+      assert_equal File.join(dir, ".ruvim", "history.json"), app.instance_variable_get(:@key_handler).completion.send(:history_file_path)
     ensure
       ENV["XDG_STATE_HOME"] = prev_xdg
       ENV["HOME"] = prev_home

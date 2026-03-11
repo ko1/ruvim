@@ -51,14 +51,13 @@ module RuVim
       )
       @stream_mixer = StreamMixer.new(editor: @editor, signal_w: @signal_w)
       @editor.stream_mixer = @stream_mixer
-      @completion = CompletionManager.new(
-        editor: @editor,
-        verbose_logger: method(:verbose_log)
-      )
       @key_handler = KeyHandler.new(
         editor: @editor,
         dispatcher: @dispatcher,
-        completion: @completion
+        completion: CompletionManager.new(
+          editor: @editor,
+          verbose_logger: method(:verbose_log)
+        )
       )
       @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
       @editor.suspend_handler = -> {
@@ -76,7 +75,7 @@ module RuVim
       }
       @editor.normal_key_feeder = ->(keys) { keys.each { |k| @key_handler.handle(k) } }
 
-      @completion.load_history!
+      @key_handler.load_history!
 
       startup_mark("init.start")
       register_builtins!
@@ -159,7 +158,7 @@ module RuVim
       end
     ensure
       @stream_mixer.shutdown!
-      @completion.save_history!
+      @key_handler.save_history!
     end
 
     def run_startup_actions!(actions, log_prefix: "startup")

@@ -7,7 +7,7 @@ class AppCompletionTest < Minitest::Test
     @app = RuVim::App.new
     @editor = @app.instance_variable_get(:@editor)
     @key_handler = @app.instance_variable_get(:@key_handler)
-    @completion = @app.instance_variable_get(:@completion)
+    @completion = @key_handler.completion
   end
 
   def test_app_starts_with_intro_buffer_without_path
