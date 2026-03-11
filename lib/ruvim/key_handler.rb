@@ -162,7 +162,7 @@ module RuVim
             repeat_token: (kwargs[:repeat_token] || kwargs["repeat_token"]).to_s
           )
         when :follow_toggle
-          @editor.stream_mixer.ex_follow_toggle
+          @editor.follow_toggle!
         when :normal_ctrl_c
           handle_normal_ctrl_c
         else
@@ -182,8 +182,8 @@ module RuVim
         @macro_record_pending = false
         @macro_play_pending = false
         buf = @editor.current_buffer
-        if buf && @editor.stream_mixer&.follow_active?(buf)
-          @editor.stream_mixer.stop_follow!(buf)
+        if buf && @editor.follow_active?(buf)
+          @editor.stop_follow!(buf)
         else
           @editor.clear_message
         end

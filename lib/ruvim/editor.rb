@@ -68,7 +68,8 @@ module RuVim
     attr_accessor :current_window_id, :mode, :message, :pending_count, :alternate_buffer_id, :restricted_mode, :current_window_view_height_hint, :screen_columns
 
     # External dependencies (injected by App, settable for tests)
-    attr_accessor :keymap_manager, :app_action_handler, :shell_executor, :suspend_handler, :stream_mixer, :confirm_key_reader, :normal_key_feeder
+    attr_accessor :keymap_manager, :app_action_handler, :shell_executor, :suspend_handler, :confirm_key_reader, :normal_key_feeder
+    attr_writer :stream_mixer
 
     def initialize(restricted_mode: false, stream_mixer: nil, keymap_manager: nil,
                    app_action_handler: nil, shell_executor: nil, confirm_key_reader: nil,
@@ -837,6 +838,25 @@ module RuVim
       end
 
       result
+    end
+
+    def start_stream!(buf, command, chdir: nil)
+      return false unless @stream_mixer
+
+      @stream_mixer.start_command_stream!(buf, command, chdir: chdir)
+      true
+    end
+
+    def follow_toggle!
+      @stream_mixer&.ex_follow_toggle
+    end
+
+    def follow_active?(buf)
+      @stream_mixer&.follow_active?(buf) || false
+    end
+
+    def stop_follow!(buf)
+      @stream_mixer&.stop_follow!(buf)
     end
 
     def open_path_sync(path)
