@@ -6,13 +6,12 @@ module RuVim
     # Detection metadata is stored eagerly; actual modules are resolved lazily via autoload.
     module Registry
       @entries = {}
-      @instances = {}
 
       class << self
         # Register a language module.
         #
         # @param filetype [String] primary filetype name (e.g. "ruby")
-        # @param mod [Module, Symbol] the lang module, or a Symbol for lazy resolution via Lang.const_get.
+        # @param mod [Module, Symbol] the lang class, or a Symbol for lazy resolution via Lang.const_get.
         #   When a Symbol is given and the constant is not yet defined, autoload is set up automatically.
         # @param extensions [Array<String>] file extensions including dot (e.g. [".rb", ".rake"])
         # @param basenames [Array<String>] exact basenames (e.g. ["Makefile"])
@@ -35,22 +34,16 @@ module RuVim
           aliases.each { |a| @entries[a] = entry }
         end
 
-        # Look up a lang instance by filetype string.
-        # Returns a cached instance, or a Lang::Base instance if not found.
+        # Look up a frozen lang instance by filetype string.
         def resolve_module(ft)
           entry = @entries[ft]
-          return default_instance unless entry
-          klass = resolve_mod(entry[:mod])
-          @instances[klass] ||= klass.new
+          return Lang::Base.instance unless entry
+          resolve_mod(entry[:mod]).instance
         end
 
         # Look up buffer defaults by filetype string.
         def buffer_defaults_for(ft)
           resolve_module(ft).buffer_defaults
-        end
-
-        def default_instance
-          @instances[Lang::Base] ||= Lang::Base.new
         end
 
         # Detect filetype from file extension.

@@ -81,7 +81,7 @@ module RuVim
       @group_before_snapshot = nil
       @group_changed = false
       @recording_suspended = false
-      @lang_module = Lang::Registry.default_instance
+      @lang_module = Lang::Base.instance
       @options = {}
     end
 

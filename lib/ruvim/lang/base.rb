@@ -3,6 +3,10 @@
 module RuVim
   module Lang
     class Base
+      def self.instance
+        @instance ||= new.freeze
+      end
+
       KEYWORD_COLOR = "\e[36m"
       STRING_COLOR = "\e[32m"
       NUMBER_COLOR = "\e[33m"

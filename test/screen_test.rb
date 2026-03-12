@@ -146,22 +146,16 @@ class ScreenTest < Minitest::Test
     screen = RuVim::Screen.new(terminal: term)
 
     calls = 0
-    lang_mod = buf.lang_module.singleton_class
-    verbose, $VERBOSE = $VERBOSE, nil
-    lang_mod.alias_method(:__orig_color_columns_for_screen_test, :color_columns)
-    lang_mod.define_method(:color_columns) do |*args, **kwargs|
+    spy = RuVim::Lang::Ruby.new
+    orig = spy.method(:color_columns)
+    spy.define_singleton_method(:color_columns) do |*args, **kwargs|
       calls += 1
-      __orig_color_columns_for_screen_test(*args, **kwargs)
+      orig.call(*args, **kwargs)
     end
+    buf.lang_module = spy
 
-    begin
-      screen.render(editor)
-      screen.render(editor)
-    ensure
-      lang_mod.alias_method(:color_columns, :__orig_color_columns_for_screen_test)
-      lang_mod.remove_method(:__orig_color_columns_for_screen_test) rescue nil
-      $VERBOSE = verbose
-    end
+    screen.render(editor)
+    screen.render(editor)
 
     assert_equal 1, calls
   end
