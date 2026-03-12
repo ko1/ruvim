@@ -48,14 +48,10 @@ module RuVim
           next unless [":", "/", "?"].include?(prefix)
           next unless items.is_a?(Array)
 
-          hist = loaded[prefix]
-          items.each do |item|
-            next if item.empty?
-
-            hist.delete(item)
-            hist << item
-          end
-          hist.shift while hist.length > 100
+          # Keep last occurrence of each item by reversing, deduplicating, then reversing back
+          deduped = items.reject { |item| !item.is_a?(String) || item.empty? }
+                        .reverse.uniq.reverse
+          loaded[prefix] = deduped.last(100)
         end
         @cmdline_history = loaded
       rescue StandardError => e
