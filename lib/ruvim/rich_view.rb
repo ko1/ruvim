@@ -114,9 +114,7 @@ module RuVim
     register(:markdown, :MarkdownRenderer)
     register(:json, :JsonRenderer)
     register(:jsonl, :JsonlRenderer)
+    register(:tsv, :TableRenderer, detector: ->(buf) { Lang::Tsv.detect?(buf) })
+    register(:csv, :TableRenderer, detector: ->(buf) { Lang::Csv.detect?(buf) })
   end
 end
-
-# Load format modules that register with RichView.
-require_relative "lang/tsv"
-require_relative "lang/csv"

@@ -145,8 +145,8 @@ module RuVim
       register("ocaml",   mod: :Ocaml, extensions: %w[.ml .mli], shebangs: %w[ocaml])
       register("erb",     mod: :Erb, extensions: %w[.erb])
       register("gitcommit", mod: :Gitcommit)
-      register("tsv",     mod: :Base, extensions: %w[.tsv])
-      register("csv",     mod: :Base, extensions: %w[.csv])
+      register("tsv",     mod: :Tsv, extensions: %w[.tsv])
+      register("csv",     mod: :Csv, extensions: %w[.csv])
     end
   end
 end
