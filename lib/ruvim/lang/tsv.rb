@@ -4,7 +4,7 @@ module RuVim
   module Lang
     class Tsv < Base
       # Detect TSV from buffer content: tabs >= commas and tabs > 0
-      def detect?(buffer)
+      def self.detect?(buffer)
       sample = (0...[buffer.line_count, 20].min).map { |i| buffer.line_at(i) }
       tabs = sample.sum { |l| l.count("\t") }
       commas = sample.sum { |l| l.count(",") }
@@ -13,5 +13,5 @@ module RuVim
     end
   end
 
-  RichView.register(:tsv, RichView::TableRenderer, detector: ->(buf) { Lang::Tsv.new.detect?(buf) })
+  RichView.register(:tsv, RichView::TableRenderer, detector: Lang::Tsv.method(:detect?))
 end
