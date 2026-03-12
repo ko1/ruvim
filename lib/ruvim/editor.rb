@@ -6,6 +6,7 @@ require_relative "editor/marks_jumps"
 require_relative "editor/quickfix"
 require_relative "editor/layout_tree"
 require_relative "editor/filetype"
+require_relative "editor/command_line"
 
 module RuVim
   class Editor

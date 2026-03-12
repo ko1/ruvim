@@ -34,7 +34,6 @@ require_relative "dispatcher"
 
 # Input and rendering (rich_view.rb loads tsv/csv internally)
 require_relative "keymap_manager"
-require_relative "command_line"
 require_relative "input"
 require_relative "terminal"
 require_relative "rich_view"

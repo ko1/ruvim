@@ -63,7 +63,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `keymap_manager.rb` | Key-to-command mapping with layers (filetype > buffer > mode > global) |
 | `input.rb` | Raw keyboard input, ANSI escape sequence parsing |
 | `terminal.rb` | Terminal I/O: raw mode, alternate screen, winsize |
-| `command_line.rb` | Command-line text/cursor state |
+| `editor/command_line.rb` | Command-line text/cursor state |
 | `command_registry.rb` | Normal/insert mode command registry (singleton) |
 | `ex_command_registry.rb` | Ex command registry (singleton) |
 | `cli.rb` | CLI argument parsing, `--help`, `--version` |
