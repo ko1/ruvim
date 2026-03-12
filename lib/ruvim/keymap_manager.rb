@@ -5,11 +5,60 @@ module RuVim
     Match = Struct.new(:status, :invocation, keyword_init: true)
     BindingEntry = Struct.new(:layer, :mode, :tokens, :id, :argv, :kwargs, :bang, :scope, keyword_init: true)
 
+    # A Hash wrapper that maintains a prefix index for O(1) prefix lookups.
+    class LayerMap < Hash
+      def initialize
+        super
+        # For each prefix, track the max key length among keys sharing that prefix.
+        @prefix_max_len = {}
+      end
+
+      def []=(tokens, value)
+        was_new = !key?(tokens)
+        super
+        add_to_prefix_index(tokens) if was_new
+      end
+
+      def delete(tokens)
+        had = key?(tokens)
+        result = super
+        rebuild_prefix_index if had
+        result
+      end
+
+      # Is there any key that starts with (or equals) `prefix`?
+      def has_prefix?(prefix)
+        @prefix_max_len.key?(prefix)
+      end
+
+      # Is there any key strictly longer than `prefix` that starts with `prefix`?
+      def has_longer_match?(prefix)
+        max = @prefix_max_len[prefix]
+        max ? max > prefix.length : false
+      end
+
+      private
+
+      def add_to_prefix_index(tokens)
+        len = tokens.length
+        len.times do |i|
+          pfx = tokens[0..i]
+          cur = @prefix_max_len[pfx]
+          @prefix_max_len[pfx] = len if cur.nil? || len > cur
+        end
+      end
+
+      def rebuild_prefix_index
+        @prefix_max_len = {}
+        each_key { |tokens| add_to_prefix_index(tokens) }
+      end
+    end
+
     def initialize
-      @mode_maps = Hash.new { |h, k| h[k] = {} }
-      @global_map = {}
-      @buffer_maps = Hash.new { |h, k| h[k] = {} }
-      @filetype_maps = Hash.new { |h, k| h[k] = Hash.new { |hh, m| hh[m] = {} } }
+      @mode_maps = Hash.new { |h, k| h[k] = LayerMap.new }
+      @global_map = LayerMap.new
+      @buffer_maps = Hash.new { |h, k| h[k] = LayerMap.new }
+      @filetype_maps = Hash.new { |h, k| h[k] = Hash.new { |hh, m| hh[m] = LayerMap.new } }
     end
 
     def bind(mode, seq, id, argv: [], kwargs: {}, bang: false)
@@ -86,12 +135,12 @@ module RuVim
         next if layer.empty?
 
         if (exact = layer[pending_tokens])
-          longer = layer.keys.any? { |k| k.length > pending_tokens.length && k[0, pending_tokens.length] == pending_tokens }
+          longer = layer.has_longer_match?(pending_tokens)
           return Match.new(status: (longer ? :ambiguous : :match), invocation: exact)
         end
       end
 
-      has_prefix = layers.any? { |layer| layer.keys.any? { |k| k[0, pending_tokens.length] == pending_tokens } }
+      has_prefix = layers.any? { |layer| layer.has_prefix?(pending_tokens) }
       Match.new(status: has_prefix ? :pending : :none)
     end
 

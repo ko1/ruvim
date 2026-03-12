@@ -45,4 +45,32 @@ class KeymapManagerTest < Minitest::Test
     insert = @km.resolve_with_context(:insert, ["x"], editor: @editor)
     assert_equal "ruby.insert.x", insert.invocation.id
   end
+
+  def test_ambiguous_when_exact_and_longer_exist
+    @km.bind(:normal, "g", "go")
+    @km.bind(:normal, "gg", "go.top")
+
+    match = @km.resolve_with_context(:normal, ["g"], editor: @editor)
+    assert_equal :ambiguous, match.status
+    assert_equal "go", match.invocation.id
+  end
+
+  def test_no_match_for_unknown_key
+    @km.bind(:normal, "x", "delete.char")
+
+    match = @km.resolve_with_context(:normal, ["z"], editor: @editor)
+    assert_equal :none, match.status
+  end
+
+  def test_layer_map_prefix_index
+    layer = RuVim::KeymapManager::LayerMap.new
+    layer[["d", "d"]] = :dd
+    layer[["d", "w"]] = :dw
+
+    assert layer.has_prefix?(["d"])
+    assert layer.has_prefix?(["d", "d"])
+    assert layer.has_longer_match?(["d"])
+    refute layer.has_longer_match?(["d", "d"])
+    refute layer.has_prefix?(["x"])
+  end
 end
