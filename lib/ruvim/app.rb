@@ -29,8 +29,6 @@ require_relative "editor"
 # Registries and commands (handler.rb loads git/* internally)
 require_relative "command_registry"
 require_relative "ex_command_registry"
-require_relative "commands/gh"
-require_relative "commands/git/handler"
 require_relative "global_commands"
 require_relative "dispatcher"
 

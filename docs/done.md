@@ -225,4 +225,9 @@
   - class method (`def self.method`) からインスタンスメソッド (`def method`) に変換
   - Registry が class ではなくキャッシュ済みインスタンスを返すように変更
   - Typescript < Javascript、Cpp < C、Erb < Html の継承で委譲メソッドを削除
-
+  - `BUFFER_DEFAULTS` 定数を `buffer_defaults` インスタンスメソッドに変換（`const_defined?` 排除）
+  - `Lang::Base.instance` で frozen singleton インスタンスを提供（Registry の `@instances` キャッシュ削除）
+  - `Tsv.detect?` / `Csv.detect?` をクラスメソッド化（ステートレス検出）
+  - RichView レンダラーを autoload 化（TableRenderer, MarkdownRenderer, JsonRenderer, JsonlRenderer）
+  - TSV/CSV の検出を lambda + autoload で遅延ロード化
+  - Git/Gh コマンドハンドラーを `method_missing` + autoload で遅延ロード化（`app.rb` から eager require 削除）

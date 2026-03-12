@@ -50,7 +50,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `editor/filetype.rb` | Filetype detection (basename, extension, shebang) and assignment |
 | `buffer.rb` | Text buffer (lines, file I/O, encoding) |
 | `window.rb` | View of a buffer (cursor, scroll, grapheme-aware movement) |
-| `global_commands.rb` | Command host (singleton, includes command modules, Git::Handler, Gh::Handler) |
+| `global_commands.rb` | Command host (singleton, includes command modules, lazy-loads Git::Handler/Gh::Handler via method_missing) |
 | `commands/motion.rb` | Cursor movement, scrolling, word movement, bracket matching |
 | `commands/edit.rb` | Insert mode, delete, change, join, replace, indent, undo/redo, text objects, range operations |
 | `commands/register.rb` | Yank, paste, visual yank/delete, register operations |

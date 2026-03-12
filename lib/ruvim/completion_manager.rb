@@ -583,6 +583,7 @@ module RuVim
 
       def git_subcommand_candidates(prefix)
         @git_subcommands ||= begin
+          GlobalCommands.load_git_handler!
           builtin = Commands::Git::Handler::GIT_SUBCOMMANDS.keys
           external = parse_git_help_subcommands
           (builtin + external).uniq.sort
@@ -592,6 +593,7 @@ module RuVim
 
       def gh_subcommand_candidates(prefix)
         @gh_subcommands ||= begin
+          GlobalCommands.load_gh_handler!
           builtin = Commands::Gh::Handler::GH_SUBCOMMANDS.keys
           external = parse_gh_help_subcommands
           (builtin + external).uniq.sort

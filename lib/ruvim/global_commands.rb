@@ -12,6 +12,11 @@ require_relative "commands/buffer"
 require_relative "commands/meta"
 
 module RuVim
+  module Commands
+    autoload :Git, File.expand_path("commands/git/handler", __dir__)
+    autoload :Gh, File.expand_path("commands/gh", __dir__)
+  end
+
   class GlobalCommands
     include Singleton
     include Commands::Motion
@@ -21,9 +26,6 @@ module RuVim
     include Commands::Window
     include Commands::Buffer
     include Commands::Meta
-    include Commands::Git::Handler
-    include Commands::Gh::Handler
-
     def call(spec_call, ctx, argv: [], kwargs: {}, bang: false, count: nil)
       case spec_call
       when Symbol, String
@@ -78,6 +80,44 @@ module RuVim
       true
     rescue StandardError
       false
+    end
+
+    GIT_METHOD_PREFIX = /\Agit_|enter_git_/
+    GH_METHOD_PREFIX = /\Agh_/
+
+    def self.load_git_handler!
+      return if @git_handler_loaded
+      @git_handler_loaded = true
+      require_relative "commands/git/handler"
+      include Commands::Git::Handler
+    end
+
+    def self.load_gh_handler!
+      return if @gh_handler_loaded
+      @gh_handler_loaded = true
+      require_relative "commands/gh"
+      include Commands::Gh::Handler
+    end
+
+    def method_missing(name, *args, **kw, &block)
+      case name
+      when GIT_METHOD_PREFIX
+        self.class.load_git_handler!
+        return send(name, *args, **kw, &block) if respond_to?(name)
+      when GH_METHOD_PREFIX
+        self.class.load_gh_handler!
+        return send(name, *args, **kw, &block) if respond_to?(name)
+      end
+      super
+    end
+
+    def respond_to_missing?(name, include_private = false)
+      case name
+      when GIT_METHOD_PREFIX, GH_METHOD_PREFIX
+        true
+      else
+        super
+      end
     end
   end
 end
