@@ -6,7 +6,7 @@ module RuVim
   class Stream::Run < Stream
     attr_accessor :io, :pid, :thread, :command, :exit_status
 
-    def initialize(command:, buffer_id:, queue:, stop_handler: nil, &notify)
+    def initialize(command:, buffer_id:, queue:, chdir: nil, stop_handler: nil, &notify)
       super(stop_handler: stop_handler)
       @command = command
       @io = nil
@@ -15,24 +15,10 @@ module RuVim
       @state = :live
       stream = self
       @thread = Thread.new do
-        shell = ENV["SHELL"].to_s
-        shell = "/bin/sh" if shell.empty?
-        PTY.spawn(shell, "-c", command) do |r, _w, pid|
-          stream.io = r
-          stream.pid = pid
-          begin
-            while (chunk = r.readpartial(4096))
-              text = Buffer.decode_text(chunk).delete("\r")
-              queue << { type: :stream_data, buffer_id: buffer_id, data: text }
-              notify.call
-            end
-          rescue EOFError, Errno::EIO
-            # expected: PTY raises EIO when child process exits
-          end
-          _status = Process.waitpid2(pid)[1] rescue nil
-          stream.io = nil
-          queue << { type: :stream_eof, buffer_id: buffer_id, status: _status }
-          notify.call
+        if chdir
+          run_popen(command, chdir, buffer_id, queue, stream, &notify)
+        else
+          run_pty(command, buffer_id, queue, stream, &notify)
         end
       rescue StandardError => e
         stream.io = nil
@@ -69,6 +55,43 @@ module RuVim
         thread.join(0.05)
       end
       @state = :closed
+    end
+
+    private
+
+    def run_pty(command, buffer_id, queue, stream, &notify)
+      shell = ENV["SHELL"].to_s
+      shell = "/bin/sh" if shell.empty?
+      PTY.spawn(shell, "-c", command) do |r, _w, pid|
+        stream.io = r
+        stream.pid = pid
+        begin
+          while (chunk = r.readpartial(4096))
+            text = Buffer.decode_text(chunk).delete("\r")
+            queue << { type: :stream_data, buffer_id: buffer_id, data: text }
+            notify.call
+          end
+        rescue EOFError, Errno::EIO
+          # expected: PTY raises EIO when child process exits
+        end
+        _status = Process.waitpid2(pid)[1] rescue nil
+        stream.io = nil
+        queue << { type: :stream_eof, buffer_id: buffer_id, status: _status }
+        notify.call
+      end
+    end
+
+    def run_popen(command, chdir, buffer_id, queue, stream, &notify)
+      IO.popen(command, chdir: chdir, err: [:child, :out]) do |io|
+        stream.io = io
+        while (chunk = io.read(4096))
+          queue << { type: :stream_data, buffer_id: buffer_id, data: Buffer.decode_text(chunk) }
+          notify.call
+        end
+      end
+      stream.io = nil
+      queue << { type: :stream_eof, buffer_id: buffer_id }
+      notify.call
     end
   end
 end

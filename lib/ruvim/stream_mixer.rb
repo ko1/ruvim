@@ -45,13 +45,8 @@ module RuVim
       def start_command_stream!(buf, command, chdir: nil)
         ensure_event_queue!
         stop = -> { stop_buffer_stream!(buf) }
-        buf.stream = if chdir
-          Stream::Git.new(cmd: command, root: chdir, buffer_id: buf.id, queue: @stream_event_queue,
-            stop_handler: stop, &method(:notify_signal_wakeup))
-        else
-          Stream::Run.new(command: command, buffer_id: buf.id, queue: @stream_event_queue,
-            stop_handler: stop, &method(:notify_signal_wakeup))
-        end
+        buf.stream = Stream::Run.new(command: command, buffer_id: buf.id, queue: @stream_event_queue,
+          chdir: chdir, stop_handler: stop, &method(:notify_signal_wakeup))
       end
 
       def stop_buffer_stream!(buf)

@@ -30,8 +30,7 @@ RuVim::Stream
 ├── Stream::Stdin
 ├── Stream::Run
 ├── Stream::Follow
-├── Stream::FileLoad
-└── Stream::Git
+└── Stream::FileLoad
 
 RuVim::Lang::Base
 ├── Lang::Ruby
@@ -141,10 +140,9 @@ App
 | `stream_mixer.rb` | Stream coordinator: event queue, drain, editor integration |
 | `stream.rb` | Stream base class (state, live?, status, stop!) |
 | `stream/stdin.rb` | Stream::Stdin — reads from stdin pipe |
-| `stream/run.rb` | Stream::Run — PTY command execution |
+| `stream/run.rb` | Stream::Run — command execution (PTY or IO.popen with chdir) |
 | `stream/follow.rb` | Stream::Follow — file watcher (inotify/polling) |
 | `stream/file_load.rb` | Stream::FileLoad — async large file loading |
-| `stream/git.rb` | Stream::Git — git command output via IO.popen |
 | `editor.rb` | Editor state: buffers, windows, modes, visual, rich, tabpages, filetype |
 | `editor/options.rb` | Option system (OPTION_DEFS, get/set/effective, coercion) |
 | `editor/registers.rb` | Register management (named, numbered, clipboard integration) |

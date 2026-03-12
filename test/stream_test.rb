@@ -121,12 +121,13 @@ class StreamTest < Minitest::Test
     end
   end
 
-  # --- Stream::Git ---
+  # --- Stream::Run with chdir (popen mode) ---
 
-  def test_git_status_always_nil
+  def test_run_with_chdir_starts_live
     q = make_queue
-    s = RuVim::Stream::Git.new(cmd: ["echo", "test"], root: ".", buffer_id: 1, queue: q, &noop)
-    assert_nil s.status
+    s = RuVim::Stream::Run.new(command: ["echo", "test"], buffer_id: 1, queue: q, chdir: ".", &noop)
+    assert_equal :live, s.state
+    assert_equal "run", s.status
   ensure
     s&.stop!
   end
