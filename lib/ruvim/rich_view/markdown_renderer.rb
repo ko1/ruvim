@@ -3,7 +3,7 @@
 module RuVim
   module RichView
     module MarkdownRenderer
-      MD = Lang::Markdown.new
+      MD = Lang::Registry.resolve_module("markdown")
 
       module_function
 

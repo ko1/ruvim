@@ -574,36 +574,36 @@ class LangTest < Minitest::Test
   # --- Indent support ---
 
   def test_python_indent_after_colon
-    assert RuVim::Lang::Python.new.indent_trigger?("def foo():")
-    assert RuVim::Lang::Python.new.indent_trigger?("if x > 0:")
+    assert resolve_lang("python").indent_trigger?("def foo():")
+    assert resolve_lang("python").indent_trigger?("if x > 0:")
   end
 
   def test_javascript_indent_after_brace
-    assert RuVim::Lang::Javascript.new.indent_trigger?("function foo() {")
+    assert resolve_lang("javascript").indent_trigger?("function foo() {")
   end
 
   def test_go_indent_after_brace
-    assert RuVim::Lang::Go.new.indent_trigger?("func main() {")
+    assert resolve_lang("go").indent_trigger?("func main() {")
   end
 
   def test_rust_indent_after_brace
-    assert RuVim::Lang::Rust.new.indent_trigger?("fn main() {")
+    assert resolve_lang("rust").indent_trigger?("fn main() {")
   end
 
   def test_elixir_indent_after_do
-    assert RuVim::Lang::Elixir.new.indent_trigger?("def hello do")
+    assert resolve_lang("elixir").indent_trigger?("def hello do")
   end
 
   def test_lua_indent_after_function
-    assert RuVim::Lang::Lua.new.indent_trigger?("function hello()")
+    assert resolve_lang("lua").indent_trigger?("function hello()")
   end
 
   def test_sh_indent_after_then
-    assert RuVim::Lang::Sh.new.indent_trigger?("if [ -f foo ]; then")
+    assert resolve_lang("sh").indent_trigger?("if [ -f foo ]; then")
   end
 
   def test_yaml_indent_after_key_colon
-    assert RuVim::Lang::Yaml.new.indent_trigger?("services:")
+    assert resolve_lang("yaml").indent_trigger?("services:")
   end
 
   # --- ERB ---

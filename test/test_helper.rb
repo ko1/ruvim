@@ -17,6 +17,10 @@ module RuVimTestHelpers
     editor.ensure_bootstrap_buffer!
     editor
   end
+
+  def resolve_lang(ft)
+    RuVim::Lang::Registry.resolve_module(ft)
+  end
 end
 
 class Minitest::Test

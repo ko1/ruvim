@@ -7,7 +7,7 @@ class OnSaveHookTest < Minitest::Test
     editor = fresh_editor
     ctx = RuVim::Context.new(editor: editor)
     # Should not raise
-    RuVim::Lang::Base.new.on_save(ctx, "/tmp/nonexistent.txt")
+    resolve_lang("text").on_save(ctx, "/tmp/nonexistent.txt")
   end
 
   def test_ruby_on_save_with_valid_file
@@ -16,7 +16,7 @@ class OnSaveHookTest < Minitest::Test
     Dir.mktmpdir do |dir|
       path = File.join(dir, "valid.rb")
       File.write(path, "puts 'hello'\n")
-      RuVim::Lang::Ruby.new.on_save(ctx, path)
+      resolve_lang("ruby").on_save(ctx, path)
       # No error message should be set (echo from before should remain)
       refute editor.message_error?
       assert_empty editor.quickfix_items, "quickfix list should be empty for valid file"
@@ -29,7 +29,7 @@ class OnSaveHookTest < Minitest::Test
     Dir.mktmpdir do |dir|
       path = File.join(dir, "bad.rb")
       File.write(path, "def foo(\n")
-      RuVim::Lang::Ruby.new.on_save(ctx, path)
+      resolve_lang("ruby").on_save(ctx, path)
       assert editor.message_error?
       assert_match(/syntax error/i, editor.message)
       refute_empty editor.quickfix_items, "quickfix list should be populated on syntax error"
@@ -43,7 +43,7 @@ class OnSaveHookTest < Minitest::Test
     editor = fresh_editor
     ctx = RuVim::Context.new(editor: editor)
     # Should not raise
-    RuVim::Lang::Ruby.new.on_save(ctx, nil)
+    resolve_lang("ruby").on_save(ctx, nil)
     refute editor.message_error?
   end
 
