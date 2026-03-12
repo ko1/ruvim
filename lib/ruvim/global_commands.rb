@@ -88,14 +88,12 @@ module RuVim
     def self.load_git_handler!
       return if @git_handler_loaded
       @git_handler_loaded = true
-      require_relative "commands/git/handler"
       include Commands::Git::Handler
     end
 
     def self.load_gh_handler!
       return if @gh_handler_loaded
       @gh_handler_loaded = true
-      require_relative "commands/gh"
       include Commands::Gh::Handler
     end
 
