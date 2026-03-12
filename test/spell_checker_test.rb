@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require "ruvim/spell_checker"
+require "ruvim/editor/spell_checker"
 
 class SpellCheckerTest < Minitest::Test
   def setup

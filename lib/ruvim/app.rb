@@ -13,7 +13,7 @@ require_relative "text_metrics"
 module RuVim
   autoload :Clipboard, File.expand_path("clipboard", __dir__)
   autoload :Browser, File.expand_path("browser", __dir__)
-  autoload :SpellChecker, File.expand_path("spell_checker", __dir__)
+  autoload :SpellChecker, File.expand_path("editor/spell_checker", __dir__)
   autoload :FileWatcher, File.expand_path("file_watcher", __dir__)
 end
 
@@ -40,14 +40,14 @@ require_relative "rich_view"
 require_relative "screen"
 
 # Configuration
-require_relative "config_dsl"
-require_relative "config_loader"
+require_relative "config/config_dsl"
+require_relative "config/config_loader"
 
 # App components
 require_relative "stream_mixer"
 require_relative "completion_manager"
 require_relative "key_handler"
-require_relative "app_defaults"
+require_relative "config/defaults"
 
 module RuVim
   class App

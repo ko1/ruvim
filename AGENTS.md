@@ -28,7 +28,6 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | File | Description |
 |------|-------------|
 | `app.rb` | Main application: initialization, run loop, config, startup; autoloads Clipboard, Browser, SpellChecker, FileWatcher |
-| `app_defaults.rb` | Built-in command/Ex registration and default key bindings |
 | `key_handler.rb` | Key input dispatch, mode handling, normal/visual/command-line/rich modes |
 | `key_handler/pending_state.rb` | Pending state machines (operator, register, mark, jump, replace, find) |
 | `key_handler/macro_dot.rb` | Macro recording/playback, dot repeat |
@@ -67,12 +66,13 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `command_registry.rb` | Normal/insert mode command registry (singleton) |
 | `ex_command_registry.rb` | Ex command registry (singleton) |
 | `cli.rb` | CLI argument parsing, `--help`, `--version` |
-| `config_loader.rb` | Load `~/.config/ruvim/init.rb` and ftplugin |
-| `config_dsl.rb` | User config DSL: `nmap`, `imap`, `set`, `command`, `colorscheme` |
+| `config/config_loader.rb` | Load `~/.config/ruvim/init.rb` and ftplugin |
+| `config/config_dsl.rb` | User config DSL: `nmap`, `imap`, `set`, `command`, `colorscheme` |
+| `config/defaults.rb` | Built-in command/Ex registration and default key bindings |
 | `display_width.rb` | Character display width (CJK, emoji, combining marks) |
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
-| `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
+| `editor/spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
 | `lang/registry.rb` | Central lang registry (filetype detection, buffer_defaults lookup); autoloads all lang/* modules on demand |
 | `lang/base.rb` | Base lang class: apply_regex, color constants, no-op indent/dedent/on_save instance method defaults |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
