@@ -14,17 +14,17 @@ module RuVim
       AUTO_VAR_RE = /\$[@<*^?%]/
 
       def color_columns(text)
-      cols = {}
-      apply_regex(cols, text, TARGET_RE, "\e[1;33m")
-      apply_regex(cols, text, VARIABLE_DEF_RE, KEYWORD_COLOR)
-      apply_regex(cols, text, DIRECTIVE_RE, KEYWORD_COLOR)
-      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
-      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
-      apply_regex(cols, text, FUNCTION_RE, "\e[35m")
-      apply_regex(cols, text, VARIABLE_REF_RE, VARIABLE_COLOR)
-      apply_regex(cols, text, AUTO_VAR_RE, VARIABLE_COLOR)
-      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
-      cols
+        cols = {}
+        apply_regex(cols, text, TARGET_RE, "\e[1;33m")
+        apply_regex(cols, text, VARIABLE_DEF_RE, KEYWORD_COLOR)
+        apply_regex(cols, text, DIRECTIVE_RE, KEYWORD_COLOR)
+        apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+        apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+        apply_regex(cols, text, FUNCTION_RE, "\e[35m")
+        apply_regex(cols, text, VARIABLE_REF_RE, VARIABLE_COLOR)
+        apply_regex(cols, text, AUTO_VAR_RE, VARIABLE_COLOR)
+        apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+        cols
       end
     end
   end

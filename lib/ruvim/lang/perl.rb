@@ -4,16 +4,16 @@ module RuVim
   module Lang
     class Perl < Base
       KEYWORDS = %w[
-      my our local sub return if elsif else unless while until for
-      foreach do given when default last next redo goto
-      use require package no BEGIN END
-      die warn print say chomp chop push pop shift unshift
-      open close read write seek tell
-      map grep sort reverse join split
-      defined undef delete exists ref bless
-      eval try catch finally
-      and or not xor
-      eq ne lt gt le ge cmp
+        my our local sub return if elsif else unless while until for
+        foreach do given when default last next redo goto
+        use require package no BEGIN END
+        die warn print say chomp chop push pop shift unshift
+        open close read write seek tell
+        map grep sort reverse join split
+        defined undef delete exists ref bless
+        eval try catch finally
+        and or not xor
+        eq ne lt gt le ge cmp
       ].freeze
 
       KEYWORD_RE = /\b(?:#{KEYWORDS.join("|")})\b/
@@ -33,7 +33,7 @@ module RuVim
       INDENT_CLOSE_RE = /\A\s*\}/
 
       DEDENT_TRIGGERS = {
-      "}" => /\A(\s*)\}/
+        "}" => /\A(\s*)\}/
       }.freeze
 
       def buffer_defaults
@@ -43,47 +43,47 @@ module RuVim
       end
 
       def calculate_indent(lines, target_row, shiftwidth)
-      depth = 0
-      (0...target_row).each do |row|
-        line = lines[row].to_s
-        line.each_char do |ch|
-          case ch
-          when "{" then depth += 1
-          when "}" then depth -= 1
+        depth = 0
+        (0...target_row).each do |row|
+          line = lines[row].to_s
+          line.each_char do |ch|
+            case ch
+            when "{" then depth += 1
+            when "}" then depth -= 1
+            end
           end
         end
-      end
 
-      target_line = lines[target_row].to_s.lstrip
-      depth -= 1 if target_line.match?(INDENT_CLOSE_RE)
-      depth = 0 if depth < 0
-      depth * shiftwidth
+        target_line = lines[target_row].to_s.lstrip
+        depth -= 1 if target_line.match?(INDENT_CLOSE_RE)
+        depth = 0 if depth < 0
+        depth * shiftwidth
       end
 
       def indent_trigger?(line)
-      line.to_s.rstrip.match?(INDENT_OPEN_RE)
+        line.to_s.rstrip.match?(INDENT_OPEN_RE)
       end
 
       def dedent_trigger(char)
-      DEDENT_TRIGGERS[char]
+        DEDENT_TRIGGERS[char]
       end
 
       def color_columns(text)
-      cols = {}
-      # POD documentation
-      if text.match?(POD_RE)
-        text.length.times { |i| cols[i] = COMMENT_COLOR }
-        return cols
-      end
-      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
-      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
-      apply_regex(cols, text, KEYWORD_RE, KEYWORD_COLOR)
-      apply_regex(cols, text, SCALAR_RE, VARIABLE_COLOR)
-      apply_regex(cols, text, ARRAY_RE, "\e[35m")
-      apply_regex(cols, text, HASH_RE, CONSTANT_COLOR)
-      apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)
-      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
-      cols
+        cols = {}
+        # POD documentation
+        if text.match?(POD_RE)
+          text.length.times { |i| cols[i] = COMMENT_COLOR }
+          return cols
+        end
+        apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+        apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+        apply_regex(cols, text, KEYWORD_RE, KEYWORD_COLOR)
+        apply_regex(cols, text, SCALAR_RE, VARIABLE_COLOR)
+        apply_regex(cols, text, ARRAY_RE, "\e[35m")
+        apply_regex(cols, text, HASH_RE, CONSTANT_COLOR)
+        apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)
+        apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+        cols
       end
     end
   end

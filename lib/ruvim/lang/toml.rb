@@ -14,17 +14,17 @@ module RuVim
       COMMENT_RE = /#.*/
 
       def color_columns(text)
-      cols = {}
-      apply_regex(cols, text, ARRAY_TABLE_RE, "\e[1;36m")
-      apply_regex(cols, text, TABLE_RE, "\e[1;36m")
-      apply_regex(cols, text, KEY_RE, KEYWORD_COLOR)
-      apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
-      apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
-      apply_regex(cols, text, KEYWORD_RE, "\e[35m")
-      apply_regex(cols, text, DATETIME_RE, CONSTANT_COLOR)
-      apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)
-      apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
-      cols
+        cols = {}
+        apply_regex(cols, text, ARRAY_TABLE_RE, "\e[1;36m")
+        apply_regex(cols, text, TABLE_RE, "\e[1;36m")
+        apply_regex(cols, text, KEY_RE, KEYWORD_COLOR)
+        apply_regex(cols, text, STRING_DOUBLE_RE, STRING_COLOR)
+        apply_regex(cols, text, STRING_SINGLE_RE, STRING_COLOR)
+        apply_regex(cols, text, KEYWORD_RE, "\e[35m")
+        apply_regex(cols, text, DATETIME_RE, CONSTANT_COLOR)
+        apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)
+        apply_regex(cols, text, COMMENT_RE, COMMENT_COLOR, override: true)
+        cols
       end
     end
   end

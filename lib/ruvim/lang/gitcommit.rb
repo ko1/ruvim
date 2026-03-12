@@ -12,11 +12,11 @@ module RuVim
       end
 
       def color_columns(text)
-      cols = {}
-      if text.start_with?("#")
-        text.length.times { |i| cols[i] = COMMENT_COLOR }
-      end
-      cols
+        cols = {}
+        if text.start_with?("#")
+          text.length.times { |i| cols[i] = COMMENT_COLOR }
+        end
+        cols
       end
     end
   end

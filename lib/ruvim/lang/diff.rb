@@ -10,29 +10,29 @@ module RuVim
       META_COLOR   = "\e[33m"  # yellow
 
       def color_columns(text)
-      cols = {}
-      color = line_color(text)
-      return cols unless color
+        cols = {}
+        color = line_color(text)
+        return cols unless color
 
-      text.length.times { |i| cols[i] = color }
-      cols
+        text.length.times { |i| cols[i] = color }
+        cols
       end
 
       def line_color(text)
-      return nil if text.empty?
+        return nil if text.empty?
 
-      case text
-      when /\A@@/
-        HUNK_COLOR
-      when /\Adiff /
-        HEADER_COLOR
-      when /\A\+/
-        ADD_COLOR
-      when /\A-/
-        DELETE_COLOR
-      when /\Aindex /, /\Anew file/, /\Adeleted file/, /\Arename/, /\Asimilarity/
-        META_COLOR
-      end
+        case text
+        when /\A@@/
+          HUNK_COLOR
+        when /\Adiff /
+          HEADER_COLOR
+        when /\A\+/
+          ADD_COLOR
+        when /\A-/
+          DELETE_COLOR
+        when /\Aindex /, /\Anew file/, /\Adeleted file/, /\Arename/, /\Asimilarity/
+          META_COLOR
+        end
       end
     end
   end
