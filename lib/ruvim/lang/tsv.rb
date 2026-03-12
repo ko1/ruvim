@@ -13,5 +13,5 @@ module RuVim
     end
   end
 
-  RichView.register(:tsv, RichView::TableRenderer, detector: Lang::Tsv.method(:detect?))
+  RichView.register(:tsv, :TableRenderer, detector: Lang::Tsv.method(:detect?))
 end

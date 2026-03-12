@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
-require_relative "rich_view/table_renderer"
-require_relative "rich_view/markdown_renderer"
-require_relative "rich_view/json_renderer"
-require_relative "rich_view/jsonl_renderer"
-
 module RuVim
   module RichView
+    autoload :TableRenderer, File.expand_path("rich_view/table_renderer", __dir__)
+    autoload :MarkdownRenderer, File.expand_path("rich_view/markdown_renderer", __dir__)
+    autoload :JsonRenderer, File.expand_path("rich_view/json_renderer", __dir__)
+    autoload :JsonlRenderer, File.expand_path("rich_view/jsonl_renderer", __dir__)
+
     @renderers = {}
     @detectors = []
 
@@ -18,7 +18,8 @@ module RuVim
     end
 
     def renderer_for(filetype)
-      @renderers[filetype.to_sym]
+      r = @renderers[filetype.to_sym]
+      r.is_a?(Symbol) ? RichView.const_get(r) : r
     end
 
     def registered_filetypes
@@ -48,7 +49,7 @@ module RuVim
       format = format ? format.to_sym : detect_format(buffer)
       raise RuVim::CommandError, "Cannot detect format for rich view" unless format
 
-      renderer = @renderers[format]
+      renderer = renderer_for(format)
       raise RuVim::CommandError, "No renderer for format: #{format}" unless renderer
 
       if renderer.respond_to?(:open_view!)
@@ -73,7 +74,7 @@ module RuVim
       return lines unless state
 
       format = state[:format]
-      renderer = @renderers[format]
+      renderer = renderer_for(format)
       return lines unless renderer
 
       delimiter = state[:delimiter]
@@ -109,9 +110,10 @@ module RuVim
       km.bind_buffer(buffer_id, "<C-c>", "rich.close_buffer")
     end
 
-    register(:markdown, MarkdownRenderer)
-    register(:json, JsonRenderer)
-    register(:jsonl, JsonlRenderer)
+    # Register built-in renderers using symbols (resolved lazily via autoload)
+    register(:markdown, :MarkdownRenderer)
+    register(:json, :JsonRenderer)
+    register(:jsonl, :JsonlRenderer)
   end
 end
 

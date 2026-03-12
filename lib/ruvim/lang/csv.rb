@@ -12,5 +12,5 @@ module RuVim
     end
   end
 
-  RichView.register(:csv, RichView::TableRenderer, detector: Lang::Csv.method(:detect?))
+  RichView.register(:csv, :TableRenderer, detector: Lang::Csv.method(:detect?))
 end
