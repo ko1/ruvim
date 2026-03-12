@@ -23,6 +23,111 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
   → GlobalCommands.<method>() → Editor state update → Screen.render() → Terminal.write()
 ```
 
+### Class Hierarchy
+
+```
+RuVim::Stream
+├── Stream::Stdin
+├── Stream::Run
+├── Stream::Follow
+├── Stream::FileLoad
+└── Stream::Git
+
+RuVim::Lang::Base
+├── Lang::Ruby
+├── Lang::Markdown
+├── Lang::Json
+├── Lang::Scheme
+├── Lang::C
+│   └── Lang::Cpp
+├── Lang::Javascript
+│   └── Lang::Typescript
+├── Lang::Diff
+├── Lang::Yaml
+├── Lang::Sh
+├── Lang::Python
+├── Lang::Html
+├── Lang::Toml
+├── Lang::Go
+├── Lang::Rust
+├── Lang::Makefile
+├── Lang::Dockerfile
+├── Lang::Sql
+├── Lang::Elixir
+├── Lang::Perl
+├── Lang::Lua
+├── Lang::Ocaml
+├── Lang::Erb
+└── Lang::Gitcommit
+
+RuVim::ConfigDSL < BasicObject
+```
+
+### Module Inclusions
+
+```
+Editor
+  includes: Options, Registers, MarksJumps, Quickfix, LayoutTree, Filetype
+
+KeyHandler
+  includes: PendingState, MacroDot, InsertMode
+
+GlobalCommands (singleton)
+  includes: Commands::Motion, Commands::Edit, Commands::Register,
+            Commands::Search, Commands::Window, Commands::Buffer, Commands::Meta
+  lazy-loads: Commands::Git::Handler, Commands::Gh::Handler (via method_missing)
+```
+
+### Singletons
+
+- `CommandRegistry` — normal/insert mode command specs (`include Singleton`)
+- `ExCommandRegistry` — Ex command specs and alias lookup (`include Singleton`)
+- `GlobalCommands` — command handler host (`include Singleton`)
+- `SpellChecker` — spell checking (`include Singleton`)
+- `Lang::Base` — frozen instance pattern (`.instance`)
+
+### Object Dependency Graph
+
+```
+App
+├── Terminal ─────────────────────────────────── stdin/stdout I/O
+├── Input ────────────────────────────────────── keyboard parsing (reads from Terminal)
+├── Screen ───────────────────────────────────── rendering (writes to Terminal)
+├── KeymapManager ────────────────────────────── key-to-command resolution (LayerMap)
+├── Dispatcher
+│   ├── CommandRegistry (singleton)
+│   ├── ExCommandRegistry (singleton)
+│   └── GlobalCommands (singleton)
+├── Editor
+│   ├── Buffer[] ─────── @lang_module (Lang::*), @stream (Stream::*), @options
+│   ├── Window[] ─────── @buffer_id → Buffer, @options
+│   ├── CommandLine
+│   ├── @keymap_manager ← injected by App
+│   └── @stream_mixer ── injected by App
+├── StreamMixer
+│   ├── @editor ───────── injected by App
+│   └── Stream::* ─────── managed stream instances
+├── KeyHandler
+│   ├── @editor ───────── injected by App
+│   ├── @dispatcher ───── injected by App
+│   └── CompletionManager
+│       └── @editor ───── injected
+└── ConfigLoader
+    ├── CommandRegistry
+    ├── ExCommandRegistry
+    ├── KeymapManager
+    └── GlobalCommands
+    (creates ConfigDSL for eval context)
+```
+
+### Key Design Patterns
+
+- **Dependency Injection**: App creates and wires all subsystems; Editor receives keymaps, stream_mixer, callbacks
+- **Lazy Loading**: autoload for Clipboard, Browser, SpellChecker, FileWatcher, Git::Handler, Gh::Handler, all Lang::* modules
+- **Dual Implementation**: DisplayWidth and TextMetrics have C extension + Pure Ruby fallback
+- **State Machines**: KeyHandler manages pending states (operator, register, mark, jump, find, replace, macro)
+- **Layered Resolution**: KeymapManager resolves keys via filetype > buffer > mode > global layers with prefix index
+
 ### Core (lib/ruvim/)
 
 | File | Description |
