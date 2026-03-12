@@ -22,11 +22,11 @@ module RuVim
     end
 
     def fetch(id)
-      @specs.fetch(id.to_s)
+      @specs.fetch(id)
     end
 
     def registered?(id)
-      @specs.key?(id.to_s)
+      @specs.key?(id)
     end
 
     def all
