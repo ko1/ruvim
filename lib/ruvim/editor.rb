@@ -77,11 +77,6 @@ module RuVim
       @hit_enter_lines = nil
       @run_history = {}  # buffer_id => last run command (unexpanded)
       @run_output_buffer_id = nil
-      @spell_checker = nil
-    end
-
-    def spell_checker
-      @spell_checker ||= SpellChecker.new
     end
 
     def running?

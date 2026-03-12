@@ -1248,7 +1248,7 @@ module RuVim
     def spell_highlight_source_cols(editor, window, buffer, source_line_text, source_col_offset:)
       return {} unless editor.effective_option("spell", window:, buffer:)
 
-      editor.spell_checker.spell_highlight_cols(source_line_text, source_col_offset: source_col_offset)
+      SpellChecker.instance.spell_highlight_cols(source_line_text, source_col_offset: source_col_offset)
     end
 
     def cached_syntax_color_columns(lang_mod, source_line_text)

@@ -13,7 +13,7 @@ require_relative "text_metrics"
 module RuVim
   autoload :Clipboard, File.expand_path("clipboard", __dir__)
   autoload :Browser, File.expand_path("browser", __dir__)
-  autoload :SpellChecker, File.expand_path("editor/spell_checker", __dir__)
+  autoload :SpellChecker, File.expand_path("spell_checker", __dir__)
   autoload :FileWatcher, File.expand_path("file_watcher", __dir__)
 end
 

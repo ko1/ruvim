@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 require "set"
+require "singleton"
 
 module RuVim
   class SpellChecker
+    include Singleton
     DICT_PATHS = [
       "/usr/share/dict/words",
       "/usr/share/dict/american-english",
@@ -12,8 +14,8 @@ module RuVim
 
     WORD_RE = /[a-zA-Z']+/
 
-    def initialize(dict_path: nil)
-      @dictionary = load_dictionary(dict_path)
+    def initialize
+      @dictionary = load_dictionary
     end
 
     def valid?(word)
@@ -55,8 +57,8 @@ module RuVim
 
     private
 
-    def load_dictionary(explicit_path)
-      path = explicit_path || find_dict_path
+    def load_dictionary
+      path = find_dict_path
       dict = Set.new
       if path && File.exist?(path)
         File.foreach(path, chomp: true) do |word|

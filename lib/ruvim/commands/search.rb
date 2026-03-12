@@ -267,7 +267,7 @@ module RuVim
         return unless spell_enabled?(ctx)
 
         cnt = normalized_count(count)
-        checker = ctx.editor.spell_checker
+        checker = SpellChecker.instance
         buf = ctx.buffer
         win = ctx.window
         y = win.cursor_y
@@ -289,7 +289,7 @@ module RuVim
         return unless spell_enabled?(ctx)
 
         cnt = normalized_count(count)
-        checker = ctx.editor.spell_checker
+        checker = SpellChecker.instance
         buf = ctx.buffer
         win = ctx.window
         y = win.cursor_y

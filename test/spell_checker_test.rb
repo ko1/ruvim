@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require_relative "test_helper"
-require "ruvim/editor/spell_checker"
+require "ruvim/spell_checker"
 
 class SpellCheckerTest < Minitest::Test
   def setup
-    @checker = RuVim::SpellChecker.new
+    @checker = RuVim::SpellChecker.instance
   end
 
   def test_common_english_words_are_valid
@@ -118,11 +118,10 @@ class SpellOptionTest < Minitest::Test
     assert_equal "en", editor.effective_option("spelllang")
   end
 
-  def test_spell_checker_is_lazy_loaded
-    editor = fresh_editor
-    assert_nil editor.instance_variable_get(:@spell_checker)
-    checker = editor.spell_checker
+  def test_spell_checker_is_singleton
+    checker = RuVim::SpellChecker.instance
     assert_instance_of RuVim::SpellChecker, checker
+    assert_same checker, RuVim::SpellChecker.instance
   end
 
   def test_gitcommit_filetype_enables_spell

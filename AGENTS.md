@@ -72,7 +72,7 @@ CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
 | `display_width.rb` | Character display width (CJK, emoji, combining marks) |
 | `text_metrics.rb` | Grapheme-aware text measurement and navigation |
 | `keyword_chars.rb` | Word character definition (iskeyword) |
-| `editor/spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary) |
+| `spell_checker.rb` | Spell checking (Pure Ruby, /usr/share/dict/words dictionary, singleton) |
 | `lang/registry.rb` | Central lang registry (filetype detection, buffer_defaults lookup); autoloads all lang/* modules on demand |
 | `lang/base.rb` | Base lang class: apply_regex, color constants, no-op indent/dedent/on_save instance method defaults |
 | `lang/markdown.rb` | Markdown parsing, detection helpers, and syntax highlight colors |
