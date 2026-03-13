@@ -25,6 +25,9 @@ module RuVim
         buffer.options["filetype"] = ft
         buffer.lang_module = resolve_lang_module(ft)
         apply_filetype_defaults(buffer, ft)
+        if @keymap_manager
+          Lang::Registry.register_filetype_bindings(ft, CommandRegistry.instance, @keymap_manager)
+        end
       end
 
       def apply_filetype_defaults(buffer, ft)

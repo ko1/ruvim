@@ -46,6 +46,15 @@ module RuVim
           resolve_module(ft).buffer_defaults
         end
 
+        # Call register_filetype_bindings on the lang class for the given filetype.
+        def register_filetype_bindings(ft, cmd_registry, keymaps)
+          entry = @entries[ft]
+          return unless entry
+
+          klass = resolve_mod(entry[:mod])
+          klass.register_filetype_bindings(cmd_registry, keymaps, ft)
+        end
+
         # Detect filetype from file extension.
         # Returns filetype string or nil.
         def detect_by_extension(ext)

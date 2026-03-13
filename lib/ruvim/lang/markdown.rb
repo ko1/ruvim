@@ -175,8 +175,7 @@ module RuVim
         nil
       end
 
-      # Register markdown-specific commands and filetype bindings.
-      def self.register!(cmd_registry, keymaps)
+      def self.register_filetype_bindings(cmd_registry, keymaps, _filetype)
         cmd_registry.register("file.goto_markdown_link",
           call: method(:goto_link),
           desc: "Open markdown link under cursor") unless cmd_registry.registered?("file.goto_markdown_link")

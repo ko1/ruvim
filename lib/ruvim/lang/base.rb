@@ -45,6 +45,10 @@ module RuVim
       def buffer_defaults
         {}
       end
+
+      def self.register_filetype_bindings(_cmd_registry, _keymaps, _filetype)
+        # no-op by default; subclasses may register filetype-specific commands/bindings
+      end
     end
   end
 end

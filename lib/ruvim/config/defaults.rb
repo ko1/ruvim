@@ -209,9 +209,6 @@ module RuVim
       register_ex_unless(ex, "run", call: :run_command, desc: "Run command and show output in buffer", nargs: :any, raw_args: true)
       register_ex_unless(ex, "git", call: :git_dispatch, desc: "Git subcommand dispatcher", nargs: :any)
       register_ex_unless(ex, "gh", call: :gh_dispatch, desc: "GitHub subcommand dispatcher", nargs: :any)
-
-      # Filetype-specific commands and bindings
-      Lang::Markdown.register!(cmd, @keymaps)
     end
 
     def bind_default_keys!
