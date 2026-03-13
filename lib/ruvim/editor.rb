@@ -612,22 +612,27 @@ module RuVim
     end
 
     def open_path_sync(path)
+      # For filetypes with auto_open rich view (e.g., images), skip reading
+      # the file as text to avoid decoding large binary data.
+      ft = detect_filetype(path)
+      if ft && auto_open_filetype?(ft)
+        buffer = add_empty_buffer(path: path)
+        assign_filetype(buffer, ft)
+        switch_to_buffer(buffer.id)
+        RuVim::RichView.open!(self, format: ft)
+        return buffer
+      end
+
       buffer = add_buffer_from_file(path)
       switch_to_buffer(buffer.id)
       echo("[New File]") unless path && File.exist?(path)
-      auto_open_rich_view(buffer)
       buffer
     end
 
-    # Auto-open rich view for filetypes whose renderer opts in via auto_open?.
-    def auto_open_rich_view(buffer)
-      ft = buffer.options["filetype"]
-      return unless ft
-
+    # Check if a filetype has a renderer that auto-opens.
+    def auto_open_filetype?(ft)
       renderer = RuVim::RichView.renderer_for(ft.to_sym)
-      return unless renderer && renderer.respond_to?(:auto_open?) && renderer.auto_open?
-
-      RuVim::RichView.open!(self, format: ft)
+      renderer && renderer.respond_to?(:auto_open?) && renderer.auto_open?
     end
 
     def evict_bootstrap_buffer!
