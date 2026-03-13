@@ -119,7 +119,7 @@ setglobal "tabstop=8"
   - 不可視文字の表示記号を指定します。
   - 現状は `tab`, `trail`, `nbsp` のみ使用します。
 
-- `showbreak` (`string`, default `">"`) [`PARTIAL`]
+- `showbreak` (`string`, default `""`) [`PARTIAL`]
   - `wrap` 継続行の先頭に表示する文字列です。
   - 現状は描画にのみ反映されます。
 

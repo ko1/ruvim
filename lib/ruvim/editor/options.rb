@@ -17,7 +17,7 @@ module RuVim
         "signcolumn" => { default_scope: :window, type: :string, default: "auto" },
         "list" => { default_scope: :window, type: :bool, default: false },
         "listchars" => { default_scope: :window, type: :string, default: "tab:>-,trail:-,nbsp:+" },
-        "showbreak" => { default_scope: :window, type: :string, default: ">" },
+        "showbreak" => { default_scope: :window, type: :string, default: "" },
         "showmatch" => { default_scope: :global, type: :bool, default: false },
         "matchtime" => { default_scope: :global, type: :int, default: 5 },
         "whichwrap" => { default_scope: :global, type: :string, default: "" },
