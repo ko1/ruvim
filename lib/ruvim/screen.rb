@@ -477,50 +477,57 @@ module RuVim
     end
 
     def rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: 1)
-      raw_lines = []
-      height.times do |dy|
-        row = window.row_offset + dy
-        raw_lines << (row < buffer.line_count ? buffer.line_at(row) : nil)
-      end
+      # Fetch enough buffer lines — images expand 1 buffer line into N display rows,
+      # so we may need fewer buffer lines than display rows.  Fetch all from row_offset
+      # to end of buffer (renderer needs them for table grouping etc.).
+      max_buf = buffer.line_count - window.row_offset
+      raw_lines = [max_buf, height * 2].min.times.map { |i|
+        row = window.row_offset + i
+        row < buffer.line_count ? buffer.line_at(row) : nil
+      }
 
       non_nil = raw_lines.compact.map { |l| RuVim::TextMetrics.terminal_safe_text(l) }
       context = rich_view_context(editor, window, buffer)
       formatted = RuVim::RichView.render_visible_lines(editor, non_nil, context: context)
-      fmt_idx = 0
+
       col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
       sixel_enabled = sixel_enabled?(editor)
-      image_cover_until = -1  # display row index until which image covers
 
-      Array.new(height) do |dy|
-        buffer_row = window.row_offset + dy
-        if dy < image_cover_until
-          # Row covered by a sixel image above — skip entirely
-          fmt_idx += 1 if buffer_row < buffer.line_count
-          SIXEL_COVERED
-        elsif buffer_row < buffer.line_count
-          line = formatted[fmt_idx] || ""
-          fmt_idx += 1
+      # Build display rows: one buffer line may produce 1 display row (text) or
+      # N display rows (image: 1 sixel row + N-1 SIXEL_COVERED rows).
+      rows = []
+      fmt_idx = 0
+      buffer_row = window.row_offset
+
+      while rows.length < height && fmt_idx < formatted.length
+        line = formatted[fmt_idx]
+        fmt_idx += 1
+
+        if line.is_a?(Hash) && line[:type] == :image
           prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
-
-          if line.is_a?(Hash) && line[:type] == :image
-            result = render_image_entry(editor, buffer, line, content_w, sixel_enabled, gutter_w)
-            if result[:rows] > 1
-              image_cover_until = dy + result[:rows]
-            end
-            prefix + result[:text]
-          else
-            cursor_col = nil
-            if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
-              cursor_col = @rich_render_info[:cursor_sc] - col_offset_sc
-            end
-            body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
-            prefix + body
-          end
+          result = render_image_entry(editor, buffer, line, content_w, height - rows.length, sixel_enabled)
+          rows << prefix + result[:text]
+          (result[:rows] - 1).times { break if rows.length >= height; rows << SIXEL_COVERED }
         else
-          prefix = render_gutter_prefix(editor, window, buffer, nil, gutter_w)
-          prefix + pad_plain_display("~", content_w)
+          prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
+          cursor_col = nil
+          if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
+            cursor_col = @rich_render_info[:cursor_sc] - col_offset_sc
+          end
+          body = render_rich_view_line_sc(line.to_s, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
+          rows << prefix + body
         end
+
+        buffer_row += 1
       end
+
+      # Fill remaining display rows with ~
+      while rows.length < height
+        prefix = render_gutter_prefix(editor, window, buffer, nil, gutter_w)
+        rows << prefix + pad_plain_display("~", content_w)
+      end
+
+      rows
     end
 
     def rich_view_context(editor, window, buffer)
@@ -549,31 +556,31 @@ module RuVim
     end
 
     # Returns { text: String, rows: Integer }
-    def render_image_entry(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w)
+    # available_rows: how many display rows remain in the viewport
+    def render_image_entry(editor, buffer, img_hash, content_w, available_rows, sixel_enabled)
       alt = img_hash[:alt].to_s
       path = img_hash[:path].to_s
-      image_rows = 1
 
       if sixel_enabled
         require_relative "sixel" unless defined?(RuVim::Sixel)
         buf_path = buffer.respond_to?(:file_path) ? buffer.file_path : nil
         buf_dir = buf_path && !buf_path.to_s.empty? ? File.dirname(buf_path) : nil
         cell_w, cell_h = @terminal.cell_size
+        max_h_cells = [available_rows, 1].max
         @sixel_cache ||= RuVim::Sixel::Cache.new
         sixel_data = RuVim::Sixel.load_image(path, buffer_dir: buf_dir,
-                                              max_width_cells: [content_w, 1].max, max_height_cells: 10,
-                                              cell_width: cell_w, cell_height: cell_h, cache: @sixel_cache)
+                                              max_width_cells: [content_w, 1].max,
+                                              max_height_cells: max_h_cells,
+                                              cell_width: cell_w, cell_height: cell_h,
+                                              cache: @sixel_cache)
         if sixel_data
           image_rows = [sixel_data[:rows], 1].max
-          # Emit sixel data inline — render_full/render_diff will write it
-          # at this row position; covered rows below are marked SIXEL_COVERED
-          # so they won't be cleared or overwritten
           return { text: sixel_data[:sixel], rows: image_rows }
         end
       end
 
       placeholder = "\e[90m[Image: #{alt.empty? ? path : alt}]\e[m"
-      { text: pad_plain_display(placeholder, content_w), rows: image_rows }
+      { text: pad_plain_display(placeholder, content_w), rows: 1 }
     end
 
     # Render a formatted rich-view line by skipping `skip_sc` display columns
