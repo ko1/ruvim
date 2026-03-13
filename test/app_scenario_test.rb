@@ -551,6 +551,31 @@ class AppScenarioTest < Minitest::Test
     end
   end
 
+  def test_gf_markdown_link_opens_url_in_browser
+    opened_url = nil
+    original = RuVim::Browser.method(:open_url)
+    verbose_bak = $VERBOSE
+    $VERBOSE = nil
+    RuVim::Browser.define_singleton_method(:open_url) { |url| opened_url = url; true }
+    $VERBOSE = verbose_bak
+
+    @editor.current_buffer.path = "/tmp/test.md"
+    @editor.assign_filetype(@editor.current_buffer, "markdown")
+    @editor.current_buffer.replace_all_lines!(["See [docs](https://example.com/docs) here"])
+    @editor.current_window.cursor_y = 0
+    @editor.current_window.cursor_x = 5
+    @editor.set_option("hidden", true, scope: :global)
+
+    feed("g", "f")
+
+    assert_equal "https://example.com/docs", opened_url
+  ensure
+    verbose_bak = $VERBOSE
+    $VERBOSE = nil
+    RuVim::Browser.define_singleton_method(:open_url, original)
+    $VERBOSE = verbose_bak
+  end
+
   def test_gf_non_markdown_ignores_link_syntax
     Dir.mktmpdir("ruvim-gf-nomd") do |dir|
       target = File.join(dir, "docs")

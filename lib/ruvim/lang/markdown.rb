@@ -188,6 +188,15 @@ module RuVim
         line = ctx.buffer.line_at(ctx.window.cursor_y)
         token = link_path_at(line, ctx.window.cursor_x)
         if token
+          if token.match?(%r{\Ahttps?://})
+            if Browser.open_url(token)
+              ctx.editor.echo("Opened: #{token}")
+            else
+              ctx.editor.echo_error("Failed to open: #{token}")
+            end
+            return
+          end
+
           gc = GlobalCommands.instance
           target = gc.send(:parse_gf_target, token)
           path = gc.send(:resolve_gf_path, ctx, target[:path])
