@@ -1081,16 +1081,150 @@ end
 
 複数ウィンドウのレイアウトは、レイアウトツリーを走査して各画面行の「行計画（row plan）」を構築することで実現する。各行計画は、どのウィンドウの何行目をどのカラムからどの幅で描画するかを記述する。ウィンドウ間にはセパレータ（`│` や `─`）が描画される。
 
-### シンタックスカラーの適用
+### バッファ文字列から画面セルへの変換
 
-各行に対して、言語モジュールから得た色情報（文字インデックス → ANSI カラーコード のハッシュ）を参照しながら、1 セルずつ色を切り替えて描画する。
+バッファは行を Ruby の String として保持する。しかし、1 文字がターミナル上で何カラム消費するかは文字によって異なる。ASCII は 1 カラム、CJK 文字は 2 カラム、タブは `tabstop` 設定に依存し、結合文字は 0 カラムだ。この「文字インデックス」と「画面カラム」のギャップを吸収するのが **Cell** 抽象だ。
+
+```ruby
+class Cell
+  attr_reader :glyph          # 表示する文字（タブは " "、制御文字は "?"）
+  attr_reader :source_col     # バッファ行内の文字インデックス
+  attr_reader :display_width  # この文字が占める画面カラム数
+end
+```
+
+`TextMetrics.clip_cells_for_width` がバッファの文字列を Cell の配列に変換する。
+
+```ruby
+def clip_cells_for_width(text, width, source_col_start: 0, tabstop: 2)
+  cells = []
+  display_col = 0
+
+  text.each_char do |ch|
+    code = ch.ord
+    # ASCII 高速パス
+    if code >= 0x20 && code <= 0x7E
+      break if display_col >= width
+      cells << Cell.new(ch, source_col, 1)
+      display_col += 1
+      source_col += 1
+      next
+    end
+
+    if ch == "\t"
+      w = tabstop - (display_col % tabstop)  # 次のタブ位置まで
+      break if display_col + w > width
+      w.times { cells << Cell.new(" ", source_col, 1) }  # 空白セルに展開
+      display_col += w
+      source_col += 1    # バッファ上は 1 文字
+      next
+    end
+    # ... 制御文字 → "?"、CJK → display_width: 2
+  end
+  [cells, display_col]
+end
+```
+
+ここに重要な設計がある。**タブ文字は複数の Cell に展開されるが、すべての Cell が同じ `source_col` を持つ**。つまり、画面上のカラム位置からバッファの文字位置を逆引きできる。ビジュアル選択や検索ハイライトが `source_col` を使って色付けの要否を判定するため、タブ展開が正しく動作する。
+
+### 描画のレイヤー構造
+
+Cell 配列ができたら、各セルに色を重ねていく。色の決定は **優先度順** で、最初にマッチした条件が採用される。
 
 ```
-  "Hello"
-  ^     ^
-  |     +-- STRING_COLOR (\e[32m) をここで閉じる
-  +-------- STRING_COLOR (\e[32m) をここで開く
+カーソル位置     → 反転表示 (\e[7m)
+ビジュアル選択   → 反転表示 (\e[7m)
+検索ハイライト   → 黄色背景 (\e[43m)
+カラーカラム     → 灰色背景
+カーソル行       → 背景色
+シンタックス色   → 各言語モジュールの色 + スペルチェック下線（併用可）
+スペルチェック   → 赤下線 (\e[4;31m)
+なし             → 素の文字
 ```
+
+```ruby
+cells.each do |cell|
+  ch = display_glyph_for_cell(cell, ...)  # list モードでの表示文字変換
+  buffer_col = cell.source_col
+
+  if cursor_here
+    highlighted << cursor_cell_render(editor, ch)
+  elsif selected
+    highlighted << "\e[7m#{ch}\e[m"
+  elsif search_cols[buffer_col]
+    highlighted << "#{search_bg_seq(editor)}#{ch}\e[m"
+  elsif (syntax_color = syntax_cols[buffer_col])
+    highlighted << "#{syntax_color}#{ch}\e[m"
+  else
+    highlighted << ch
+  end
+end
+```
+
+色情報はすべて `{ 文字インデックス => ANSI エスケープ文字列 }` のハッシュとして提供される。シンタックスハイライト、検索マッチ、スペルチェックが同じインターフェースを持つことで、描画コードは色の出所を知る必要がない。
+
+### 高速パス — 色も特殊文字もない行
+
+画面に見えるすべての行で Cell を生成するのは無駄が多い。条件が揃えば、**文字列のスライスだけで済む**高速パスを通る。
+
+```ruby
+def can_bulk_render_line?(text, ...)
+  return false if cursor_on_this_line     # カーソル行は描画が特殊
+  return false if visual_active?          # 選択範囲がある
+  return false if text.include?("\t")     # タブは展開が必要
+  return false unless text.ascii_only?    # CJK は幅計算が必要
+  return false unless syntax_cols.empty?  # ハイライトがある
+  return false unless search_cols.empty?  # 検索マッチがある
+  true
+end
+
+def bulk_render_line(text, width, col_offset:)
+  clipped = text[col_offset, width].to_s
+  clipped + (" " * [width - clipped.length, 0].max)  # 右パディング
+end
+```
+
+ASCII のみでハイライトも特殊文字もない行は、単純な `String#[]` でクリップして空白を埋めるだけだ。Cell オブジェクトの生成も ANSI エスケープの出力も不要で、大量のプレーンテキストで効果が大きい。
+
+### 編集による再描画の流れ
+
+ユーザーが文字を挿入すると、以下の連鎖が起きる。
+
+```
+キー入力 → Buffer#insert_char → @lines[row] = 新しい文字列
+→ App#run_ui_loop が @needs_redraw を検出
+→ Screen#render → build_frame
+→ 変更された行: Cell 変換 → 色重ね → 文字列化
+→ 未変更の行: @last_frame と同一 → スキップ
+→ 差分出力: 変更行だけ端末に送信
+```
+
+ここでキャッシュの無効化は **暗黙的** に起きる。バッファの行が編集されると新しい文字列オブジェクトが生成される（`insert_char` の `line.dup.insert(col, char)` による）。シンタックスキャッシュは `[言語モジュール, 行テキスト]` をキーとするため、文字列が変われば自動的にキャッシュミスし、再計算される。明示的な invalidation は不要だ。
+
+さらに、差分レンダリングにより、編集で変わった行だけが端末に送信される。10 万行のファイルで 1 行だけ変更しても、出力されるのはその 1 行のエスケープシーケンスだけだ。
+
+### 座標系の変換
+
+エディタ内では 3 つの座標系が共存する。
+
+| 座標系 | 単位 | 用途 |
+|--------|------|------|
+| バッファ座標 | `(行番号, 文字インデックス)` | カーソル位置、テキスト操作 |
+| 画面座標 | `(行番号, 画面カラム)` | 描画位置の計算 |
+| ターミナル座標 | `(行番号, カラム)` | ANSI エスケープの出力先 |
+
+バッファ座標から画面座標への変換は `TextMetrics.screen_col_for_char_index` が担う。
+
+```ruby
+def screen_col_for_char_index(line, char_index, tabstop: 2)
+  prefix = line[0...char_index].to_s
+  DisplayWidth.display_width(prefix, tabstop:)
+end
+```
+
+逆方向（画面座標 → バッファ座標）は `char_index_for_screen_col` だ。マウスクリックや水平スクロールで使われる。
+
+ウィンドウの `col_offset`（水平スクロール量）はバッファ座標（文字インデックス）で保持し、描画時に画面座標に変換する。カーソル位置 `cursor_x` もバッファ座標だ。レイアウトツリーから算出された矩形のオフセットを加算して、最終的なターミナル座標（`\e[行;列H` で使う値）を得る。
 
 ---
 
