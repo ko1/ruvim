@@ -8,7 +8,11 @@ Vim の操作感をベースに、Ruby ならではの、もしくは ko1 が欲
 
 - **Rich View (`gr`)** — TSV / CSV / Markdown をテーブル整形して閲覧。CJK 幅を考慮したカラム揃え
 - **`g/` 検索フィルタ** — 検索にマッチする行だけを集めたバッファを作成。再帰的に絞り込み可能。ログ解析に便利
-- **Follow mode (`-f` / `:follow`)** — `tail -f` 相当のファイル追従。inotify 対応
+- **ストリーム統合** — データを非同期にバッファへ流し込む仕組み。4種類のソースに対応
+  - **大きなファイル** — 巨大ファイルを少しずつ非同期ロード。読み込み中も操作可能
+  - **Stdin パイプ** — `ls -la | ruvim` のようにパイプの出力をそのままバッファで閲覧・編集
+  - **`:run` コマンド** — `:run make` で外部プロセスを実行し、出力をリアルタイムにバッファへ表示。PTY 対応
+  - **Follow mode (`-f` / `:follow`)** — 外部ファイルを監視して変更を自動反映。`tail -f` 相当。inotify 対応
 - **Git / GitHub 統合** — `:git blame`, `:git status`, `:git diff`, `:git log`, `:git branch`, `:git commit`, `:git grep` をエディタ内で実行。`:gh link` で GitHub URL をクリップボードにコピー、`:gh browse` でブラウザで開く
 - Ruby related:
   - **Ruby DSL 設定** — `~/.config/ruvim/init.rb` に Ruby で `nmap`, `set`, `command` を記述。Vim script 不要
