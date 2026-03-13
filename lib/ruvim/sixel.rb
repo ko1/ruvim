@@ -376,7 +376,8 @@ module RuVim
     def encode_with_img2sixel(path, max_px_w, max_px_h, cell_height)
       return nil unless img2sixel_available?
 
-      out = IO.popen(["img2sixel", "-w", max_px_w.to_s, "-h", max_px_h.to_s, path],
+      # Only pass the constraining dimension to preserve aspect ratio.
+      out = IO.popen(["img2sixel", "-w", max_px_w.to_s, path],
                      "r", err: File::NULL) { |io| io.read }
       return nil if out.nil? || out.empty? || !$?.success?
 
@@ -386,6 +387,19 @@ module RuVim
              else
                max_px_h
              end
+
+      # If height exceeds max, re-run with height constraint instead
+      if px_h > max_px_h
+        out = IO.popen(["img2sixel", "-h", max_px_h.to_s, path],
+                       "r", err: File::NULL) { |io| io.read }
+        return nil if out.nil? || out.empty? || !$?.success?
+        px_h = if (m = out.match(/"(\d+);(\d+);(\d+);(\d+)/))
+                 m[4].to_i
+               else
+                 max_px_h
+               end
+      end
+
       rows = (px_h + cell_height - 1) / cell_height
       { sixel: out, rows: [rows, 1].max }
     rescue StandardError
