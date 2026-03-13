@@ -43,32 +43,33 @@ class SixelTest < Minitest::Test
 
   # --- Quantizer ---
 
-  def test_quantize_color
-    # 8R × 8G × 4B = 256 palette
+  def test_quantize_build_palette
+    # Simple 2x2 image: red, green, blue, white
+    pixels = [[[255, 0, 0], [0, 255, 0]], [[0, 0, 255], [255, 255, 255]]]
     q = RuVim::Sixel::Quantizer
-    idx = q.quantize(255, 0, 0)
-    assert_kind_of Integer, idx
-    assert idx >= 0 && idx < 256
+    result = q.build_palette(pixels, 2, 2)
 
-    # Same color should give same index
-    assert_equal idx, q.quantize(255, 0, 0)
+    assert_kind_of Array, result[:palette]
+    assert result[:palette].length <= 256
+    assert result[:palette].length >= 1
 
-    # Black
-    black = q.quantize(0, 0, 0)
-    assert_equal 0, black
+    # Each palette entry is [r, g, b]
+    result[:palette].each do |c|
+      assert_equal 3, c.length
+      c.each { |v| assert v >= 0 && v <= 255 }
+    end
 
-    # White: ri=7, gi=7, bi=3 → 7*32 + 7*4 + 3 = 255
-    white = q.quantize(255, 255, 255)
-    assert_equal 255, white
+    # Map has correct dimensions
+    assert_equal 2, result[:map].length
+    assert_equal 2, result[:map][0].length
   end
 
-  def test_quantize_color_register
+  def test_quantize_nearest
     q = RuVim::Sixel::Quantizer
-    r, g, b = q.color_register(0)  # black
-    assert_equal [0, 0, 0], [r, g, b]
-
-    r, g, b = q.color_register(255)  # white
-    assert_equal [100, 100, 100], [r, g, b]
+    palette = [[0, 0, 0], [255, 0, 0], [255, 255, 255]]
+    assert_equal 1, q.nearest([250, 10, 10], palette)  # closest to red
+    assert_equal 0, q.nearest([10, 10, 10], palette)    # closest to black
+    assert_equal 2, q.nearest([240, 240, 240], palette)  # closest to white
   end
 
   # --- Sixel Encoder ---

@@ -154,31 +154,83 @@ module RuVim
       end
     end
 
-    # --- Uniform quantizer (8R × 8G × 4B = 256 colors) ---
+    # --- Median-cut color quantizer (adaptive palette, up to 256 colors) ---
 
     module Quantizer
-      R_LEVELS = 8
-      G_LEVELS = 8
-      B_LEVELS = 4
+      MAX_COLORS = 256
 
       module_function
 
-      # Map 0-255 to palette index (0-255)
-      def quantize(r, g, b)
-        ri = (r * (R_LEVELS - 1).to_f / 255).round
-        gi = (g * (G_LEVELS - 1).to_f / 255).round
-        bi = (b * (B_LEVELS - 1).to_f / 255).round
-        ri * (G_LEVELS * B_LEVELS) + gi * B_LEVELS + bi
+      # Build an adaptive palette from the image pixels.
+      # Returns { palette: [[r,g,b], ...], map: 2D array of palette indices }
+      def build_palette(pixels, width, height)
+        # Collect all pixels into a flat list
+        all = Array.new(width * height)
+        height.times do |y|
+          row = pixels[y]
+          width.times { |x| all[y * width + x] = row[x] }
+        end
+
+        # Median-cut: split into boxes until we have enough
+        boxes = [all]
+        while boxes.length < MAX_COLORS
+          # Find the box with the widest range
+          best_idx = 0
+          best_range = -1
+          best_ch = 0
+          boxes.each_with_index do |box, i|
+            next if box.length <= 1
+            3.times do |ch|
+              mn, mx = box.first[ch], box.first[ch]
+              box.each { |px| v = px[ch]; mn = v if v < mn; mx = v if v > mx }
+              range = mx - mn
+              if range > best_range
+                best_range = range
+                best_idx = i
+                best_ch = ch
+              end
+            end
+          end
+          break if best_range <= 0
+
+          box = boxes[best_idx]
+          box.sort_by! { |px| px[best_ch] }
+          mid = box.length / 2
+          boxes[best_idx] = box[0...mid]
+          boxes.push(box[mid..])
+        end
+
+        # Compute average color for each box
+        palette = boxes.map do |box|
+          sr = sg = sb = 0
+          box.each { |px| sr += px[0]; sg += px[1]; sb += px[2] }
+          n = box.length
+          [sr / n, sg / n, sb / n]
+        end
+
+        # Build pixel→index map using nearest palette color
+        map = Array.new(height) do |y|
+          row = pixels[y]
+          Array.new(width) { |x| nearest(row[x], palette) }
+        end
+
+        { palette: palette, map: map }
       end
 
-      # Return [r%, g%, b%] in 0-100 range for sixel color register
-      def color_register(index)
-        bi = index % B_LEVELS
-        gi = (index / B_LEVELS) % G_LEVELS
-        ri = index / (G_LEVELS * B_LEVELS)
-        [(ri * 100.0 / (R_LEVELS - 1)).round,
-         (gi * 100.0 / (G_LEVELS - 1)).round,
-         (bi * 100.0 / (B_LEVELS - 1)).round]
+      # Find nearest palette index for a pixel (squared Euclidean distance)
+      def nearest(px, palette)
+        r, g, b = px
+        best = 0
+        best_d = Float::INFINITY
+        palette.each_with_index do |c, i|
+          dr = r - c[0]; dg = g - c[1]; db = b - c[2]
+          d = dr * dr + dg * dg + db * db
+          if d < best_d
+            best_d = d
+            best = i
+          end
+        end
+        best
       end
     end
 
@@ -188,6 +240,11 @@ module RuVim
       module_function
 
       def encode(pixels, width, height)
+        # Build adaptive palette via median-cut
+        q = Quantizer.build_palette(pixels, width, height)
+        palette = q[:palette]
+        idx_map = q[:map]
+
         # DCS P1;P2;P3 q — P2=1: no-scrolling mode (prevents terminal from
         # scrolling when image extends near bottom of screen)
         out = +"\eP0;1q"
@@ -195,19 +252,12 @@ module RuVim
         # Raster attributes: "Pan;Pad;Ph;Pv" — aspect ratio 1:1, image dimensions
         out << "\"1;1;#{width};#{height}"
 
-        # Collect used colors and define registers
-        used = {}
-        height.times do |y|
-          width.times do |x|
-            r, g, b = pixels[y][x]
-            idx = Quantizer.quantize(r, g, b)
-            used[idx] = true
-          end
-        end
-
-        used.each_key do |idx|
-          r, g, b = Quantizer.color_register(idx)
-          out << "##{idx};2;#{r};#{g};#{b}"
+        # Define color registers
+        palette.each_with_index do |c, i|
+          rp = (c[0] * 100.0 / 255).round
+          gp = (c[1] * 100.0 / 255).round
+          bp = (c[2] * 100.0 / 255).round
+          out << "##{i};2;#{rp};#{gp};#{bp}"
         end
 
         # Encode bands of 6 rows
@@ -219,8 +269,7 @@ module RuVim
           color_data = {}
           band_height.times do |dy|
             width.times do |x|
-              r, g, b = pixels[y + dy][x]
-              idx = Quantizer.quantize(r, g, b)
+              idx = idx_map[y + dy][x]
               color_data[idx] ||= Array.new(width, 0)
               color_data[idx][x] |= (1 << dy)
             end
