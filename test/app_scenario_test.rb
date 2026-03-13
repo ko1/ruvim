@@ -514,6 +514,64 @@ class AppScenarioTest < Minitest::Test
     end
   end
 
+  def test_gf_markdown_link
+    Dir.mktmpdir("ruvim-gf-md") do |dir|
+      target = File.join(dir, "docs", "bar.md")
+      FileUtils.mkdir_p(File.join(dir, "docs"))
+      File.write(target, "# Bar\n")
+      @editor.current_buffer.path = File.join(dir, "README.md")
+      @editor.assign_filetype(@editor.current_buffer, "markdown")
+      @editor.current_buffer.replace_all_lines!(["See [foo](./docs/bar.md) for details"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 5  # on '[foo]'
+      @editor.set_option("hidden", true, scope: :global)
+
+      feed("g", "f")
+
+      assert_equal File.expand_path(target), File.expand_path(@editor.current_buffer.path)
+      assert_equal "# Bar", @editor.current_buffer.line_at(0)
+    end
+  end
+
+  def test_gf_markdown_link_cursor_on_path
+    Dir.mktmpdir("ruvim-gf-md2") do |dir|
+      target = File.join(dir, "docs", "bar.md")
+      FileUtils.mkdir_p(File.join(dir, "docs"))
+      File.write(target, "# Bar\n")
+      @editor.current_buffer.path = File.join(dir, "README.md")
+      @editor.assign_filetype(@editor.current_buffer, "markdown")
+      @editor.current_buffer.replace_all_lines!(["See [foo](./docs/bar.md) for details"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 12  # on the path part
+      @editor.set_option("hidden", true, scope: :global)
+
+      feed("g", "f")
+
+      assert_equal File.expand_path(target), File.expand_path(@editor.current_buffer.path)
+    end
+  end
+
+  def test_gf_non_markdown_ignores_link_syntax
+    Dir.mktmpdir("ruvim-gf-nomd") do |dir|
+      target = File.join(dir, "docs")
+      FileUtils.mkdir_p(target)
+      target_file = File.join(dir, "docs", "bar.md")
+      File.write(target_file, "# Bar\n")
+      @editor.current_buffer.path = File.join(dir, "main.txt")
+      # No markdown filetype set - default behavior
+      @editor.current_buffer.replace_all_lines!(["See [foo](./docs/bar.md) for details"])
+      @editor.current_window.cursor_y = 0
+      @editor.current_window.cursor_x = 5
+      @editor.set_option("hidden", true, scope: :global)
+
+      feed("g", "f")
+
+      # Default gf extracts 'foo' (not the markdown link path), so it won't find a file
+      # The current buffer should stay the same
+      assert_equal File.expand_path(File.join(dir, "main.txt")), File.expand_path(@editor.current_buffer.path)
+    end
+  end
+
   def test_showmatch_message_respects_matchtime_and_clears
     @editor.set_option("showmatch", true, scope: :global)
     @editor.set_option("matchtime", 1, scope: :global) # 0.1 sec

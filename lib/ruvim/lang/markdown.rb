@@ -161,6 +161,52 @@ module RuVim
       end
 
 
+      # Extract the path from a markdown link [text](path) at cursor position.
+      # Returns the path string or nil if cursor is not on a link.
+      def self.link_path_at(line, cursor_x)
+        return nil if line.nil? || line.empty?
+
+        line.scan(LINK_RE) do
+          m = Regexp.last_match
+          if cursor_x >= m.begin(0) && cursor_x < m.end(0)
+            return m[2]
+          end
+        end
+        nil
+      end
+
+      # Register markdown-specific commands and filetype bindings.
+      def self.register!(cmd_registry, keymaps)
+        cmd_registry.register("file.goto_markdown_link",
+          call: method(:goto_link),
+          desc: "Open markdown link under cursor") unless cmd_registry.registered?("file.goto_markdown_link")
+        keymaps.bind_filetype("markdown", "gf", "file.goto_markdown_link")
+      end
+
+      # gf command handler for markdown filetype.
+      # Tries markdown link first, falls back to default gf.
+      def self.goto_link(ctx, **)
+        line = ctx.buffer.line_at(ctx.window.cursor_y)
+        token = link_path_at(line, ctx.window.cursor_x)
+        if token
+          gc = GlobalCommands.instance
+          target = gc.send(:parse_gf_target, token)
+          path = gc.send(:resolve_gf_path, ctx, target[:path])
+          if path
+            if ctx.buffer.modified? && !ctx.editor.effective_option("hidden", window: ctx.window, buffer: ctx.buffer)
+              unless gc.send(:maybe_autowrite_before_switch, ctx)
+                ctx.editor.echo_error("Unsaved changes (set hidden or :w)")
+                return
+              end
+            end
+            ctx.editor.open_path(path)
+            gc.send(:move_cursor_to_gf_line, ctx, target[:line], target[:col]) if target[:line]
+            return
+          end
+        end
+        GlobalCommands.instance.file_goto_under_cursor(ctx)
+      end
+
       def fill_line(cols, text, color)
         text.length.times { |i| cols[i] = color }
       end
