@@ -49,7 +49,7 @@ module RuVim
           next unless items.is_a?(Array)
 
           # Keep last occurrence of each item by reversing, deduplicating, then reversing back
-          deduped = items.reject { |item| !item.is_a?(String) || item.empty? }
+          deduped = items.select { |item| item.is_a?(String) && !item.empty? }
                         .reverse.uniq.reverse
           loaded[prefix] = deduped.last(100)
         end
@@ -262,16 +262,10 @@ module RuVim
       def reusable_command_line_completion_matches(cmd, ctx)
         state = @cmdline_completion
         return nil unless state
-        return nil unless state[:prefix] == cmd.prefix
-        return nil unless state[:kind] == ctx[:kind]
-        return nil unless state[:command] == ctx[:command]
-        return nil unless state[:arg_index] == ctx[:arg_index]
-        return nil unless state[:token_start] == ctx[:token_start]
 
         before_text = cmd.text[0...ctx[:token_start]].to_s
         after_text = cmd.text[ctx[:token_end]..].to_s
-        return nil unless state[:before_text] == before_text
-        return nil unless state[:after_text] == after_text
+        return nil unless completion_state_matches?(state, cmd, ctx, before_text, after_text)
 
         matches = Array(state[:matches]).map(&:to_s)
         return nil if matches.empty?
@@ -289,13 +283,7 @@ module RuVim
         before_text = cmd.text[0...ctx[:token_start]].to_s
         after_text = cmd.text[ctx[:token_end]..].to_s
         same = state &&
-               state[:prefix] == cmd.prefix &&
-               state[:kind] == ctx[:kind] &&
-               state[:command] == ctx[:command] &&
-               state[:arg_index] == ctx[:arg_index] &&
-               state[:token_start] == ctx[:token_start] &&
-               state[:before_text] == before_text &&
-               state[:after_text] == after_text &&
+               completion_state_matches?(state, cmd, ctx, before_text, after_text) &&
                state[:matches] == matches
         unless same
           state = {
@@ -410,16 +398,30 @@ module RuVim
       end
 
       def insert_completion_noselect?
-        @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }.include?("noselect")
+        parsed_completeopt.include?("noselect")
       end
 
       def insert_completion_noinsert?
-        @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }.include?("noinsert")
+        parsed_completeopt.include?("noinsert")
       end
 
       def insert_completion_menu_enabled?
-        opts = @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }
+        opts = parsed_completeopt
         opts.include?("menu") || opts.include?("menuone")
+      end
+
+      def completion_state_matches?(state, cmd, ctx, before_text, after_text)
+        state[:prefix] == cmd.prefix &&
+          state[:kind] == ctx[:kind] &&
+          state[:command] == ctx[:command] &&
+          state[:arg_index] == ctx[:arg_index] &&
+          state[:token_start] == ctx[:token_start] &&
+          state[:before_text] == before_text &&
+          state[:after_text] == after_text
+      end
+
+      def parsed_completeopt
+        @editor.effective_option("completeopt").to_s.split(",").map { |s| s.strip.downcase }
       end
 
       def show_insert_completion_menu(matches, selected:, current: nil)
@@ -551,30 +553,25 @@ module RuVim
         end
       end
 
+      EX_ARG_COMPLETERS = {
+        "e" => :path, "edit" => :path, "w" => :path, "write" => :path, "tabnew" => :path,
+        "buffer" => :buffer, "b" => :buffer,
+        "set" => :option, "setlocal" => :option, "setglobal" => :option,
+        "git" => :git, "gh" => :gh
+      }.freeze
+      private_constant :EX_ARG_COMPLETERS
+
       def ex_arg_completion_candidates(command_name, arg_index, prefix)
         return [] unless arg_index.zero?
 
-        if %w[e edit w write tabnew].include?(command_name)
-          return path_completion_candidates(prefix)
+        case EX_ARG_COMPLETERS[command_name]
+        when :path   then path_completion_candidates(prefix)
+        when :buffer then buffer_completion_candidates(prefix)
+        when :option then option_completion_candidates(prefix)
+        when :git    then git_subcommand_candidates(prefix)
+        when :gh     then gh_subcommand_candidates(prefix)
+        else []
         end
-
-        if %w[buffer b].include?(command_name)
-          return buffer_completion_candidates(prefix)
-        end
-
-        if %w[set setlocal setglobal].include?(command_name)
-          return option_completion_candidates(prefix)
-        end
-
-        if command_name == "git"
-          return git_subcommand_candidates(prefix)
-        end
-
-        if command_name == "gh"
-          return gh_subcommand_candidates(prefix)
-        end
-
-        []
       end
 
       def git_subcommand_candidates(prefix)

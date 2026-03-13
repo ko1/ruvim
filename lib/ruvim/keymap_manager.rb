@@ -41,8 +41,9 @@ module RuVim
 
       def add_to_prefix_index(tokens)
         len = tokens.length
+        pfx = []
         len.times do |i|
-          pfx = tokens[0..i]
+          pfx = (pfx + [tokens[i]]).freeze
           cur = @prefix_max_len[pfx]
           @prefix_max_len[pfx] = len if cur.nil? || len > cur
         end
