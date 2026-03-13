@@ -160,7 +160,7 @@ module RuVim
         buffer = editor.buffers.fetch(window.buffer_id)
         gutter_w = number_column_width(editor, window, buffer)
         content_w = [rect[:width] - gutter_w, 1].max
-        window_rows_cache[win_id] = window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:)
+        window_rows_cache[win_id] = window_render_rows(editor, window, buffer, height: rect[:height], gutter_w:, content_w:, rect_top: rect[:top])
       end
 
       # Build a row-plan: for each screen row, collect the pieces to concatenate
@@ -444,15 +444,15 @@ module RuVim
       leading_prefix_width + [base, 0].max + extra
     end
 
-    def window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
-      return plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:) unless wrap_enabled?(editor, window, buffer)
+    def window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: 1)
+      return plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: rect_top) unless wrap_enabled?(editor, window, buffer)
 
       wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
     end
 
-    def plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+    def plain_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: 1)
       if RuVim::RichView.active?(editor)
-        return rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+        return rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: rect_top)
       end
 
       Array.new(height) do |dy|
@@ -465,7 +465,7 @@ module RuVim
       end
     end
 
-    def rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+    def rich_view_render_rows(editor, window, buffer, height:, gutter_w:, content_w:, rect_top: 1)
       raw_lines = []
       height.times do |dy|
         row = window.row_offset + dy
@@ -478,17 +478,25 @@ module RuVim
       fmt_idx = 0
       col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
       sixel_enabled = sixel_enabled?(editor)
+      image_cover_until = -1  # display row index until which image covers
 
       Array.new(height) do |dy|
         buffer_row = window.row_offset + dy
         prefix = render_gutter_prefix(editor, window, buffer, buffer_row < buffer.line_count ? buffer_row : nil, gutter_w)
-        if buffer_row < buffer.line_count
+        if dy < image_cover_until
+          # Row covered by a sixel image above — render blank
+          fmt_idx += 1 if buffer_row < buffer.line_count
+          prefix + " " * content_w
+        elsif buffer_row < buffer.line_count
           line = formatted[fmt_idx] || ""
           fmt_idx += 1
 
           if line.is_a?(Hash) && line[:type] == :image
-            body = render_image_placeholder(editor, buffer, line, content_w, sixel_enabled, gutter_w, dy)
-            prefix + body
+            result = render_image_entry(editor, buffer, line, content_w, sixel_enabled, gutter_w, rect_top + dy, dy)
+            if result[:rows] > 1
+              image_cover_until = dy + result[:rows]
+            end
+            prefix + result[:text]
           else
             cursor_col = nil
             if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
@@ -528,9 +536,13 @@ module RuVim
       end
     end
 
-    def render_image_placeholder(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w, dy)
+    # Returns { text: String, rows: Integer }
+    # screen_row: absolute 1-based screen row for overlay positioning
+    # dy: window-relative row index for blank row tracking
+    def render_image_entry(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w, screen_row, dy)
       alt = img_hash[:alt].to_s
       path = img_hash[:path].to_s
+      image_rows = 1
 
       if sixel_enabled
         require_relative "sixel" unless defined?(RuVim::Sixel)
@@ -542,12 +554,13 @@ module RuVim
                                               max_width_cells: [content_w, 1].max, max_height_cells: 10,
                                               cell_width: cell_w, cell_height: cell_h, cache: @sixel_cache)
         if sixel_data
-          @sixel_overlays << { dy: dy, gutter_w: gutter_w, data: sixel_data[:sixel] }
+          @sixel_overlays << { screen_row: screen_row, col: gutter_w + 1, data: sixel_data[:sixel] }
+          image_rows = [sixel_data[:rows], 1].max
         end
       end
 
       placeholder = "\e[90m[Image: #{alt.empty? ? path : alt}]\e[m"
-      pad_plain_display(placeholder, content_w)
+      { text: pad_plain_display(placeholder, content_w), rows: image_rows }
     end
 
     def emit_sixel_overlays
@@ -555,10 +568,7 @@ module RuVim
 
       out = +""
       @sixel_overlays.each do |overlay|
-        # Move cursor to overlay position and emit sixel data
-        row = overlay[:dy] + 1  # 1-based
-        col = overlay[:gutter_w] + 1
-        out << "\e[#{row};#{col}H"
+        out << "\e[#{overlay[:screen_row]};#{overlay[:col]}H"
         out << overlay[:data]
       end
       @terminal.write(out)
