@@ -51,6 +51,8 @@
 - plugin 向け `ctx.editor / ctx.buffer / ctx.window` API リファレンス（未確定 API 注記つき）
 - `:run` コマンド（PTY ストリーミング、`runprg` オプション、バッファごと実行履歴、`%` ファイル名展開、auto-save、Ctrl-C 停止、status line にコマンド表示）
 - `path:line:col` 形式でのファイルオープン（CLI 引数 / `:e` / `gf` 対応、存在するファイルのみ解釈）
+- Markdown `gf`: `[text](path)` リンク上で `gf` するとファイルを開く（filetype 層 binding、リンク外はデフォルトにフォールバック）
+- `Lang::Base.register_filetype_bindings` フック（`assign_filetype` 時に自動呼び出し、lang モジュールが filetype 固有のコマンド/binding を自己登録）
 - `:global` / `:vglobal`（`:g/pattern/command`, `:v/pattern/command`）— マッチ行に Ex コマンドを実行、undo は一括
 - Ex コマンド追加: `:print`/`:p`, `:number`/`:nu`, `:move`/`:m`, `:copy`/`:t`, `:join`/`:j`, `:>`/`:<`, `:normal`/`:norm`
 
