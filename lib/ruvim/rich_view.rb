@@ -6,6 +6,7 @@ module RuVim
     autoload :MarkdownRenderer, File.expand_path("rich_view/markdown_renderer", __dir__)
     autoload :JsonRenderer, File.expand_path("rich_view/json_renderer", __dir__)
     autoload :JsonlRenderer, File.expand_path("rich_view/jsonl_renderer", __dir__)
+    autoload :ImageRenderer, File.expand_path("rich_view/image_renderer", __dir__)
 
     @renderers = {}
     @detectors = []
@@ -116,5 +117,6 @@ module RuVim
     register(:jsonl, :JsonlRenderer)
     register(:tsv, :TableRenderer, detector: ->(buf) { Lang::Tsv.detect?(buf) })
     register(:csv, :TableRenderer, detector: ->(buf) { Lang::Csv.detect?(buf) })
+    register(:png, :ImageRenderer)
   end
 end

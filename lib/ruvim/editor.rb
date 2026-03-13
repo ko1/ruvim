@@ -615,7 +615,19 @@ module RuVim
       buffer = add_buffer_from_file(path)
       switch_to_buffer(buffer.id)
       echo("[New File]") unless path && File.exist?(path)
+      auto_open_rich_view(buffer)
       buffer
+    end
+
+    # Auto-open rich view for filetypes whose renderer opts in via auto_open?.
+    def auto_open_rich_view(buffer)
+      ft = buffer.options["filetype"]
+      return unless ft
+
+      renderer = RuVim::RichView.renderer_for(ft.to_sym)
+      return unless renderer && renderer.respond_to?(:auto_open?) && renderer.auto_open?
+
+      RuVim::RichView.open!(self, format: ft)
     end
 
     def evict_bootstrap_buffer!

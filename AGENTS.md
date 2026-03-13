@@ -205,6 +205,7 @@ App
 | `lang/gitcommit.rb` | Git commit message syntax highlighting, spell default |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
+| `lang/png.rb` | Image filetype (PNG/JPG/GIF/BMP/WEBP) for RichView image display |
 | `commands/git/blame.rb` | Git blame: parser, runner, command handlers |
 | `commands/git/status.rb` | Git status: runner, filename parser, command handlers |
 | `commands/git/diff.rb` | Git diff: runner, command handlers |
@@ -219,11 +220,12 @@ App
 | `browser.rb` | URL open (open/xdg-open/wslview/PowerShell) |
 | `context.rb` | Command handler context (editor, window, buffer, invocation) |
 | `command_invocation.rb` | Single command invocation (id, argv, count, bang) |
-| `rich_view.rb` | Rich view mode (TSV/CSV/Markdown rendering); requires lang/tsv and lang/csv |
+| `rich_view.rb` | Rich view mode (TSV/CSV/Markdown/Image rendering); requires lang/tsv and lang/csv |
 | `rich_view/table_renderer.rb` | Table formatting with display-width-aware column alignment |
 | `rich_view/markdown_renderer.rb` | Markdown rendering (headings, inline, tables, code blocks, HR, image tags) |
 | `rich_view/json_renderer.rb` | JSON pretty-print into virtual buffer |
 | `rich_view/jsonl_renderer.rb` | JSONL per-line pretty-print into virtual buffer |
+| `rich_view/image_renderer.rb` | Image file viewer via sixel (virtual buffer with markdown image line) |
 | `sixel.rb` | Pure Ruby PNG→Sixel encoder (PNG decoder, resize, quantize, encode, cache) |
 
 ### C Extension (ext/ruvim/)
@@ -246,7 +248,7 @@ App
 
 ### Tests (test/)
 
-- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`, `undo_file_test`, `spell_checker_test`, `quickfix_test`, `filetype_test`, `sixel_test`
+- Unit: `buffer_test`, `window_test`, `editor_test`, `screen_test`, `display_width_test`, `text_metrics_test`, `keymap_manager_test`, `highlighter_test`, `dispatcher_test`, `config_*_test`, `indent_test`, `file_watcher_test`, `clipboard_test`, `browser_test`, `command_line_test`, `keyword_chars_test`, `ex_command_registry_test`, `command_invocation_test`, `undo_file_test`, `spell_checker_test`, `quickfix_test`, `filetype_test`, `sixel_test`, `image_view_test`
 - Lang: `lang_test` (syntax highlighting & filetype detection for all 23 languages)
 - Integration: `app_scenario_test`, `app_motion_test`, `app_text_object_test`, `app_register_test`, `app_dot_repeat_test`, `app_completion_test`, `app_unicode_behavior_test`, `app_command_test`, `app_ex_command_test`, `render_snapshot_test`, `on_save_hook_test`, `follow_test`, `git_blame_test`, `git_grep_test`, `gh_link_test`, `run_command_test`, `stream_test`
 - Helper: `test_helper.rb` (fresh_editor, Minitest)
