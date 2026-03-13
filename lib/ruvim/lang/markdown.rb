@@ -16,7 +16,7 @@ module RuVim
       ITALIC_RE         = /(?<!\*)\*([^*]+)\*(?!\*)/
       INLINE_CODE_RE    = /`([^`]+)`/
       LINK_RE           = /\[([^\]]+)\]\(([^)]+)\)/
-      IMAGE_RE              = /\A\s*!\[([^\]]*)\]\(([^)]+)\)\s*\z/
+      IMAGE_RE              = /\A\s*!?\[([^\]]*)\]\(([^)]+)\)\s*\z/
       CHECKBOX_CHECKED_RE   = /^(\s*-\s*)\[x\]/
       CHECKBOX_UNCHECKED_RE = /^(\s*-\s*)\[ \]/
 

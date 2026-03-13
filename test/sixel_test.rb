@@ -137,14 +137,19 @@ class SixelTest < Minitest::Test
     md = RuVim::Lang::Markdown
     assert md::IMAGE_RE.match?("![alt](path.png)")
     assert md::IMAGE_RE.match?("  ![description](./images/photo.png)  ")
+    assert md::IMAGE_RE.match?("[link only](./pic.png)")
+    assert md::IMAGE_RE.match?("  [text](path)  ")
     refute md::IMAGE_RE.match?("text ![alt](path.png) more text")
-    refute md::IMAGE_RE.match?("[link](url)")
+    refute md::IMAGE_RE.match?("text [link](url) more")
   end
 
   def test_markdown_parse_image
     md = RuVim::Lang::Markdown.instance
     result = md.parse_image("![my image](./test.png)")
     assert_equal ["my image", "./test.png"], result
+
+    result2 = md.parse_image("[HTML view](./docs/pic.png)")
+    assert_equal ["HTML view", "./docs/pic.png"], result2
 
     assert_nil md.parse_image("not an image line")
     assert_nil md.parse_image("text ![alt](path) text")
