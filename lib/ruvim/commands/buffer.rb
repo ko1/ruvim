@@ -164,6 +164,15 @@ module RuVim
           return
         end
 
+        if token.match?(%r{\Ahttps?://})
+          if Browser.open_url(token)
+            ctx.editor.echo("Opened: #{token}")
+          else
+            ctx.editor.echo_error("Failed to open: #{token}")
+          end
+          return
+        end
+
         target = parse_gf_target(token)
         path = resolve_gf_path(ctx, target[:path])
         unless path
