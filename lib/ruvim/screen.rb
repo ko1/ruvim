@@ -600,6 +600,7 @@ module RuVim
     def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
       rows = []
       row_idx = window.row_offset
+      seg_skip = window.wrap_seg_offset
       while rows.length < height
         if row_idx >= buffer.line_count
           rows << (render_gutter_prefix(editor, window, buffer, nil, gutter_w) + pad_plain_display("~", content_w))
@@ -609,9 +610,14 @@ module RuVim
         line = buffer.line_at(row_idx)
         segments = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
         segments.each_with_index do |seg, seg_i|
+          if seg_skip > 0
+            seg_skip -= 1
+            next
+          end
           break if rows.length >= height
 
-          gutter = render_gutter_prefix(editor, window, buffer, seg_i.zero? ? row_idx : nil, gutter_w)
+          show_line_nr = (seg_i.zero? && window.wrap_seg_offset.zero?) || (row_idx != window.row_offset)
+          gutter = render_gutter_prefix(editor, window, buffer, (show_line_nr && seg_i.zero?) ? row_idx : nil, gutter_w)
           rows << gutter + render_text_segment(line, editor, buffer_row: row_idx, window:, buffer:, width: content_w,
                                                source_col_start: seg[:source_col_start], display_prefix: seg[:display_prefix])
         end
@@ -624,6 +630,7 @@ module RuVim
       return if height <= 0 || buffer.line_count <= 0
 
       window.row_offset = [[window.row_offset, 0].max, buffer.line_count - 1].min
+      window.wrap_seg_offset = 0 if window.cursor_y != window.row_offset
       return if window.cursor_y < window.row_offset
 
       cursor_line = buffer.line_at(window.cursor_y)
@@ -633,15 +640,25 @@ module RuVim
       visual_rows_before = 0
       row = window.row_offset
       while row < window.cursor_y
-        visual_rows_before += wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+        segs_count = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+        segs_count -= window.wrap_seg_offset if row == window.row_offset
+        visual_rows_before += segs_count
         row += 1
       end
 
       cursor_visual_row = visual_rows_before + cursor_seg_index
       while cursor_visual_row >= height && window.row_offset < window.cursor_y
-        dropped = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(window.row_offset), width: content_w).length
+        first_line_segs = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(window.row_offset), width: content_w).length
+        dropped = first_line_segs - window.wrap_seg_offset
+        window.wrap_seg_offset = 0
         window.row_offset += 1
         cursor_visual_row -= dropped
+      end
+
+      # If cursor line itself wraps beyond viewport, skip leading segments
+      if cursor_visual_row >= height && window.row_offset == window.cursor_y
+        window.wrap_seg_offset = cursor_seg_index - (height - 1)
+        window.wrap_seg_offset = 0 if window.wrap_seg_offset < 0
       end
     rescue StandardError
       nil
@@ -1079,13 +1096,17 @@ module RuVim
         visual_rows_before = 0
         row = window.row_offset
         while row < window.cursor_y
-          visual_rows_before += wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+          segs_count = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(row), width: content_w).length
+          segs_count -= window.wrap_seg_offset if row == window.row_offset
+          visual_rows_before += segs_count
           row += 1
         end
         segs = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
         seg_index = wrapped_segment_index(segs, window.cursor_x)
         seg = segs[seg_index] || { source_col_start: 0, display_prefix: "" }
-        row = rect[:top] + visual_rows_before + seg_index
+        effective_seg_index = seg_index
+        effective_seg_index -= window.wrap_seg_offset if window.cursor_y == window.row_offset
+        row = rect[:top] + visual_rows_before + effective_seg_index
         seg_prefix_w = RuVim::DisplayWidth.display_width(seg[:display_prefix].to_s, tabstop:)
         extra_virtual = [window.cursor_x - line.length, 0].max
         cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(line, window.cursor_x, tabstop:) + extra_virtual

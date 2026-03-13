@@ -647,4 +647,31 @@ class ScreenTest < Minitest::Test
     assert_includes output, "\e[6 q", "Command-line mode should set steady bar cursor"
     assert_includes output, "\e[?25h", "Command-line mode should show terminal cursor"
   end
+
+  def test_wrap_last_line_last_segment_visible
+    # When cursor is at the end of a long wrapping line that is the only line,
+    # the last wrapped segment must be rendered (not clipped).
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    # 40 chars on an 8-col viewport → 5 segments; text_rows = 4 so segments won't all fit
+    buf.replace_all_lines!(["aaaaaaaa" + "bbbbbbbb" + "cccccccc" + "dddddddd" + "eeeeeeee"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    win.cursor_y = 0
+    win.cursor_x = 39 # last char, in segment 4
+
+    term = TerminalStub.new([6, 8]) # text_rows = 4
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    content_w = [rects[win.id][:width] - screen.send(:number_column_width, editor, win, buf), 1].max
+    screen.send(:ensure_visible_under_wrap, editor, win, buf, height: [rects[win.id][:height], 1].max, content_w: content_w)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    visible = (1..text_rows).map { |i| frame[:lines][i].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "") }
+    # The last segment "eeeeeeee" must appear somewhere in the visible rows
+    assert(visible.any? { |r| r.include?("eeeeeeee") },
+           "Last wrapped segment should be visible, got: #{visible.inspect}")
+  end
 end

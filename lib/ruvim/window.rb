@@ -3,7 +3,7 @@
 module RuVim
   class Window
     attr_reader :id
-    attr_accessor :buffer_id, :row_offset, :col_offset
+    attr_accessor :buffer_id, :row_offset, :col_offset, :wrap_seg_offset
     attr_reader :cursor_x, :cursor_y
     attr_reader :options
 
@@ -14,6 +14,7 @@ module RuVim
       @cursor_y = 0
       @row_offset = 0
       @col_offset = 0
+      @wrap_seg_offset = 0
       @preferred_x = nil
       @options = {}
     end
