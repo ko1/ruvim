@@ -15,6 +15,10 @@ module RuVim
         true
       end
 
+      def wrappable?
+        true
+      end
+
       def render_visible(lines, delimiter:, context: {})
         return lines if lines.nil? || lines.empty?
 

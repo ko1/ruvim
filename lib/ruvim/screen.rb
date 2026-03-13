@@ -613,15 +613,14 @@ module RuVim
     end
 
     # Returns true when wrap should be applied in rich view.
-    # Tabular formats (TSV/CSV) need horizontal scroll to preserve column alignment,
-    # so wrapping is only enabled for text-oriented formats like markdown.
+    # Only enabled when the renderer declares itself wrappable (via `wrappable?`).
     def rich_view_wrap?(editor, window, buffer)
-      return false unless editor.rich_state
+      state = editor.rich_state
+      return false unless state
       return false unless editor.effective_option("wrap", window:, buffer:)
 
-      format = editor.rich_state[:format]
-      # Only wrap for text-oriented rich view formats
-      format == :markdown
+      renderer = RuVim::RichView.renderer_for(state[:format])
+      renderer && renderer.respond_to?(:wrappable?) && renderer.wrappable?
     end
 
     # Extract the cumulative active ANSI style from a string.
