@@ -83,7 +83,7 @@ class SixelTest < Minitest::Test
 
   def test_encode_sixel_starts_with_dcs
     result = RuVim::Sixel.encode(fixture_png, max_width_cells: 10, max_height_cells: 5)
-    assert result[:sixel].start_with?("\ePq"), "Sixel should start with DCS (ESC P q)"
+    assert result[:sixel].start_with?("\eP0;1q"), "Sixel should start with DCS (ESC P 0;1 q)"
   end
 
   def test_encode_sixel_ends_with_st

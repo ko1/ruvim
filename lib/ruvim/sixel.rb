@@ -182,7 +182,12 @@ module RuVim
       module_function
 
       def encode(pixels, width, height)
-        out = +"\ePq"
+        # DCS P1;P2;P3 q — P2=1: no-scrolling mode (prevents terminal from
+        # scrolling when image extends near bottom of screen)
+        out = +"\eP0;1q"
+
+        # Raster attributes: "Pan;Pad;Ph;Pv" — aspect ratio 1:1, image dimensions
+        out << "\"1;1;#{width};#{height}"
 
         # Collect used colors and define registers
         used = {}
@@ -200,7 +205,6 @@ module RuVim
         end
 
         # Encode bands of 6 rows
-        band = 0
         y = 0
         while y < height
           band_height = [6, height - y].min
@@ -216,28 +220,18 @@ module RuVim
             end
           end
 
-          first_color = true
-          color_data.each do |idx, columns|
+          # Each color: select → data → $ (CR back to start of band)
+          # Last color in band: no $ needed (- or ST follows)
+          keys = color_data.keys
+          keys.each_with_index do |idx, ci|
             out << "##{idx}"
-            columns.each do |bits|
-              out << (bits + 63).chr
-            end
-            if first_color
-              out << "$"  # carriage return (back to start of band)
-              first_color = false
-            else
-              # For subsequent colors in same band, use $ to overlay
-              out << "$" unless idx == color_data.keys.last
-            end
+            color_data[idx].each { |bits| out << (bits + 63).chr }
+            out << "$" unless ci == keys.length - 1
           end
 
-          out << "-"  # next band (graphics newline)
           y += 6
-          band += 1
+          out << "-" if y < height  # graphics newline (next band)
         end
-
-        # Remove trailing - if present
-        out.chomp!("-")
 
         out << "\e\\"
         out
