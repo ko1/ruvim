@@ -480,7 +480,11 @@ module RuVim
         if buffer_row < buffer.line_count
           line = formatted[fmt_idx] || ""
           fmt_idx += 1
-          body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc)
+          cursor_col = nil
+          if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
+            cursor_col = @rich_render_info[:cursor_sc] - col_offset_sc
+          end
+          body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
           prefix + body
         else
           prefix + pad_plain_display("~", content_w)
@@ -510,7 +514,7 @@ module RuVim
     # CJK and ASCII characters with different char-to-display-width ratios.
     # ANSI escape sequences (\e[...m) are treated as zero-width and passed
     # through to the output unchanged.
-    def render_rich_view_line_sc(text, width:, skip_sc:)
+    def render_rich_view_line_sc(text, width:, skip_sc:, cursor_col: nil)
       # Phase 1: skip `skip_sc` display columns
       # Collect ANSI sequences encountered during skip so active styles carry over.
       chars = text
@@ -543,6 +547,7 @@ module RuVim
         col += leading_pad
         pos += 1 if pos < len && chars[pos] != "\e"
       end
+      cursor_rendered = false
       while pos < len
         if chars[pos] == "\e"
           end_pos = find_ansi_end(chars, pos)
@@ -553,11 +558,24 @@ module RuVim
         ch = chars[pos]
         cw = RuVim::DisplayWidth.cell_width(ch, col: skipped + col, tabstop: 8)
         break if col + cw > width
-        out << ch
+        if cursor_col && col == cursor_col && !cursor_rendered
+          out << "\e[7m#{ch}\e[m"
+          cursor_rendered = true
+        else
+          out << ch
+        end
         col += cw
         pos += 1
       end
-      out << " " * [width - col, 0].max
+      trailing = [width - col, 0].max
+      if cursor_col && !cursor_rendered && cursor_col >= col && cursor_col < col + trailing
+        gap = cursor_col - col
+        out << " " * gap if gap > 0
+        out << "\e[7m \e[m"
+        out << " " * [trailing - gap - 1, 0].max
+      else
+        out << " " * trailing
+      end
       out << "\e[m"
       out
     end

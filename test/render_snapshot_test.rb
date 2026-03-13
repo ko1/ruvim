@@ -29,6 +29,20 @@ class RenderSnapshotTest < Minitest::Test
     assert_equal expected, snapshot
   end
 
+  def test_rich_view_cursor_is_visible
+    # In rich view, the cursor cell should be rendered with reverse video (\e[7m)
+    frame = build_rich_view_frame(
+      lines: ["col1\tcol2", "val1\tval2"],
+      winsize: [6, 40],
+      rich_format: :tsv,
+      cursor_y: 0,
+      cursor_x: 0
+    )
+    # Row 1 is the cursor line — it should contain reverse video for the cursor cell
+    cursor_line = frame[:lines][1].to_s
+    assert_includes cursor_line, "\e[7m", "Rich view cursor line should render cursor cell with reverse video"
+  end
+
   def test_unicode_scrolled_render_matches_snapshot
     snapshot = build_snapshot(
       lines: ["# title", "", "foo", "bar 日本語 編集", "baz", "qux", "quux"],
@@ -86,6 +100,27 @@ class RenderSnapshotTest < Minitest::Test
     frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
 
     (1..rows).map { |row| frame[:lines][row].to_s }.join("\n")
+  end
+
+  def build_rich_view_frame(lines:, winsize:, rich_format:, cursor_y: 0, cursor_x: 0)
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(lines)
+    win.cursor_y = cursor_y
+    win.cursor_x = cursor_x
+    editor.instance_variable_set(:@rich_state, { format: rich_format })
+
+    term = TerminalStub.new(winsize)
+    screen = RuVim::Screen.new(terminal: term)
+
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    content_w = [rects[win.id][:width] - screen.send(:number_column_width, editor, win, buf), 1].max
+    win.ensure_visible(buf, height: text_rows, width: content_w, tabstop: 2)
+    screen.send(:ensure_visible_rich, editor, win, buf, rects[win.id], content_w)
+    screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
   end
 
   def strip_ansi(str)
