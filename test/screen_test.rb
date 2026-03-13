@@ -703,4 +703,51 @@ class ScreenTest < Minitest::Test
     assert(visible.any? { |r| r.include?("12345") },
            "Last wrapped segment should be visible, got: #{visible.inspect}")
   end
+
+  def test_rich_view_markdown_wrap_renders_wrapped_lines
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    # A long markdown line that should wrap on a narrow viewport
+    buf.replace_all_lines!(["This is a long paragraph that should wrap when rendered in rich view markdown mode."])
+    buf.options["filetype"] = "markdown"
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+
+    RuVim::RichView.open!(editor, format: :markdown)
+
+    term = TerminalStub.new([10, 20])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    visible = (1..text_rows).map { |i| frame[:lines][i].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "") }
+    # The line should be wrapped across multiple display rows (not truncated)
+    non_tilde = visible.reject { |r| r.strip == "~" }
+    assert non_tilde.length > 1,
+           "Long rich view line should wrap into multiple display rows, got: #{non_tilde.inspect}"
+  end
+
+  def test_rich_view_markdown_wrap_no_horizontal_scroll
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    buf.replace_all_lines!(["Short line", "Another short line"])
+    buf.options["filetype"] = "markdown"
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+
+    RuVim::RichView.open!(editor, format: :markdown)
+
+    term = TerminalStub.new([10, 40])
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    visible = (1..text_rows).map { |i| frame[:lines][i].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "") }
+    assert visible.any? { |r| r.include?("Short line") }
+    assert visible.any? { |r| r.include?("Another short line") }
+  end
 end

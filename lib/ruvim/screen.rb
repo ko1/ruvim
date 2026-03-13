@@ -490,7 +490,8 @@ module RuVim
       context = rich_view_context(editor, window, buffer)
       formatted = RuVim::RichView.render_visible_lines(editor, non_nil, context: context)
 
-      col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
+      rich_wrap = rich_view_wrap?(editor, window, buffer)
+      col_offset_sc = rich_wrap ? 0 : (@rich_render_info ? @rich_render_info[:col_offset_sc] : 0)
       sixel_enabled = sixel_enabled?(editor)
 
       # Build display rows: one buffer line may produce 1 display row (text) or
@@ -510,6 +511,22 @@ module RuVim
           rows << prefix + result[:text]
           added = 1
           (result[:rows] - 1).times { break if rows.length >= height; rows << SIXEL_COVERED; added += 1 }
+          line_display_rows[buffer_row] = added
+        elsif rich_wrap
+          # Wrap the formatted line into multiple display rows
+          segments = wrap_rich_line(line.to_s, content_w)
+          added = 0
+          segments.each_with_index do |seg, seg_i|
+            break if rows.length >= height
+            prefix = render_gutter_prefix(editor, window, buffer, seg_i.zero? ? buffer_row : nil, gutter_w)
+            cursor_col = nil
+            if seg_i.zero? && editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
+              cursor_col = @rich_render_info[:cursor_sc]
+            end
+            body = render_rich_view_line_sc(seg, width: content_w, skip_sc: 0, cursor_col: cursor_col)
+            rows << prefix + body
+            added += 1
+          end
           line_display_rows[buffer_row] = added
         else
           prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
@@ -535,6 +552,99 @@ module RuVim
       end
 
       rows
+    end
+
+    # Split an ANSI-formatted line into segments of at most `width` display columns.
+    # Preserves ANSI escape sequences across segment boundaries.
+    def wrap_rich_line(text, width)
+      return [text] if width <= 0
+
+      segments = []
+      pos = 0
+      len = text.length
+
+      while pos < len
+        seg = +""
+        col = 0
+        # Collect leading ANSI sequences at the start of a new segment
+        # (carried over from the previous segment's pending_ansi)
+
+        while pos < len
+          if text[pos] == "\e"
+            end_pos = find_ansi_end(text, pos)
+            seg << text[pos...end_pos]
+            pos = end_pos
+            next
+          end
+          ch = text[pos]
+          cw = RuVim::DisplayWidth.cell_width(ch, col: col, tabstop: 8)
+          break if col + cw > width && col > 0
+          seg << ch
+          col += cw
+          pos += 1
+        end
+
+        # Collect any trailing ANSI sequences that haven't been added yet
+        while pos < len && text[pos] == "\e"
+          end_pos = find_ansi_end(text, pos)
+          seg << text[pos...end_pos]
+          pos = end_pos
+        end
+
+        # Gather active ANSI state to prepend to next segment
+        active_ansi = extract_active_ansi(seg)
+        seg << "\e[m" unless active_ansi.empty?
+        segments << seg
+
+        # Prepend active ANSI state to the next segment if there's more text
+        if pos < len && !active_ansi.empty?
+          # We'll insert the active ANSI at the beginning of the next iteration
+          # by prepending it to the remaining text conceptually
+          # Instead, we build the next segment starting with the active state
+          next_prefix = active_ansi
+          # Rewind: we need to prepend to next segment. Use a simple approach:
+          # insert the prefix into text at current position
+          text = text[0...pos] + next_prefix + text[pos..]
+          len = text.length
+        end
+      end
+
+      segments.empty? ? [""] : segments
+    end
+
+    # Returns true when wrap should be applied in rich view.
+    # Tabular formats (TSV/CSV) need horizontal scroll to preserve column alignment,
+    # so wrapping is only enabled for text-oriented formats like markdown.
+    def rich_view_wrap?(editor, window, buffer)
+      return false unless editor.rich_state
+      return false unless editor.effective_option("wrap", window:, buffer:)
+
+      format = editor.rich_state[:format]
+      # Only wrap for text-oriented rich view formats
+      format == :markdown
+    end
+
+    # Extract the cumulative active ANSI style from a string.
+    # Returns a string of ANSI sequences that should be prepended to continue the style.
+    def extract_active_ansi(text)
+      active = +""
+      pos = 0
+      len = text.length
+      while pos < len
+        if text[pos] == "\e"
+          end_pos = find_ansi_end(text, pos)
+          seq = text[pos...end_pos]
+          if seq == "\e[m" || seq == "\e[0m"
+            active = +""
+          else
+            active << seq
+          end
+          pos = end_pos
+        else
+          pos += 1
+        end
+      end
+      active
     end
 
     def rich_view_context(editor, window, buffer)
@@ -765,8 +875,9 @@ module RuVim
       delimiter = state[:delimiter]
       renderer = RuVim::RichView.renderer_for(format)
       height = [rect[:height], 1].max
+      rich_wrap = rich_view_wrap?(editor, win, buf)
 
-      # Vertical: adjust row_offset for display row expansion (images)
+      # Vertical: adjust row_offset for display row expansion (images/wrap)
       adjust_rich_scroll(win, buf, height)
 
       raw_lines = height.times.map { |dy|
@@ -784,27 +895,41 @@ module RuVim
         cursor_sc = RuVim::TextMetrics.screen_col_for_char_index(cursor_raw_line, win.cursor_x)
       end
 
-      # Use persisted screen-column offset from previous frame
-      offset_sc = @rich_col_offset_sc || 0
+      if rich_wrap
+        # No horizontal scrolling when wrap is enabled
+        @rich_col_offset_sc = 0
+        win.col_offset = 0
 
-      sso = editor.effective_option("sidescrolloff", window: win, buffer: buf).to_i
-      sso = [[sso, 0].max, [content_w - 1, 0].max].min
+        if win == editor.current_window
+          @rich_render_info = {
+            col_offset_sc: 0,
+            cursor_sc: cursor_sc,
+            delimiter: delimiter
+          }
+        end
+      else
+        # Use persisted screen-column offset from previous frame
+        offset_sc = @rich_col_offset_sc || 0
 
-      if cursor_sc < offset_sc + sso
-        offset_sc = [cursor_sc - sso, 0].max
-      elsif cursor_sc >= offset_sc + content_w - sso
-        offset_sc = cursor_sc - content_w + sso + 1
-      end
-      offset_sc = [offset_sc, 0].max
+        sso = editor.effective_option("sidescrolloff", window: win, buffer: buf).to_i
+        sso = [[sso, 0].max, [content_w - 1, 0].max].min
 
-      @rich_col_offset_sc = offset_sc
+        if cursor_sc < offset_sc + sso
+          offset_sc = [cursor_sc - sso, 0].max
+        elsif cursor_sc >= offset_sc + content_w - sso
+          offset_sc = cursor_sc - content_w + sso + 1
+        end
+        offset_sc = [offset_sc, 0].max
 
-      if win == editor.current_window
-        @rich_render_info = {
-          col_offset_sc: offset_sc,
-          cursor_sc: cursor_sc,
-          delimiter: delimiter
-        }
+        @rich_col_offset_sc = offset_sc
+
+        if win == editor.current_window
+          @rich_render_info = {
+            col_offset_sc: offset_sc,
+            cursor_sc: cursor_sc,
+            delimiter: delimiter
+          }
+        end
       end
     end
 

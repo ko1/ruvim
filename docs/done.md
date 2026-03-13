@@ -68,6 +68,7 @@
 - Markdown Rich mode（見出し・インライン装飾・テーブル罫線・コードブロック・HR・ブロック引用の ANSI レンダリング）
 - `render_rich_view_line_sc` の ANSI エスケープシーケンス対応
 - `ensure_visible_rich` の汎用化（`renderer.cursor_display_col` インターフェース）
+- Markdown Rich mode で `wrap` オプションに対応（長い行を折り返して表示）
 
 ## UI / 画面描画 / 端末挙動
 
