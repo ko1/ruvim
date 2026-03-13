@@ -3,8 +3,11 @@
 require_relative "test_helper"
 require "ruvim/spell_checker"
 
+SPELL_DICT_AVAILABLE = RuVim::SpellChecker::DICT_PATHS.any? { |p| File.exist?(p) }
+
 class SpellCheckerTest < Minitest::Test
   def setup
+    skip "No system dictionary available" unless SPELL_DICT_AVAILABLE
     @checker = RuVim::SpellChecker.instance
   end
 
@@ -140,6 +143,7 @@ end
 
 class SpellNavigationTest < Minitest::Test
   def setup
+    skip "No system dictionary available" unless SPELL_DICT_AVAILABLE
     @app = RuVim::App.new(clean: true)
     @editor = @app.instance_variable_get(:@editor)
     @key_handler = @app.instance_variable_get(:@key_handler)
