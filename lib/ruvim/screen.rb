@@ -5,12 +5,13 @@ module RuVim
     DEFAULT_TABSTOP = 2
     SYNTAX_CACHE_LIMIT = 2048
     WRAP_SEGMENTS_CACHE_LIMIT = 1024
+    SIXEL_COVERED = :sixel_covered
+
     def initialize(terminal:)
       @terminal = terminal
       @last_frame = nil
       @syntax_color_cache = {}
       @wrapped_segments_cache = {}
-      @sixel_overlays = []
       @sixel_cache = nil
     end
 
@@ -20,7 +21,6 @@ module RuVim
 
     def render(editor)
       @rich_render_info = nil
-      @sixel_overlays = []
 
       rows, cols = @terminal.winsize
       editor.screen_columns = [cols.to_i, 1].max
@@ -81,7 +81,6 @@ module RuVim
       end
       @last_frame = frame.merge(cursor_row:, cursor_col:)
       @terminal.write(out)
-      emit_sixel_overlays
     end
 
     def current_window_view_height(editor)
@@ -173,6 +172,7 @@ module RuVim
           next
         end
 
+        sixel_covered = false
         pieces = +""
         plan.each do |piece|
           case piece[:type]
@@ -180,8 +180,12 @@ module RuVim
             rect = rects[piece[:id]]
             dy = row_no - rect[:top]
             rows = window_rows_cache[piece[:id]]
-            text = (rows && dy >= 0 && dy < rect[:height]) ? (rows[dy] || " " * rect[:width]) : " " * rect[:width]
-            pieces << text
+            row_content = (rows && dy >= 0 && dy < rect[:height]) ? rows[dy] : nil
+            if row_content == SIXEL_COVERED
+              sixel_covered = true
+              next
+            end
+            pieces << (row_content || " " * rect[:width])
           when :vsep
             pieces << "|"
           when :hsep
@@ -190,7 +194,7 @@ module RuVim
             pieces << " " * piece[:width]
           end
         end
-        lines[row_no] = pieces
+        lines[row_no] = sixel_covered ? SIXEL_COVERED : pieces
       end
     end
 
@@ -261,11 +265,11 @@ module RuVim
     def render_full(frame)
       out = +""
       out << "\e[?25l"
-      out << "\e[H"
       1.upto(frame[:rows]) do |row_no|
-        out << "\e[2K"
-        out << (frame[:lines][row_no] || "")
-        out << "\r\n" unless row_no == frame[:rows]
+        line = frame[:lines][row_no]
+        next if line == SIXEL_COVERED  # skip rows covered by sixel image above
+        out << "\e[#{row_no};1H\e[2K"
+        out << (line || "")
       end
       out
     end
@@ -275,13 +279,20 @@ module RuVim
       out << "\e[?25l"
       max_rows = [frame[:rows], @last_frame[:rows]].max
       1.upto(max_rows) do |row_no|
-        new_line = frame[:lines][row_no] || ""
-        old_line = @last_frame[:lines][row_no] || ""
+        new_line = frame[:lines][row_no]
+        old_line = @last_frame[:lines][row_no]
         next if new_line == old_line
+        next if new_line == SIXEL_COVERED  # skip covered rows
 
-        out << "\e[#{row_no};1H"
-        out << "\e[2K"
-        out << new_line
+        # If previous frame had sixel here but new doesn't, clear it
+        if old_line == SIXEL_COVERED && new_line != SIXEL_COVERED
+          out << "\e[#{row_no};1H\e[2K"
+          out << (new_line || "")
+          next
+        end
+
+        out << "\e[#{row_no};1H\e[2K"
+        out << (new_line || "")
       end
       out
     end
@@ -482,17 +493,17 @@ module RuVim
 
       Array.new(height) do |dy|
         buffer_row = window.row_offset + dy
-        prefix = render_gutter_prefix(editor, window, buffer, buffer_row < buffer.line_count ? buffer_row : nil, gutter_w)
         if dy < image_cover_until
-          # Row covered by a sixel image above — render blank
+          # Row covered by a sixel image above — skip entirely
           fmt_idx += 1 if buffer_row < buffer.line_count
-          prefix + " " * content_w
+          SIXEL_COVERED
         elsif buffer_row < buffer.line_count
           line = formatted[fmt_idx] || ""
           fmt_idx += 1
+          prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
 
           if line.is_a?(Hash) && line[:type] == :image
-            result = render_image_entry(editor, buffer, line, content_w, sixel_enabled, gutter_w, rect_top + dy, dy)
+            result = render_image_entry(editor, buffer, line, content_w, sixel_enabled, gutter_w)
             if result[:rows] > 1
               image_cover_until = dy + result[:rows]
             end
@@ -506,6 +517,7 @@ module RuVim
             prefix + body
           end
         else
+          prefix = render_gutter_prefix(editor, window, buffer, nil, gutter_w)
           prefix + pad_plain_display("~", content_w)
         end
       end
@@ -537,9 +549,7 @@ module RuVim
     end
 
     # Returns { text: String, rows: Integer }
-    # screen_row: absolute 1-based screen row for overlay positioning
-    # dy: window-relative row index for blank row tracking
-    def render_image_entry(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w, screen_row, dy)
+    def render_image_entry(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w)
       alt = img_hash[:alt].to_s
       path = img_hash[:path].to_s
       image_rows = 1
@@ -554,24 +564,16 @@ module RuVim
                                               max_width_cells: [content_w, 1].max, max_height_cells: 10,
                                               cell_width: cell_w, cell_height: cell_h, cache: @sixel_cache)
         if sixel_data
-          @sixel_overlays << { screen_row: screen_row, col: gutter_w + 1, data: sixel_data[:sixel] }
           image_rows = [sixel_data[:rows], 1].max
+          # Emit sixel data inline — render_full/render_diff will write it
+          # at this row position; covered rows below are marked SIXEL_COVERED
+          # so they won't be cleared or overwritten
+          return { text: sixel_data[:sixel], rows: image_rows }
         end
       end
 
       placeholder = "\e[90m[Image: #{alt.empty? ? path : alt}]\e[m"
       { text: pad_plain_display(placeholder, content_w), rows: image_rows }
-    end
-
-    def emit_sixel_overlays
-      return if @sixel_overlays.empty?
-
-      out = +""
-      @sixel_overlays.each do |overlay|
-        out << "\e[#{overlay[:screen_row]};#{overlay[:col]}H"
-        out << overlay[:data]
-      end
-      @terminal.write(out)
     end
 
     # Render a formatted rich-view line by skipping `skip_sc` display columns
