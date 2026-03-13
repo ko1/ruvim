@@ -361,13 +361,49 @@ module RuVim
         return cached if cached
       end
 
-      png_data = File.binread(full_path)
-      result = encode(png_data, max_width_cells: max_width_cells, max_height_cells: max_height_cells,
-                                cell_width: cell_width, cell_height: cell_height)
+      max_px_w = max_width_cells * cell_width
+      max_px_h = max_height_cells * cell_height
+      result = encode_with_img2sixel(full_path, max_px_w, max_px_h, cell_height) ||
+               encode_file(full_path, max_width_cells: max_width_cells, max_height_cells: max_height_cells,
+                                      cell_width: cell_width, cell_height: cell_height)
       cache&.put(full_path, mtime, max_width_cells, max_height_cells, result) if result
       result
     rescue StandardError
       nil
+    end
+
+    # Try encoding with img2sixel command (fast, high quality).
+    def encode_with_img2sixel(path, max_px_w, max_px_h, cell_height)
+      return nil unless img2sixel_available?
+
+      out = IO.popen(["img2sixel", "-w", max_px_w.to_s, "-h", max_px_h.to_s, path],
+                     "r", err: File::NULL) { |io| io.read }
+      return nil if out.nil? || out.empty? || !$?.success?
+
+      # Extract pixel height from raster attributes ("Pan;Pad;Ph;Pv)
+      px_h = if (m = out.match(/"(\d+);(\d+);(\d+);(\d+)/))
+               m[4].to_i
+             else
+               max_px_h
+             end
+      rows = (px_h + cell_height - 1) / cell_height
+      { sixel: out, rows: [rows, 1].max }
+    rescue StandardError
+      nil
+    end
+
+    def img2sixel_available?
+      return @img2sixel_available unless @img2sixel_available.nil?
+      @img2sixel_available = system("img2sixel", "--version", out: File::NULL, err: File::NULL) == true
+    rescue StandardError
+      @img2sixel_available = false
+    end
+
+    # Fallback: Pure Ruby PNG→Sixel encode from file path.
+    def encode_file(path, max_width_cells:, max_height_cells:, cell_width: 8, cell_height: 16)
+      png_data = File.binread(path)
+      encode(png_data, max_width_cells: max_width_cells, max_height_cells: max_height_cells,
+                        cell_width: cell_width, cell_height: cell_height)
     end
 
     def resolve_path(path, buffer_dir)
