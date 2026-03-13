@@ -132,6 +132,48 @@ class SixelTest < Minitest::Test
     assert_equal pixels, resized
   end
 
+  # --- DoS protection ---
+
+  def test_decode_png_rejects_oversized_dimensions
+    # Craft a minimal PNG with absurdly large dimensions in IHDR
+    ihdr_data = [100_000, 100_000, 8, 2, 0, 0, 0].pack("NNCCCCC")
+    ihdr_crc = [Zlib.crc32("IHDR" + ihdr_data)].pack("N")
+    ihdr_chunk = [13].pack("N") + "IHDR" + ihdr_data + ihdr_crc
+    iend_chunk = [0].pack("N") + "IEND" + [Zlib.crc32("IEND")].pack("N")
+    png = RuVim::Sixel::PNGDecoder::PNG_SIGNATURE + ihdr_chunk + iend_chunk
+
+    assert_raises(RuVim::Sixel::PNGDecoder::Error) do
+      RuVim::Sixel::PNGDecoder.decode(png)
+    end
+  end
+
+  def test_decode_png_rejects_oversized_decompressed_data
+    # Valid small IHDR but craft an IDAT that decompresses to more than the limit
+    # A 4x4 RGB image needs (4*3+1)*4 = 52 bytes unfiltered.
+    # We create a valid IHDR for 4x4 but stuff way too much compressed data.
+    ihdr_data = [4, 4, 8, 2, 0, 0, 0].pack("NNCCCCC")
+    ihdr_crc = [Zlib.crc32("IHDR" + ihdr_data)].pack("N")
+    ihdr_chunk = [13].pack("N") + "IHDR" + ihdr_data + ihdr_crc
+
+    # Create a large payload that compresses well (zip bomb style)
+    big = "\x00" * (RuVim::Sixel::PNGDecoder::MAX_INFLATE_SIZE + 1000)
+    compressed = Zlib::Deflate.deflate(big)
+    idat_crc = [Zlib.crc32("IDAT" + compressed)].pack("N")
+    idat_chunk = [compressed.bytesize].pack("N") + "IDAT" + compressed + idat_crc
+    iend_chunk = [0].pack("N") + "IEND" + [Zlib.crc32("IEND")].pack("N")
+    png = RuVim::Sixel::PNGDecoder::PNG_SIGNATURE + ihdr_chunk + idat_chunk + iend_chunk
+
+    assert_raises(RuVim::Sixel::PNGDecoder::Error) do
+      RuVim::Sixel::PNGDecoder.decode(png)
+    end
+  end
+
+  def test_download_rejects_oversized_response
+    # Test that download respects size limit — we can't easily test with a real server,
+    # so just verify the constant exists
+    assert_equal 10 * 1024 * 1024, RuVim::Sixel::MAX_DOWNLOAD_SIZE
+  end
+
   # --- Markdown IMAGE_RE ---
 
   def test_markdown_image_re

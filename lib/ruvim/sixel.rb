@@ -4,6 +4,8 @@ require "zlib"
 
 module RuVim
   module Sixel
+    MAX_DOWNLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+
     module_function
 
     # Encode PNG binary data to a sixel string.
@@ -39,6 +41,8 @@ module RuVim
 
     module PNGDecoder
       PNG_SIGNATURE = [137, 80, 78, 71, 13, 10, 26, 10].pack("C*").freeze
+      MAX_PIXELS = 50_000_000       # 50M pixels
+      MAX_INFLATE_SIZE = 200 << 20  # 200 MB
 
       class Error < StandardError; end
 
@@ -71,13 +75,30 @@ module RuVim
         raise Error, "Unsupported bit depth: #{ihdr[:bit_depth]}" unless ihdr[:bit_depth] == 8
         raise Error, "Unsupported color type: #{ihdr[:color_type]}" unless [2, 6].include?(ihdr[:color_type])
 
-        raw = Zlib::Inflate.inflate(idat_chunks.join)
+        total_pixels = ihdr[:width] * ihdr[:height]
+        raise Error, "Image too large: #{total_pixels} pixels (max #{MAX_PIXELS})" if total_pixels > MAX_PIXELS
+
+        raw = safe_inflate(idat_chunks.join)
         unfilter(raw, ihdr)
       end
 
       def parse_ihdr(data)
         width, height, bit_depth, color_type = data.unpack("NNC2")
         { width: width, height: height, bit_depth: bit_depth, color_type: color_type }
+      end
+
+      def safe_inflate(data)
+        zstream = Zlib::Inflate.new
+        buf = +""
+        begin
+          zstream.inflate(data) do |chunk|
+            buf << chunk
+            raise Error, "Decompressed data too large (max #{MAX_INFLATE_SIZE} bytes)" if buf.bytesize > MAX_INFLATE_SIZE
+          end
+        ensure
+          zstream.close
+        end
+        buf
       end
 
       def unfilter(raw, ihdr)
@@ -447,11 +468,26 @@ module RuVim
       return cache_file if File.exist?(cache_file)
 
       uri = URI.parse(url)
-      response = Net::HTTP.get_response(uri)
-      return nil unless response.is_a?(Net::HTTPSuccess)
+      Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") do |http|
+        request = Net::HTTP::Get.new(uri)
+        http.request(request) do |response|
+          return nil unless response.is_a?(Net::HTTPSuccess)
 
-      File.binwrite(cache_file, response.body)
-      cache_file
+          # Check Content-Length header first if available
+          content_length = response["Content-Length"]&.to_i
+          return nil if content_length && content_length > MAX_DOWNLOAD_SIZE
+
+          # Stream body with size limit
+          body = +""
+          response.read_body do |chunk|
+            body << chunk
+            return nil if body.bytesize > MAX_DOWNLOAD_SIZE
+          end
+
+          File.binwrite(cache_file, body)
+          return cache_file
+        end
+      end
     rescue StandardError
       nil
     end
