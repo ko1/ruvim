@@ -10,7 +10,6 @@ require "benchmark"
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
 require "ruvim/display_width"
 require "ruvim/text_metrics"
-require "ruvim/highlighter"
 require "ruvim/lang/registry"
 require "ruvim/lang/base"
 require "ruvim/lang/ruby"

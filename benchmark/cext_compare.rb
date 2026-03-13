@@ -8,11 +8,10 @@
 require "benchmark"
 
 $LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-$LOAD_PATH.unshift File.expand_path("../ext/ruvim", __dir__)
 
 require "ruvim/display_width"
 require "ruvim/text_metrics"
-require "ruvim_ext"
+require "ruvim/ruvim_ext"
 
 # ---------------------------------------------------------------------------
 # Test data
