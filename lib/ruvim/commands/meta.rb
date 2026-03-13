@@ -739,10 +739,12 @@ module RuVim
       end
 
       def same_command_callable?(a, b)
-        if (a.is_a?(Symbol) || a.is_a?(String)) && (b.is_a?(Symbol) || b.is_a?(String))
-          return a.to_sym == b.to_sym
+        case a
+        when Symbol, String
+          (b.is_a?(Symbol) || b.is_a?(String)) && a.to_sym == b.to_sym
+        else
+          a.equal?(b)
         end
-        a.equal?(b)
       end
 
       def format_command_binding_label(entry)

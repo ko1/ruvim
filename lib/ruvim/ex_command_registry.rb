@@ -64,7 +64,7 @@ module RuVim
     end
 
     def registered?(name)
-      !!resolve(name)
+      @lookup.key?(name.to_s)
     end
 
     def unregister(name)
