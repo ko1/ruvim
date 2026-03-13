@@ -155,63 +155,109 @@ module RuVim
     end
 
     # --- Median-cut color quantizer (adaptive palette, up to 256 colors) ---
+    #
+    # Operates on a histogram of unique colors (not individual pixels) for speed.
+    # Colors are reduced to 5-bit per channel (32K buckets) before median-cut,
+    # then a lookup table maps quantized colors to palette indices.
 
     module Quantizer
       MAX_COLORS = 256
+      SHIFT = 3  # 8-bit → 5-bit (32 levels per channel)
 
       module_function
 
       # Build an adaptive palette from the image pixels.
       # Returns { palette: [[r,g,b], ...], map: 2D array of palette indices }
       def build_palette(pixels, width, height)
-        # Collect all pixels into a flat list
-        all = Array.new(width * height)
+        # Build histogram of quantized colors: key = (rq<<10 | gq<<5 | bq)
+        hist = Hash.new(0)
         height.times do |y|
           row = pixels[y]
-          width.times { |x| all[y * width + x] = row[x] }
+          width.times do |x|
+            r, g, b = row[x]
+            key = ((r >> SHIFT) << 10) | ((g >> SHIFT) << 5) | (b >> SHIFT)
+            hist[key] += 1
+          end
         end
 
-        # Median-cut: split into boxes until we have enough
-        boxes = [all]
+        # Convert histogram to weighted color entries: [[rq, gq, bq, count], ...]
+        entries = hist.map do |key, count|
+          rq = (key >> 10) & 0x1F
+          gq = (key >> 5)  & 0x1F
+          bq = key          & 0x1F
+          [rq, gq, bq, count]
+        end
+
+        # Median-cut on weighted entries
+        # Each box: { entries: [...], ranges: [r_range, g_range, b_range] }
+        boxes = [make_box(entries)]
         while boxes.length < MAX_COLORS
-          # Find the box with the widest range
-          best_idx = 0
-          best_range = -1
-          best_ch = 0
+          # Find box with widest range (weighted by pixel count)
+          best_idx = nil
+          best_range = 0
           boxes.each_with_index do |box, i|
-            next if box.length <= 1
-            3.times do |ch|
-              mn, mx = box.first[ch], box.first[ch]
-              box.each { |px| v = px[ch]; mn = v if v < mn; mx = v if v > mx }
-              range = mx - mn
-              if range > best_range
-                best_range = range
-                best_idx = i
-                best_ch = ch
-              end
+            next if box[:entries].length <= 1
+            mr = box[:ranges].max
+            if mr > best_range
+              best_range = mr
+              best_idx = i
             end
           end
-          break if best_range <= 0
+          break if best_idx.nil? || best_range <= 0
 
           box = boxes[best_idx]
-          box.sort_by! { |px| px[best_ch] }
-          mid = box.length / 2
-          boxes[best_idx] = box[0...mid]
-          boxes.push(box[mid..])
+          ch = box[:ranges].index(best_range)
+          sorted = box[:entries].sort_by { |e| e[ch] }
+
+          # Split at median by pixel count
+          total = 0
+          sorted.each { |e| total += e[3] }
+          half = total / 2
+          acc = 0
+          split = 1
+          sorted.each_with_index do |e, i|
+            acc += e[3]
+            if acc >= half
+              split = [i + 1, 1].max
+              break
+            end
+          end
+          split = sorted.length - 1 if split >= sorted.length
+
+          boxes[best_idx] = make_box(sorted[0...split])
+          boxes.push(make_box(sorted[split..]))
         end
 
-        # Compute average color for each box
+        # Compute weighted average color for each box (in original 8-bit space)
         palette = boxes.map do |box|
-          sr = sg = sb = 0
-          box.each { |px| sr += px[0]; sg += px[1]; sb += px[2] }
-          n = box.length
-          [sr / n, sg / n, sb / n]
+          sr = sg = sb = tw = 0
+          box[:entries].each do |e|
+            w = e[3]
+            sr += ((e[0] << SHIFT) + (1 << (SHIFT - 1))) * w
+            sg += ((e[1] << SHIFT) + (1 << (SHIFT - 1))) * w
+            sb += ((e[2] << SHIFT) + (1 << (SHIFT - 1))) * w
+            tw += w
+          end
+          [(sr / tw).clamp(0, 255), (sg / tw).clamp(0, 255), (sb / tw).clamp(0, 255)]
         end
 
-        # Build pixel→index map using nearest palette color
+        # Build lookup table: quantized_key → palette index
+        lut = {}
+        hist.each_key do |key|
+          rq = ((key >> 10) & 0x1F) << SHIFT | (1 << (SHIFT - 1))
+          gq = ((key >> 5)  & 0x1F) << SHIFT | (1 << (SHIFT - 1))
+          bq = (key          & 0x1F) << SHIFT | (1 << (SHIFT - 1))
+          lut[key] = nearest([rq, gq, bq], palette)
+        end
+
+        # Map pixels to palette indices via LUT
         map = Array.new(height) do |y|
           row = pixels[y]
-          Array.new(width) { |x| nearest(row[x], palette) }
+          Array.new(width) do |x|
+            r, g, b = row[x]
+            key = ((r >> SHIFT) << 10) | ((g >> SHIFT) << 5) | (b >> SHIFT)
+            lut[key]
+          end
         end
 
         { palette: palette, map: map }
@@ -231,6 +277,15 @@ module RuVim
           end
         end
         best
+      end
+
+      private_class_method def self.make_box(entries)
+        ranges = [0, 0, 0]
+        3.times do |ch|
+          vals = entries.map { |e| e[ch] }
+          ranges[ch] = vals.max - vals.min
+        end
+        { entries: entries, ranges: ranges }
       end
     end
 
