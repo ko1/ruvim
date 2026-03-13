@@ -646,16 +646,19 @@ module RuVim
         row += 1
       end
 
-      cursor_visual_row = visual_rows_before + cursor_seg_index
-      while cursor_visual_row >= height && window.row_offset < window.cursor_y
+      # Try to show all segments of the cursor line, not just the cursor's segment
+      last_seg_visual_row = visual_rows_before + cursor_segs.length - 1
+      while last_seg_visual_row >= height && window.row_offset < window.cursor_y
         first_line_segs = wrapped_segments_for_line(editor, window, buffer, buffer.line_at(window.row_offset), width: content_w).length
         dropped = first_line_segs - window.wrap_seg_offset
         window.wrap_seg_offset = 0
         window.row_offset += 1
-        cursor_visual_row -= dropped
+        last_seg_visual_row -= dropped
+        visual_rows_before -= dropped
       end
 
-      # If cursor line itself wraps beyond viewport, skip leading segments
+      # If cursor line itself wraps beyond viewport, skip leading segments to show cursor
+      cursor_visual_row = visual_rows_before + cursor_seg_index
       if cursor_visual_row >= height && window.row_offset == window.cursor_y
         window.wrap_seg_offset = cursor_seg_index - (height - 1)
         window.wrap_seg_offset = 0 if window.wrap_seg_offset < 0

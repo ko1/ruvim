@@ -674,4 +674,33 @@ class ScreenTest < Minitest::Test
     assert(visible.any? { |r| r.include?("eeeeeeee") },
            "Last wrapped segment should be visible, got: #{visible.inspect}")
   end
+
+  def test_wrap_last_line_all_segments_visible_cursor_at_start
+    # When cursor is at the beginning of the last line and it wraps,
+    # all wrapped segments should be visible by scrolling lines above away.
+    editor = RuVim::Editor.new
+    buf = editor.add_empty_buffer
+    win = editor.add_window(buffer_id: buf.id)
+    # 3 short lines + 1 line that wraps into 2 segments on 10-col viewport
+    buf.replace_all_lines!(["line0", "line1", "line2", "aaaaabbbbb12345"])
+    editor.set_option("wrap", true, scope: :window, window: win, buffer: buf)
+    win.cursor_y = 3
+    win.cursor_x = 0 # cursor at start, segment 0
+
+    term = TerminalStub.new([6, 10]) # text_rows = 4
+    screen = RuVim::Screen.new(terminal: term)
+    rows, cols = term.winsize
+    text_rows, text_cols = editor.text_viewport_size(rows:, cols:)
+    rects = screen.send(:window_rects, editor, text_rows:, text_cols:)
+    content_w = [rects[win.id][:width] - screen.send(:number_column_width, editor, win, buf), 1].max
+    screen.send(:ensure_visible_under_wrap, editor, win, buf, height: [rects[win.id][:height], 1].max, content_w: content_w)
+    frame = screen.send(:build_frame, editor, rows:, cols:, text_rows:, text_cols:, rects:)
+
+    visible = (1..text_rows).map { |i| frame[:lines][i].to_s.gsub(/\e\[[0-9;?]*[A-Za-z]/, "") }
+    # Both segments of the last line must be visible
+    assert(visible.any? { |r| r.include?("aaaaa") },
+           "First segment should be visible, got: #{visible.inspect}")
+    assert(visible.any? { |r| r.include?("12345") },
+           "Last wrapped segment should be visible, got: #{visible.inspect}")
+  end
 end
