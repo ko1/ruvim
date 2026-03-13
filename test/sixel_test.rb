@@ -44,22 +44,22 @@ class SixelTest < Minitest::Test
   # --- Quantizer ---
 
   def test_quantize_color
-    # Pure red -> quantized to nearest 6-level
+    # 8R × 8G × 4B = 256 palette
     q = RuVim::Sixel::Quantizer
     idx = q.quantize(255, 0, 0)
     assert_kind_of Integer, idx
-    assert idx >= 0 && idx < 216
+    assert idx >= 0 && idx < 256
 
     # Same color should give same index
     assert_equal idx, q.quantize(255, 0, 0)
 
     # Black
     black = q.quantize(0, 0, 0)
-    assert_equal 0, black  # 0*36 + 0*6 + 0
+    assert_equal 0, black
 
-    # White
+    # White: ri=7, gi=7, bi=3 → 7*32 + 7*4 + 3 = 255
     white = q.quantize(255, 255, 255)
-    assert_equal 215, white  # 5*36 + 5*6 + 5
+    assert_equal 255, white
   end
 
   def test_quantize_color_register
@@ -67,7 +67,7 @@ class SixelTest < Minitest::Test
     r, g, b = q.color_register(0)  # black
     assert_equal [0, 0, 0], [r, g, b]
 
-    r, g, b = q.color_register(215)  # white
+    r, g, b = q.color_register(255)  # white
     assert_equal [100, 100, 100], [r, g, b]
   end
 

@@ -498,6 +498,7 @@ module RuVim
       rows = []
       fmt_idx = 0
       buffer_row = window.row_offset
+      line_display_rows = {}  # buffer_row => display rows used
 
       while rows.length < height && fmt_idx < formatted.length
         line = formatted[fmt_idx]
@@ -507,7 +508,9 @@ module RuVim
           prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
           result = render_image_entry(editor, buffer, line, content_w, height - rows.length, sixel_enabled)
           rows << prefix + result[:text]
-          (result[:rows] - 1).times { break if rows.length >= height; rows << SIXEL_COVERED }
+          added = 1
+          (result[:rows] - 1).times { break if rows.length >= height; rows << SIXEL_COVERED; added += 1 }
+          line_display_rows[buffer_row] = added
         else
           prefix = render_gutter_prefix(editor, window, buffer, buffer_row, gutter_w)
           cursor_col = nil
@@ -516,10 +519,14 @@ module RuVim
           end
           body = render_rich_view_line_sc(line.to_s, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
           rows << prefix + body
+          line_display_rows[buffer_row] = 1
         end
 
         buffer_row += 1
       end
+
+      # Store display row map for scroll adjustment in next frame
+      @rich_line_display_rows = line_display_rows
 
       # Fill remaining display rows with ~
       while rows.length < height
@@ -759,6 +766,9 @@ module RuVim
       renderer = RuVim::RichView.renderer_for(format)
       height = [rect[:height], 1].max
 
+      # Vertical: adjust row_offset for display row expansion (images)
+      adjust_rich_scroll(win, buf, height)
+
       raw_lines = height.times.map { |dy|
         row = win.row_offset + dy
         row < buf.line_count ? buf.line_at(row) : nil
@@ -795,6 +805,27 @@ module RuVim
           cursor_sc: cursor_sc,
           delimiter: delimiter
         }
+      end
+    end
+
+    # Adjust row_offset so cursor_y is visible considering display row expansion
+    # from images.  Uses the per-line display row map from the previous render.
+    def adjust_rich_scroll(win, buf, height)
+      map = @rich_line_display_rows
+      return unless map
+
+      # Compute cumulative display rows from row_offset to cursor_y
+      display_used = 0
+      row = win.row_offset
+      while row <= win.cursor_y && row < buf.line_count
+        display_used += (map[row] || 1)
+        row += 1
+      end
+
+      # If cursor doesn't fit, advance row_offset
+      while display_used > height && win.row_offset < win.cursor_y
+        display_used -= (map[win.row_offset] || 1)
+        win.row_offset += 1
       end
     end
 

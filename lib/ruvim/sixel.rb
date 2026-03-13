@@ -154,25 +154,31 @@ module RuVim
       end
     end
 
-    # --- Uniform 6-level quantizer (216 colors) ---
+    # --- Uniform quantizer (8R × 8G × 4B = 256 colors) ---
 
     module Quantizer
+      R_LEVELS = 8
+      G_LEVELS = 8
+      B_LEVELS = 4
+
       module_function
 
-      # Map 0-255 to 0-5
+      # Map 0-255 to palette index (0-255)
       def quantize(r, g, b)
-        ri = (r * 5.0 / 255).round
-        gi = (g * 5.0 / 255).round
-        bi = (b * 5.0 / 255).round
-        ri * 36 + gi * 6 + bi
+        ri = (r * (R_LEVELS - 1).to_f / 255).round
+        gi = (g * (G_LEVELS - 1).to_f / 255).round
+        bi = (b * (B_LEVELS - 1).to_f / 255).round
+        ri * (G_LEVELS * B_LEVELS) + gi * B_LEVELS + bi
       end
 
       # Return [r%, g%, b%] in 0-100 range for sixel color register
       def color_register(index)
-        bi = index % 6
-        gi = (index / 6) % 6
-        ri = index / 36
-        [ri * 20, gi * 20, bi * 20]
+        bi = index % B_LEVELS
+        gi = (index / B_LEVELS) % G_LEVELS
+        ri = index / (G_LEVELS * B_LEVELS)
+        [(ri * 100.0 / (R_LEVELS - 1)).round,
+         (gi * 100.0 / (G_LEVELS - 1)).round,
+         (bi * 100.0 / (B_LEVELS - 1)).round]
       end
     end
 
