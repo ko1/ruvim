@@ -394,6 +394,36 @@ class AppStartupTest < Minitest::Test
     end
   end
 
+  def test_syncload_option_forces_synchronous_file_load
+    prev = ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"]
+    Tempfile.create(["ruvim-syncload", ".txt"]) do |f|
+      begin
+        f.write("a\nb\nc\n")
+        f.flush
+
+        # Threshold=1 would normally trigger async load
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = "1"
+        app = RuVim::App.new(clean: true)
+        editor = app.instance_variable_get(:@editor)
+        editor.set_option("syncload", true)
+
+        buf = editor.open_path(f.path)
+        # With syncload, file is loaded synchronously — no stream
+        assert_nil buf.stream
+        assert_equal %w[a b c], buf.lines
+      ensure
+        ENV["RUVIM_ASYNC_FILE_THRESHOLD_BYTES"] = prev
+        app&.instance_variable_get(:@stream_mixer)&.shutdown!
+      end
+    end
+  end
+
+  def test_sync_load_cli_option
+    opts = RuVim::CLI.parse(["--sync-load", "file.txt"])
+    assert_equal [{ type: :ex, value: "set syncload" }], opts.pre_config_actions
+    assert_equal ["file.txt"], opts.files
+  end
+
   def test_command_line_history_persists_in_xdg_state_home
     Dir.mktmpdir("ruvim-history-xdg") do |dir|
       prev_xdg = ENV["XDG_STATE_HOME"]

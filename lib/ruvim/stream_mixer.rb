@@ -150,6 +150,7 @@ module RuVim
       end
 
       def open_path_with_large_file_support(path)
+        return @editor.open_path_sync(path) if @editor.get_option("syncload", scope: :global)
         return @editor.open_path_sync(path) unless should_open_path_async?(path)
         return @editor.open_path_sync(path) unless can_start_async_file_load?
 

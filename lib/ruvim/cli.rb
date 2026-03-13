@@ -166,6 +166,8 @@ module RuVim
           opts.follow = true
         when "-M"
           opts.nomodifiable = true
+        when "--sync-load"
+          opts.pre_config_actions << { type: :ex, value: "set syncload" }
         when "-Z"
           opts.restricted_mode = true
         when "-V"
@@ -252,6 +254,7 @@ module RuVim
           -S [session]      Session startup placeholder (not implemented yet)
           -M                Open file unmodifiable (disallow editing; also readonly)
           -Z                Restricted mode (skip config/ftplugin, disable :ruby)
+          --sync-load       Disable async large file loading (always load synchronously)
           -V[N], --verbose[=N]
                             Verbose startup/config/command logs to stderr
           --startuptime FILE

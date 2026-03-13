@@ -61,7 +61,8 @@ module RuVim
         "runprg" => { default_scope: :buffer, type: :string, default: nil },
         "spell" => { default_scope: :buffer, type: :bool, default: false },
         "spelllang" => { default_scope: :buffer, type: :string, default: "en" },
-        "sixel" => { default_scope: :global, type: :string, default: "auto" }
+        "sixel" => { default_scope: :global, type: :string, default: "auto" },
+        "syncload" => { default_scope: :global, type: :bool, default: false }
       }.freeze
 
       def option_def(name)

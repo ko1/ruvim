@@ -288,6 +288,12 @@ setglobal "tabstop=8"
   - `nil` の場合は `~/.local/share/ruvim/undo/` を使用します。
   - ファイル名はファイルの絶対パスの SHA256 ハッシュです。
 
+### Global options（ファイルロード）
+
+- `syncload` (`bool`, default `false`) [`DONE`]
+  - `true` にすると大きなファイルの非同期ロード（Stream::FileLoad）を無効化し、常に同期ロードします。
+  - `:set syncload` または CLI `--sync-load` で有効化。
+
 ### Global options（検索・grep）
 
 - `grepprg` (`string`, default `"grep -nH"`) [`DONE`]
