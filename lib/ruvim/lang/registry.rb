@@ -147,7 +147,7 @@ module RuVim
       register("gitcommit", mod: :Gitcommit)
       register("tsv",     mod: :Tsv, extensions: %w[.tsv])
       register("csv",     mod: :Csv, extensions: %w[.csv])
-      register("png",     mod: :Png, extensions: %w[.png .jpg .jpeg .gif .bmp .webp])
+      register("image",   mod: :Image, extensions: %w[.png .jpg .jpeg .gif .bmp .webp])
     end
   end
 end

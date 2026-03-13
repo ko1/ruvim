@@ -117,6 +117,6 @@ module RuVim
     register(:jsonl, :JsonlRenderer)
     register(:tsv, :TableRenderer, detector: ->(buf) { Lang::Tsv.detect?(buf) })
     register(:csv, :TableRenderer, detector: ->(buf) { Lang::Csv.detect?(buf) })
-    register(:png, :ImageRenderer)
+    register(:image, :ImageRenderer)
   end
 end

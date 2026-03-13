@@ -2,7 +2,7 @@
 
 module RuVim
   module Lang
-    class Png < Base
+    class Image < Base
     end
   end
 end

@@ -205,7 +205,7 @@ App
 | `lang/gitcommit.rb` | Git commit message syntax highlighting, spell default |
 | `lang/tsv.rb` | TSV detection and RichView renderer registration |
 | `lang/csv.rb` | CSV detection and RichView renderer registration |
-| `lang/png.rb` | Image filetype (PNG/JPG/GIF/BMP/WEBP) for RichView image display |
+| `lang/image.rb` | Image filetype (PNG/JPG/GIF/BMP/WEBP) for RichView image display |
 | `commands/git/blame.rb` | Git blame: parser, runner, command handlers |
 | `commands/git/status.rb` | Git status: runner, filename parser, command handlers |
 | `commands/git/diff.rb` | Git diff: runner, command handlers |

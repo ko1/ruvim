@@ -10,31 +10,31 @@ class ImageViewTest < Minitest::Test
   # --- Filetype detection ---
 
   def test_detect_png
-    assert_equal "png", @editor.detect_filetype("photo.png")
+    assert_equal "image", @editor.detect_filetype("photo.png")
   end
 
   def test_detect_jpg
-    assert_equal "png", @editor.detect_filetype("photo.jpg")
+    assert_equal "image", @editor.detect_filetype("photo.jpg")
   end
 
   def test_detect_jpeg
-    assert_equal "png", @editor.detect_filetype("photo.jpeg")
+    assert_equal "image", @editor.detect_filetype("photo.jpeg")
   end
 
   def test_detect_gif
-    assert_equal "png", @editor.detect_filetype("anim.gif")
+    assert_equal "image", @editor.detect_filetype("anim.gif")
   end
 
   def test_detect_bmp
-    assert_equal "png", @editor.detect_filetype("icon.bmp")
+    assert_equal "image", @editor.detect_filetype("icon.bmp")
   end
 
   def test_detect_webp
-    assert_equal "png", @editor.detect_filetype("photo.webp")
+    assert_equal "image", @editor.detect_filetype("photo.webp")
   end
 
   def test_detect_png_case_insensitive
-    assert_equal "png", @editor.detect_filetype("PHOTO.PNG")
+    assert_equal "image", @editor.detect_filetype("PHOTO.PNG")
   end
 
   # --- ImageRenderer open_view! ---
@@ -93,8 +93,8 @@ class ImageViewTest < Minitest::Test
 
   # --- RichView registration ---
 
-  def test_richview_registered_for_png
-    renderer = RuVim::RichView.renderer_for(:png)
+  def test_richview_registered_for_image
+    renderer = RuVim::RichView.renderer_for(:image)
     assert_equal RuVim::RichView::ImageRenderer, renderer
   end
 
