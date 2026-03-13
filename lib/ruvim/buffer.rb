@@ -505,13 +505,13 @@ module RuVim
 
     def snapshot
       {
-        lines: @lines.map(&:dup),
+        lines: @lines.dup,
         modified: @modified
       }
     end
 
     def restore_snapshot(snap)
-      @lines = snap.fetch(:lines).map(&:dup)
+      @lines = snap.fetch(:lines).dup
       @lines = [""] if @lines.empty?
       @modified = snap.fetch(:modified)
     end

@@ -105,6 +105,7 @@
 - テスト追加（Buffer / Dispatcher / Ex parser / KeymapManager）
 - パフォーマンス改善（表示幅ベース水平スクロール / syntax cache）
 - Insert mode ペースト高速化（stdin に pending input がある間はレンダリングをスキップしバッチ処理）
+- Undo スナップショットのメモリ効率化（構造共有: 未変更行は文字列オブジェクトを共有し、`@lines.dup` で浅いコピーのみ保持）
 - rope/piece-table などのバッファ構造検討メモ（`docs/spec.md`）
 - テスト基盤の拡張（結合テスト / snapshot / シナリオ）
 - CI / 開発体験（GitHub Actions, `rake docs:check`, `rake ci`）

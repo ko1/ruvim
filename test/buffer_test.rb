@@ -112,4 +112,89 @@ class BufferTest < Minitest::Test
     assert_equal ["a", "b", "", "c", ""], b.lines
     refute b.modified?
   end
+
+  # --- Undo snapshot structural sharing tests ---
+
+  def test_undo_snapshot_shares_unchanged_line_objects
+    b = RuVim::Buffer.new(id: 1, lines: ["aaa", "bbb", "ccc"])
+    original_bbb = b.lines[1]
+    original_ccc = b.lines[2]
+
+    # Modify only line 0
+    b.insert_char(0, 0, "X")
+    assert_equal "Xaaa", b.lines[0]
+
+    # Undo restores original content
+    b.undo!
+    assert_equal ["aaa", "bbb", "ccc"], b.lines
+
+    # Unchanged lines should share the same object (structural sharing)
+    assert_same original_bbb, b.lines[1], "unchanged line 'bbb' should be the same object"
+    assert_same original_ccc, b.lines[2], "unchanged line 'ccc' should be the same object"
+  end
+
+  def test_undo_redo_with_structural_sharing_preserves_content
+    b = RuVim::Buffer.new(id: 1, lines: ["hello", "world"])
+
+    # Multiple modifications
+    b.insert_char(0, 5, "!")
+    assert_equal ["hello!", "world"], b.lines
+
+    b.insert_char(1, 5, "?")
+    assert_equal ["hello!", "world?"], b.lines
+
+    # Undo both
+    b.undo!
+    assert_equal ["hello!", "world"], b.lines
+    b.undo!
+    assert_equal ["hello", "world"], b.lines
+
+    # Redo both
+    b.redo!
+    assert_equal ["hello!", "world"], b.lines
+    b.redo!
+    assert_equal ["hello!", "world?"], b.lines
+  end
+
+  def test_change_group_undo_with_structural_sharing
+    b = RuVim::Buffer.new(id: 1, lines: ["aaa", "bbb", "ccc"])
+    original_ccc = b.lines[2]
+
+    b.begin_change_group
+    b.insert_char(0, 0, "X")
+    b.insert_char(1, 0, "Y")
+    b.end_change_group
+
+    assert_equal ["Xaaa", "Ybbb", "ccc"], b.lines
+
+    b.undo!
+    assert_equal ["aaa", "bbb", "ccc"], b.lines
+    assert_same original_ccc, b.lines[2], "unchanged line 'ccc' should be the same object after group undo"
+  end
+
+  def test_undo_after_delete_line_with_structural_sharing
+    b = RuVim::Buffer.new(id: 1, lines: ["aaa", "bbb", "ccc"])
+    original_aaa = b.lines[0]
+    original_ccc = b.lines[2]
+
+    b.delete_line(1)
+    assert_equal ["aaa", "ccc"], b.lines
+
+    b.undo!
+    assert_equal ["aaa", "bbb", "ccc"], b.lines
+    assert_same original_aaa, b.lines[0], "line 'aaa' should be the same object"
+    assert_same original_ccc, b.lines[2], "line 'ccc' should be the same object"
+  end
+
+  def test_undo_after_insert_newline_with_structural_sharing
+    b = RuVim::Buffer.new(id: 1, lines: ["hello", "world"])
+    original_world = b.lines[1]
+
+    b.insert_newline(0, 3)
+    assert_equal ["hel", "lo", "world"], b.lines
+
+    b.undo!
+    assert_equal ["hello", "world"], b.lines
+    assert_same original_world, b.lines[1], "unchanged line 'world' should be the same object"
+  end
 end

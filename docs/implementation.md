@@ -810,7 +810,23 @@ end
 
 ### Undo/Redo — スナップショット方式
 
-RuVim のアンドゥは **スナップショット方式** を採用している。変更前の状態（行配列全体のコピー）をスタックに保存する。
+RuVim のアンドゥは **スナップショット方式** を採用している。変更前の行配列のコピーをスタックに保存する。
+
+ただし、素朴に全行をディープコピー（`@lines.map(&:dup)`）すると、10 万行のファイルで 100 回の undo を重ねた場合にメモリが爆発する。
+
+RuVim はこの問題を **構造共有（structural sharing）** で解決している。スナップショットは `@lines.dup`（配列の浅いコピー）だけを取り、個々の文字列オブジェクトは共有する。これが安全なのは、Buffer の全ての変更メソッドが文字列を in-place で変更せず、常に新しい文字列を生成して代入するからだ。
+
+```ruby
+# insert_char: line.dup.insert() で新しい文字列を作り、@lines[row] に代入
+def insert_char(row, col, char)
+  record_change_before_mutation!
+  line = @lines.fetch(row)
+  @lines[row] = line.dup.insert(col, char)  # 元の line は変更されない
+  @modified = true
+end
+```
+
+スナップショットと `@lines` が同じ文字列オブジェクトを指していても、変更は常に新しいオブジェクトとして作られるので、スナップショット側の文字列は壊れない。
 
 ```ruby
 def record_change_before_mutation!
@@ -830,9 +846,11 @@ def record_change_before_mutation!
 end
 
 def snapshot
-  { lines: @lines.map(&:dup), modified: @modified }
+  { lines: @lines.dup, modified: @modified }  # 浅いコピー: 未変更行は共有
 end
 ```
+
+この方式により、1 行だけ変更した場合のスナップショットは、配列オブジェクト 1 つ（数十バイト）+ 変更された行の新しい文字列 1 つだけの追加メモリで済む。10 万行のファイルでも、未変更の 99,999 行は参照を共有する。
 
 #### チェンジグループ
 
