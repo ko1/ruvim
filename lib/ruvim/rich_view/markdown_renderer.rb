@@ -62,6 +62,12 @@ module RuVim
           return "\e[38;5;223m#{line}\e[m"
         end
 
+        # Image line
+        img = MD.parse_image(line)
+        if img
+          return { type: :image, alt: img[0], path: img[1] }
+        end
+
         # HR
         if MD.horizontal_rule?(stripped)
           return render_hr(line)

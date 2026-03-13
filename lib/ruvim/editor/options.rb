@@ -60,7 +60,8 @@ module RuVim
         "grepformat" => { default_scope: :global, type: :string, default: "%f:%l:%m" },
         "runprg" => { default_scope: :buffer, type: :string, default: nil },
         "spell" => { default_scope: :buffer, type: :bool, default: false },
-        "spelllang" => { default_scope: :buffer, type: :string, default: "en" }
+        "spelllang" => { default_scope: :buffer, type: :string, default: "en" },
+        "sixel" => { default_scope: :global, type: :string, default: "auto" }
       }.freeze
 
       def option_def(name)

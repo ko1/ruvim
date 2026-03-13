@@ -10,6 +10,8 @@ module RuVim
       @last_frame = nil
       @syntax_color_cache = {}
       @wrapped_segments_cache = {}
+      @sixel_overlays = []
+      @sixel_cache = nil
     end
 
     def invalidate_cache!
@@ -18,6 +20,7 @@ module RuVim
 
     def render(editor)
       @rich_render_info = nil
+      @sixel_overlays = []
 
       rows, cols = @terminal.winsize
       editor.screen_columns = [cols.to_i, 1].max
@@ -78,6 +81,7 @@ module RuVim
       end
       @last_frame = frame.merge(cursor_row:, cursor_col:)
       @terminal.write(out)
+      emit_sixel_overlays
     end
 
     def current_window_view_height(editor)
@@ -473,6 +477,7 @@ module RuVim
       formatted = RuVim::RichView.render_visible_lines(editor, non_nil, context: context)
       fmt_idx = 0
       col_offset_sc = @rich_render_info ? @rich_render_info[:col_offset_sc] : 0
+      sixel_enabled = sixel_enabled?(editor)
 
       Array.new(height) do |dy|
         buffer_row = window.row_offset + dy
@@ -480,12 +485,18 @@ module RuVim
         if buffer_row < buffer.line_count
           line = formatted[fmt_idx] || ""
           fmt_idx += 1
-          cursor_col = nil
-          if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
-            cursor_col = @rich_render_info[:cursor_sc] - col_offset_sc
+
+          if line.is_a?(Hash) && line[:type] == :image
+            body = render_image_placeholder(editor, buffer, line, content_w, sixel_enabled, gutter_w, dy)
+            prefix + body
+          else
+            cursor_col = nil
+            if editor.current_window_id == window.id && window.cursor_y == buffer_row && @rich_render_info
+              cursor_col = @rich_render_info[:cursor_sc] - col_offset_sc
+            end
+            body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
+            prefix + body
           end
-          body = render_rich_view_line_sc(line, width: content_w, skip_sc: col_offset_sc, cursor_col: cursor_col)
-          prefix + body
         else
           prefix + pad_plain_display("~", content_w)
         end
@@ -506,6 +517,51 @@ module RuVim
         pre_lines << buffer.line_at(row) if row < buffer.line_count
       end
       { pre_context_lines: pre_lines }
+    end
+
+    def sixel_enabled?(editor)
+      opt = editor.effective_option("sixel").to_s
+      case opt
+      when "on"  then true
+      when "off" then false
+      else @terminal.respond_to?(:sixel_capable?) && @terminal.sixel_capable?
+      end
+    end
+
+    def render_image_placeholder(editor, buffer, img_hash, content_w, sixel_enabled, gutter_w, dy)
+      alt = img_hash[:alt].to_s
+      path = img_hash[:path].to_s
+
+      if sixel_enabled
+        require_relative "sixel" unless defined?(RuVim::Sixel)
+        buf_path = buffer.respond_to?(:file_path) ? buffer.file_path : nil
+        buf_dir = buf_path && !buf_path.to_s.empty? ? File.dirname(buf_path) : nil
+        cell_w, cell_h = @terminal.cell_size
+        @sixel_cache ||= RuVim::Sixel::Cache.new
+        sixel_data = RuVim::Sixel.load_image(path, buffer_dir: buf_dir,
+                                              max_width_cells: [content_w, 1].max, max_height_cells: 10,
+                                              cell_width: cell_w, cell_height: cell_h, cache: @sixel_cache)
+        if sixel_data
+          @sixel_overlays << { dy: dy, gutter_w: gutter_w, data: sixel_data[:sixel] }
+        end
+      end
+
+      placeholder = "\e[90m[Image: #{alt.empty? ? path : alt}]\e[m"
+      pad_plain_display(placeholder, content_w)
+    end
+
+    def emit_sixel_overlays
+      return if @sixel_overlays.empty?
+
+      out = +""
+      @sixel_overlays.each do |overlay|
+        # Move cursor to overlay position and emit sixel data
+        row = overlay[:dy] + 1  # 1-based
+        col = overlay[:gutter_w] + 1
+        out << "\e[#{row};#{col}H"
+        out << overlay[:data]
+      end
+      @terminal.write(out)
     end
 
     # Render a formatted rich-view line by skipping `skip_sc` display columns

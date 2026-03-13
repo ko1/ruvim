@@ -16,6 +16,7 @@ module RuVim
       ITALIC_RE         = /(?<!\*)\*([^*]+)\*(?!\*)/
       INLINE_CODE_RE    = /`([^`]+)`/
       LINK_RE           = /\[([^\]]+)\]\(([^)]+)\)/
+      IMAGE_RE              = /\A\s*!\[([^\]]*)\]\(([^)]+)\)\s*\z/
       CHECKBOX_CHECKED_RE   = /^(\s*-\s*)\[x\]/
       CHECKBOX_UNCHECKED_RE = /^(\s*-\s*)\[ \]/
 
@@ -98,6 +99,11 @@ module RuVim
       def table_line?(line)
         stripped = line.to_s.strip
         stripped.start_with?("|") && stripped.end_with?("|") && stripped.length > 1
+      end
+
+      def parse_image(line)
+        m = line.to_s.match(IMAGE_RE)
+        m ? [m[1], m[2]] : nil
       end
 
       def table_separator?(stripped)
