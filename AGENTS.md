@@ -255,7 +255,7 @@ App
 
 ### Docs (docs/)
 
-`spec.md` (feature spec), `command.md`, `binding.md`, `config.md`, `tutorial.md`, `vim_diff.md`, `plugin.md`, `todo.md`, `done.md`
+`spec.md` (feature spec), `command.md`, `binding.md`, `config.md`, `tutorial.md`, `vim_diff.md`, `plugin.md`, `todo.md`, `done.md`, `implementation.md` (実装解説記事)
 
 ## Debugging (Lumitrace)
 
