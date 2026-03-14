@@ -56,4 +56,18 @@ class DisplayWidthTest < Minitest::Test
   def test_zero_width_joiner_returns_zero
     assert_equal 0, RuVim::DisplayWidth.cell_width("\u200D")
   end
+
+  def test_wide_codepoint_cjk_extension_b
+    # 𩸽 (U+29E3D) — CJK Unified Ideographs Extension B
+    assert_equal 2, RuVim::DisplayWidth.cell_width("𩸽")
+  end
+
+  def test_wide_codepoint_cjk_extension_b_display_width
+    assert_equal 2, RuVim::DisplayWidth.display_width("𩸽")
+  end
+
+  def test_wide_codepoint_cjk_sip_range
+    # 𠀀 (U+20000) — start of CJK Extension B
+    assert_equal 2, RuVim::DisplayWidth.cell_width("\u{20000}")
+  end
 end

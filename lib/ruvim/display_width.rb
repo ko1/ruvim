@@ -145,7 +145,8 @@ module RuVim
         (0xFE10..0xFE19).cover?(code) ||
         (0xFE30..0xFE6F).cover?(code) ||
         (0xFF00..0xFF60).cover?(code) ||
-        (0xFFE0..0xFFE6).cover?(code)
+        (0xFFE0..0xFFE6).cover?(code) ||
+        (0x20000..0x323AF).cover?(code)
     end
 
     def emoji_codepoint?(code)

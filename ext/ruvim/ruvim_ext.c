@@ -36,6 +36,7 @@ static const range_t wide_ranges[] = {
     {0xFE30, 0xFE6F},
     {0xFF00, 0xFF60},
     {0xFFE0, 0xFFE6},
+    {0x20000, 0x323AF},
 };
 #define WIDE_COUNT (sizeof(wide_ranges) / sizeof(wide_ranges[0]))
 
