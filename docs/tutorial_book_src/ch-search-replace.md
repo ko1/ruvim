@@ -21,7 +21,9 @@ n           同方向に次のマッチへ
 N           逆方向に次のマッチへ
 ```
 
-検索パターンは Ruby 正規表現です。
+検索パターンは [Ruby 正規表現](#index:正規表現)です[^1]。
+
+[^1]: Vim とは異なり、RuVim では Ruby の `Regexp` がそのまま使えます。`\d`, `\w`, `(?:...)` など Ruby の正規表現構文がすべて有効です。詳しくは[Vimとの違い](appendix-e.md)を参照してください。
 
 操作例:
 
@@ -59,6 +61,9 @@ n        → さらに次の "total" へ
 
 ## 検索オプション
 
+> [!TIP]
+> [`smartcase`](#index:smartcase) を有効にすると、小文字だけのパターンでは case-insensitive、大文字を含むパターンでは case-sensitive になります。検索の利便性が大幅に向上するので、[設定ファイル](ch-config.md)で有効化しておくことをお勧めします。
+
 ```
 :set ignorecase      大文字小文字を無視
 :set smartcase       ignorecase 有効時、大文字を含むパターンは case-sensitive
@@ -77,6 +82,9 @@ n        → さらに次の "total" へ
 :10,20s/old/new/g     10-20行の全マッチを置換
 :'<,'>s/old/new/g     Visual 選択範囲の全マッチを置換
 ```
+
+> [!WARNING]
+> `g` フラグを忘れると、各行の**最初の**マッチしか置換されません。全マッチを置換したい場合は必ず `g` を付けてください。
 
 フラグ:
 
@@ -169,7 +177,8 @@ end
 :g/def/normal A;        def を含む行の末尾にセミコロン追加
 ```
 
-`:global` の undo は一括です — 1回の `u` で全変更が元に戻ります。
+> [!NOTE]
+> [`:global`](#index::global) の undo は一括です — 1回の `u` で全変更が元に戻ります。
 
 実践例 — ログレベルの整理:
 

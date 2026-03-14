@@ -9,7 +9,10 @@
 - ConfigDSL
 - CLI オプションとの組み合わせ
 
-設定ファイルは「あなた専用のエディタ」を作るための設計図です。一度 init.rb を書いておけば、どのマシンでも同じ環境を再現できます。キーバインドの追加やオプションの永続化はもちろん、Ruby の力を借りて独自のコマンドを定義することもできます。
+[設定ファイル](#index:設定/init.rb)は「あなた専用のエディタ」を作るための設計図です。一度 init.rb を書いておけば、どのマシンでも同じ環境を再現できます。キーバインドの追加や[オプション](ch-options.md)の永続化はもちろん、Ruby の力を借りて独自のコマンドを定義することもできます。
+
+> [!TIP]
+> より高度なカスタマイズ（独自コマンドの定義など）は [Plugin API](ch-plugin-api.md) の章で詳しく解説しています。
 
 ## 設定ファイルの場所
 
@@ -71,7 +74,8 @@ nmap "K", desc: "Show method name" do |ctx, **|
 end
 ```
 
-ftplugin の `nmap`/`imap` は filetype-local として登録され、そのファイルタイプのバッファでのみ有効です。
+> [!NOTE]
+> [ftplugin](#index:設定/ftplugin) の `nmap`/`imap` は filetype-local として登録され、その[ファイルタイプ](ch-syntax-languages.md#filetype-検出)のバッファでのみ有効です。
 
 ## ConfigDSL メソッド一覧
 

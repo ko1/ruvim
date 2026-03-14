@@ -2,13 +2,13 @@
 
 ## RuVim の独自機能
 
-- **Ruby DSL 設定**: init.rb で Ruby の全機能を利用可能（Vim script 不要）
-- **`:ruby` コマンド**: 実行中に Ruby eval が可能
-- **Rich View モード**: TSV/CSV/Markdown/JSON/画像の構造化表示
-- **Follow mode**: `:follow` / `-f` でファイル追従（`tail -f` 相当）
-- **ストリーム連携**: stdin パイプ、`:run` でリアルタイム出力表示
-- **検索は Ruby 正規表現**: Vim regex ではなく Ruby の Regexp を使用
-- **ネスト分割**: ツリー構造のウィンドウレイアウト
+- **[Ruby DSL 設定](ch-config.md)**: init.rb で Ruby の全機能を利用可能（Vim script 不要）
+- **[`:ruby` コマンド](ch-plugin-api.md)**: 実行中に Ruby eval が可能
+- **[Rich View モード](ch-rich-view.md)**: TSV/CSV/Markdown/JSON/画像の構造化表示
+- **[Follow mode](ch-streams.md#follow-コマンド)**: `:follow` / `-f` でファイル追従（`tail -f` 相当）
+- **[ストリーム連携](ch-streams.md)**: stdin パイプ、`:run` でリアルタイム出力表示
+- **検索は [Ruby 正規表現](ch-search-replace.md#検索)**: Vim regex ではなく Ruby の Regexp を使用
+- **[ネスト分割](ch-windows.md#ネスト分割)**: ツリー構造のウィンドウレイアウト
 - **Shift+矢印キー**: スマート分割（1ウィンドウなら分割、2つ以上ならフォーカス移動）
 
 ## 動作の差分

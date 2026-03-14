@@ -9,7 +9,7 @@
 - `ctx` API の使い方
 - `:ruby` による対話的な Ruby 実行
 
-RuVim の真骨頂は Ruby で書かれたエディタであるという点です。Plugin API を使えば、エディタの内部状態に直接アクセスして、自分だけのコマンドやキーバインドを定義できます。Vim script を覚える必要はありません — Ruby の知識がそのまま活かせます。
+RuVim の真骨頂は Ruby で書かれたエディタであるという点です。[Plugin API](#index:Plugin API) を使えば、エディタの内部状態に直接アクセスして、自分だけのコマンドやキーバインドを定義できます。Vim script を覚える必要はありません — Ruby の知識がそのまま活かせます。
 
 ## 内部コマンドの定義
 
@@ -100,7 +100,7 @@ ctx.buffer.modified?      # 変更あり?
 ctx.buffer.line_at(row)   # 指定行の内容
 
 # 編集（undo グループで囲む）
-ctx.buffer.begin_change_group
+ctx.buffer.begin_change_group     # 必ず対で呼ぶこと
 ctx.buffer.insert_text(row, col, "text")
 ctx.buffer.end_change_group
 ```
@@ -123,6 +123,9 @@ ctx.window.clamp_to_buffer(ctx.buffer)
 ```
 
 `ctx`, `editor`, `buffer`, `window` を参照できます。stdout/stderr の出力は `[Ruby Output]` バッファに表示されます。
+
+> [!CAUTION]
+> [`:ruby`](#index::ruby) は任意の Ruby コードを実行します。[Restricted mode](ch-security.md) (`-Z`) では無効化されます。
 
 実践例 — バッファ内の行をソート:
 

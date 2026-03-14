@@ -9,7 +9,10 @@
 - `:filter` による絞り込み
 - スペルチェック
 
-バグの原因を追いかけるとき、リファクタリングで影響範囲を確認するとき、検索ワークフローが武器になります。quickfix list を使えば、プロジェクト全体の検索結果を一覧にして、一つずつ確認しながらジャンプできます。手動でファイルを開いて grep するよりも格段に速く、見落としも減ります。
+バグの原因を追いかけるとき、リファクタリングで影響範囲を確認するとき、検索ワークフローが武器になります。[quickfix list](#index:quickfix) を使えば、プロジェクト全体の検索結果を一覧にして、一つずつ確認しながらジャンプできます。手動でファイルを開いて grep するよりも格段に速く、見落としも減ります。
+
+> [!TIP]
+> バッファ内の[検索と置換](ch-search-replace.md)はすでに学びました。この章ではプロジェクト全体を横断する検索を扱います。
 
 ## quickfix list
 
@@ -62,7 +65,10 @@ location list はウィンドウローカルな quickfix list です。
 :lgrep pattern [files...]    外部 grep を実行 → location list
 ```
 
-grep プログラムは `grepprg` オプションで設定できます（デフォルト: `grep -nH`）。
+grep プログラムは [`grepprg` オプション](ch-options.md)で設定できます（デフォルト: `grep -nH`）。
+
+> [!TIP]
+> [ripgrep](https://github.com/BurntSushi/ripgrep) を使っている場合は、[設定ファイル](ch-config.md)で `set "grepprg=rg --vimgrep"` とすると高速に検索できます。
 
 操作例:
 

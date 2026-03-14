@@ -10,7 +10,7 @@
 - DoS 保護
 - Unicode 幅の設定
 
-信頼できないファイルを開くことがある以上、セキュリティへの配慮は欠かせません。Restricted mode を使えば、シェル実行や Ruby eval を無効にした安全な閲覧環境を作れます。また、readonly モードは「うっかり変更してしまった」事故を防ぎます。
+信頼できないファイルを開くことがある以上、セキュリティへの配慮は欠かせません。[Restricted mode](#index:Restricted mode) を使えば、シェル実行や Ruby eval を無効にした安全な閲覧環境を作れます。また、readonly モードは「うっかり変更してしまった」事故を防ぎます。
 
 ## Restricted mode (`-Z`)
 
@@ -28,7 +28,8 @@ ruvim -Z file.txt
 - user config / ftplugin の読み込み
 - Ruby 構文チェック（on_save）
 
-信頼できないファイルを安全に閲覧するのに適しています。
+> [!CAUTION]
+> 信頼できないファイルを開く際は必ず `-Z` を使いましょう。[`:ruby`](ch-plugin-api.md)、[`:git`](ch-git.md)、[`:gh`](ch-github.md) なども無効化されます。
 
 ## Readonly mode (`-R`)
 
@@ -50,7 +51,7 @@ ruvim -M file.txt
 
 RuVim には以下のセキュリティ対策が含まれています:
 
-- **Sixel DoS 保護**: PNG デコーダで画像サイズ上限（50M ピクセル）、Zlib 展開サイズ上限（200MB）、URL ダウンロードサイズ上限（10MB）を設定
+- **[Sixel](ch-rich-view.md#画像表示) DoS 保護**: PNG デコーダで画像サイズ上限（50M ピクセル）、Zlib 展開サイズ上限（200MB）、URL ダウンロードサイズ上限（10MB）を設定
 - **特殊ファイルの拒否**: FIFO・デバイス・ソケット等の特殊ファイルは `File.file?` チェックで拒否
 - **制御文字のサニタイズ**: Rich view レンダリング時にバッファ内容の制御文字（ESC 含む）を無害化し、ターミナルエスケープインジェクションを防止
 - **`:grep` のシェルインジェクション対策**: argv 配列で安全に実行（シェル経由ではない）

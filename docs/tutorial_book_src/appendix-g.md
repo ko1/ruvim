@@ -1,6 +1,6 @@
 # おすすめ初期設定
 
-RuVim を初めて使う方向けのおすすめ `init.rb` です。以下を `~/.config/ruvim/init.rb` に保存してください。
+RuVim を初めて使う方向けのおすすめ `init.rb` です。以下を `~/.config/ruvim/init.rb` に保存してください。各オプションの詳細は[オプション設定](ch-options.md)と[設定ファイル](ch-config.md)を参照してください。
 
 ```ruby
 # ~/.config/ruvim/init.rb

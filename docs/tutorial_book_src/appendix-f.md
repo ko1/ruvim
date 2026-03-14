@@ -2,7 +2,9 @@
 
 ## 表示が崩れる
 
-- `Ctrl-z` でサスペンドし、`fg` で復帰すると全面再描画される
+> [!TIP]
+> `Ctrl-z` でサスペンドし、`fg` で復帰すると全面再描画されます。多くの表示崩れはこれで解決します。
+
 - ターミナルリサイズ後は自動で再描画される
 - CJK 文字の幅がずれる場合: `RUVIM_AMBIGUOUS_WIDTH=2 ruvim` を試す
 
@@ -27,7 +29,7 @@ RuVim はシステムクリップボードとして以下を試みます:
 
 ```bash
 # 同期ロードに切替
-ruvim --cmd 'set syncload' huge.log
+ruvim --sync-load huge.log
 
 # 閾値を調整
 RUVIM_ASYNC_FILE_THRESHOLD_BYTES=33554432 ruvim huge.log

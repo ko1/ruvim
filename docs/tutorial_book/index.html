@@ -383,6 +383,53 @@ mark.search-highlight {
   border-radius: 2px;
 }
 
+/* === Admonitions === */
+.admonition {
+  border-left: 4px solid;
+  border-radius: 0 4px 4px 0;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.admonition p:last-child {
+  margin-bottom: 0;
+}
+
+.admonition-title {
+  font-weight: 600;
+  margin-bottom: 0.4rem !important;
+}
+
+.admonition-note {
+  border-left-color: #2563eb;
+  background: #eff6ff;
+}
+.admonition-note .admonition-title::before { content: "\2139\FE0F  "; }
+
+.admonition-tip {
+  border-left-color: #16a34a;
+  background: #f0fdf4;
+}
+.admonition-tip .admonition-title::before { content: "\1F4A1  "; }
+
+.admonition-warning {
+  border-left-color: #ca8a04;
+  background: #fefce8;
+}
+.admonition-warning .admonition-title::before { content: "\26A0\FE0F  "; }
+
+.admonition-caution {
+  border-left-color: #dc2626;
+  background: #fef2f2;
+}
+.admonition-caution .admonition-title::before { content: "\1F6D1  "; }
+
+.admonition-important {
+  border-left-color: #9333ea;
+  background: #faf5ff;
+}
+.admonition-important .admonition-title::before { content: "\2757  "; }
+
 /* === Dark Mode === */
 [data-theme="dark"] {
   --color-bg: #1a1a2e;
@@ -395,6 +442,22 @@ mark.search-highlight {
   --color-accent-light: #1c3a5c;
   --color-code-bg: #0f172a;
   --color-code-border: #2d3748;
+}
+
+[data-theme="dark"] .admonition-note {
+  background: #1e2a3a;
+}
+[data-theme="dark"] .admonition-tip {
+  background: #1a2e1a;
+}
+[data-theme="dark"] .admonition-warning {
+  background: #2e2a1a;
+}
+[data-theme="dark"] .admonition-caution {
+  background: #2e1a1a;
+}
+[data-theme="dark"] .admonition-important {
+  background: #2a1a2e;
 }
 
 [data-theme="dark"] .search-box input {
@@ -568,6 +631,52 @@ mark.search-highlight {
   }
 }
 
+/* === Index === */
+.index-group {
+  margin-bottom: 1.5rem;
+}
+
+.index-letter {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.index-entries {
+  margin-left: 0;
+}
+
+.index-entries dt {
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+.index-entries dt.index-sub {
+  font-weight: 400;
+  margin-left: 1.5rem;
+}
+
+.index-entries dd {
+  margin-left: 1.5rem;
+  font-size: 0.92rem;
+}
+
+.index-entries dd.index-sub {
+  margin-left: 3rem;
+}
+
+.index-entries dd a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.index-entries dd a:hover {
+  text-decoration: underline;
+}
+
 /* === Print === */
 @media print {
   .sidebar,
@@ -575,6 +684,14 @@ mark.search-highlight {
   .chapter-nav,
   .edit-link {
     display: none !important;
+  }
+
+  html {
+    font-size: 11pt;
+  }
+
+  body {
+    line-height: 1.5;
   }
 
   .content {
@@ -595,6 +712,19 @@ mark.search-highlight {
   .chapter pre {
     white-space: pre-wrap;
     word-wrap: break-word;
+  }
+
+  .chapter pre code {
+    font-size: 0.8rem;
+  }
+
+  @page {
+    margin: 20mm 15mm;
+    @bottom-center {
+      content: counter(page);
+      font-size: 9pt;
+      color: #666;
+    }
   }
 }
 
@@ -1383,6 +1513,9 @@ mark.search-highlight {
           </li>
         </ul>
       </li>
+      <li class="toc-chapter" data-chapter="__index__">
+        <a href="#__index__" class="toc-h1" onclick="showChapter('__index__')">索引</a>
+      </li>
     </ul>
   </nav>
 </div>
@@ -1449,6 +1582,11 @@ $ ruvim
 
 <p>モーダル編集の考え方、基本的なカーソル移動、テキストの入力と保存、ファイルの開き方 — これらを押さえれば、RuVim で日常的な編集作業を始められます。Vim 系エディタが初めての方は、ここからスタートしてください。</p>
 
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>全部を一度に覚える必要はありません。<a href="#ch-intro">RuVimとは</a>で起動と終了を覚えたら、実際のファイルを開いて少しずつ試してみましょう。</p>
+</div>
+
   </section>
   <section class="chapter" id="chapter-ch-intro" style="display: none;">
     <h1 id="ch-intro--ruvimとは">1. RuVimとは</h1>
@@ -1460,7 +1598,7 @@ $ ruvim
 <h2 id="ch-intro--この章で学ぶこと">1.1 この章で学ぶこと</h2>
 
 <ul>
-  <li>RuVim の概要とインストール方法</li>
+  <li><span id="ch-intro--idx-0">RuVim</span> の概要とインストール方法</li>
   <li>起動と終了の方法</li>
   <li>モードの概念</li>
 </ul>
@@ -1469,17 +1607,22 @@ $ ruvim
 
 <h2 id="ch-intro--ruvim-の概要">1.2 RuVim の概要</h2>
 
-<p>RuVim は Ruby で実装された Vim ライクなターミナルエディタです。Ruby 標準ライブラリのみで動作し、Vim の操作感を維持しつつ、Ruby ネイティブな拡張性を備えています。</p>
+<p><span id="ch-intro--idx-1">RuVim</span> は <span id="ch-intro--idx-2">Ruby</span> で実装された Vim ライクなターミナルエディタです。Ruby 標準ライブラリのみで動作し、Vim の操作感を維持しつつ、Ruby ネイティブな拡張性を備えています。</p>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>RuVim は外部 gem に依存しません。Ruby さえあればすぐに使い始められます。</p>
+</div>
 
 <p>主な特徴:</p>
 
 <ul>
-  <li>Vim 互換のモーダル編集（Normal / Insert / Visual / Command-line モード）</li>
-  <li>Ruby DSL による設定とプラグイン</li>
-  <li>26 言語のシンタックスハイライト</li>
-  <li>TSV/CSV/Markdown/JSON/画像の Rich View モード</li>
-  <li>Git / GitHub 連携</li>
-  <li>ストリーム連携（stdin パイプ、<code>:run</code>、<code>:follow</code>）</li>
+  <li>Vim 互換の<span id="ch-intro--idx-3">モーダル編集</span>（Normal / Insert / Visual / Command-line モード）</li>
+  <li><span id="ch-intro--idx-4">Ruby DSL</span> による設定とプラグイン</li>
+  <li>26 言語の<span id="ch-intro--idx-5">シンタックスハイライト</span></li>
+  <li>TSV/CSV/Markdown/JSON/画像の <span id="ch-intro--idx-6">Rich View</span> モード</li>
+  <li><span id="ch-intro--idx-7">Git</span> / <span id="ch-intro--idx-8">GitHub</span> 連携</li>
+  <li><span id="ch-intro--idx-9">ストリーム連携</span>（stdin パイプ、<code>:run</code>、<code>:follow</code>）</li>
 </ul>
 
 <h2 id="ch-intro--インストール">1.3 インストール</h2>
@@ -1489,10 +1632,10 @@ $ ruvim
 <pre><code class="language-bash">gem install ruvim
 </code></pre>
 
-<p>開発環境で直接実行する場合:</p>
-
-<pre><code class="language-bash">ruby -Ilib exe/ruvim
-</code></pre>
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>開発環境で直接実行する場合は <code>ruby -Ilib exe/ruvim</code> でも起動できます。</p>
+</div>
 
 <h2 id="ch-intro--起動">1.4 起動</h2>
 
@@ -1573,7 +1716,12 @@ ruvim file.txt:10:5             # path:line:col 形式
   </tbody>
 </table>
 
-<p>起動直後は <strong>Normal mode</strong> です。</p>
+<p>起動直後は <strong><span id="ch-intro--idx-10">Normal mode</span></strong> です。</p>
+
+<div class="admonition admonition-important">
+<p class="admonition-title">Important</p>
+<p>Vim 系エディタが初めての方へ: 起動直後にキーを押しても文字は入力されません。まず <code>i</code> で <span id="ch-intro--idx-11">Insert mode</span> に入ってからテキストを入力してください。</p>
+</div>
 
 <p>モードの遷移を図で示すと:</p>
 
@@ -1604,6 +1752,11 @@ flowchart LR
 :wqa      全バッファ保存して終了
 </code></pre>
 
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>「終了できない！」と焦ったら、まず <code>Esc</code> を何回か押して Normal mode に戻り、<code>:q!</code> で強制終了できます。</p>
+</div>
+
 <p>操作例 — ファイルを開いて保存して終了:</p>
 
 <pre><code>$ ruvim hello.txt
@@ -1617,6 +1770,10 @@ Esc                  ← Normal mode に戻る
 <h2 id="ch-intro--サスペンド">1.7 サスペンド</h2>
 
 <p>全モード共通で <code>Ctrl-z</code> を押すとシェルに戻ります（サスペンド）。<code>fg</code> で復帰できます。</p>
+
+<hr />
+
+<p>次の章では<a href="#ch-basic-movement">基本の移動</a>を学びます。<code>h</code>/<code>j</code>/<code>k</code>/<code>l</code> を覚えれば、マウスなしでコード中を自在に移動できるようになります。</p>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-intro.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -1636,11 +1793,11 @@ Esc                  ← Normal mode に戻る
 <h2 id="ch-basic-movement--この章で学ぶこと">2.1 この章で学ぶこと</h2>
 
 <ul>
-  <li>h/j/k/l による移動</li>
+  <li><span id="ch-basic-movement--idx-0">h/j/k/l</span> による移動</li>
   <li>行頭・行末への移動</li>
-  <li>単語単位の移動</li>
+  <li><span id="ch-basic-movement--idx-1">単語単位の移動</span></li>
   <li>バッファの先頭・末尾への移動</li>
-  <li>スクロール操作</li>
+  <li><span id="ch-basic-movement--idx-2">スクロール</span>操作</li>
   <li>カウントの使い方</li>
 </ul>
 
@@ -1648,7 +1805,7 @@ Esc                  ← Normal mode に戻る
 
 <h2 id="ch-basic-movement--基本の4方向移動">2.2 基本の4方向移動</h2>
 
-<p>Normal mode での基本移動:</p>
+<p><a href="#ch-intro--モードの概念">Normal mode</a> での基本移動:</p>
 
 <pre><code>h    左へ移動
 j    下へ移動
@@ -1656,7 +1813,10 @@ k    上へ移動
 l    右へ移動
 </code></pre>
 
-<p>矢印キーも使えます。</p>
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>矢印キーも使えますが、<code>h</code>/<code>j</code>/<code>k</code>/<code>l</code> に慣れるとホームポジションから手を離さずに済み、編集速度が格段に上がります。</p>
+</div>
 
 <p>操作例:</p>
 
@@ -1750,7 +1910,14 @@ zb    カーソル行を画面の下端に
 2Ctrl-d  2×半ページ下へ
 </code></pre>
 
-<p>注意: <code>0</code> は行頭移動として扱われ、カウントの一部にはなりません。</p>
+<div class="admonition admonition-warning">
+<p class="admonition-title">Warning</p>
+<p><code>0</code> は行頭移動として扱われ、カウントの一部にはなりません。<code>10j</code> は「10行下」ですが、<code>0j</code> は「行頭へ移動 → 1行下」になります。</p>
+</div>
+
+<hr />
+
+<p>移動コマンドを覚えたら、次は<a href="#ch-basic-editing">テキストの入力と基本編集</a>に進みましょう。また、これらの移動コマンドは<a href="#ch-operators-motions">オペレータとモーション</a>と組み合わせると真価を発揮します。</p>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-basic-movement.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -1776,7 +1943,7 @@ zb    カーソル行を画面の下端に
   <li>Undo / Redo</li>
 </ul>
 
-<p>テキストを入力できなければエディタとは呼べません。この章では Insert mode の多彩な入り方と、「間違えたら戻す」ための Undo/Redo を学びます。Insert mode への入り方を使い分けるだけで、無駄なカーソル移動がぐっと減ります。</p>
+<p>テキストを入力できなければエディタとは呼べません。この章では <span id="ch-basic-editing--idx-0">Insert mode</span> の多彩な入り方と、「間違えたら戻す」ための <span id="ch-basic-editing--idx-1">Undo</span> / Redo を学びます。Insert mode への入り方を使い分けるだけで、無駄なカーソル移動がぐっと減ります。</p>
 
 <h2 id="ch-basic-editing--insert-mode-への入り方">3.2 Insert mode への入り方</h2>
 
@@ -1787,6 +1954,11 @@ A    行末から挿入
 o    現在行の下に新しい行を開いて挿入
 O    現在行の上に新しい行を開いて挿入
 </code></pre>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>i</code> と <code>a</code> の使い分け: カーソルの<strong>前</strong>に挿入したいなら <code>i</code>、<strong>後ろ</strong>なら <code>a</code>。行頭・行末には大文字の <code>I</code>/<code>A</code> がそれぞれ対応します。</p>
+</div>
 
 <p>操作例 — 行末にセミコロンを追加:</p>
 
@@ -1880,12 +2052,14 @@ rh
 Ctrl-r  取り消した変更をやり直す（Redo）
 </code></pre>
 
-<p>Undo の粒度:</p>
-
-<ul>
-  <li>Normal mode のコマンド（<code>x</code>, <code>dd</code> など）: 1コマンド = 1 undo 単位</li>
-  <li>Insert mode: 入ってから出るまでの全入力 = 1 undo 単位</li>
-</ul>
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>Undo の粒度は Vim と同様です:</p>
+  <ul>
+    <li>Normal mode のコマンド（<code>x</code>, <code>dd</code> など）: 1コマンド = 1 undo 単位</li>
+    <li>Insert mode: 入ってから出るまでの全入力 = 1 undo 単位</li>
+  </ul>
+</div>
 
 <p>操作例:</p>
 
@@ -1898,13 +2072,17 @@ u            → Hello, World\!（再び戻る）
 
 <h2 id="ch-basic-editing--永続-undo">3.8 永続 Undo</h2>
 
-<p>RuVim はデフォルトで undo 履歴をファイルに保存します。エディタを閉じて再度開いても、undo/redo が使えます。</p>
+<p>RuVim はデフォルトで <span id="ch-basic-editing--idx-2">undo 履歴</span> をファイルに保存します。エディタを閉じて再度開いても、undo/redo が使えます。</p>
 
 <pre><code>:set undofile       有効化（デフォルトで有効）
 :set noundofile     無効化
 </code></pre>
 
-<p>undo ファイルの保存先: <code>~/.local/share/ruvim/undo/</code>（<code>undodir</code> オプションで変更可能）</p>
+<p>undo ファイルの保存先: <code>~/.local/share/ruvim/undo/</code>（<a href="#ch-options"><code>undodir</code> オプション</a>で変更可能）</p>
+
+<hr />
+
+<p>テキスト入力の基本を身につけたら、次は<a href="#ch-files">ファイルを開いて編集する</a>方法を学びましょう。</p>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-basic-editing.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -1931,7 +2109,7 @@ u            → Hello, World\!（再び戻る）
   <li><code>Ctrl-z</code> でサスペンドする</li>
 </ul>
 
-<p>プログラミングでは複数のファイルを行き来し、外部コマンドの結果を取り込み、ヘルプを参照する、という作業が日常的に発生します。エディタの中からこれらの操作がすべてできるようになると、ターミナルとエディタを何度も切り替える手間がなくなり、作業の流れが途切れにくくなります。</p>
+<p>プログラミングでは複数のファイルを行き来し、外部コマンドの結果を取り込み、ヘルプを参照する、という作業が日常的に発生します。エディタの中からこれらの操作がすべてできるようになると、ターミナルとエディタを何度も切り替える手間がなくなり、作業の流れが途切れにくくなります<sup id="fnref:ch-files--1"><a href="#fn:ch-files--1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
 <h2 id="ch-files--ファイルを開く">4.2 ファイルを開く</h2>
 
@@ -1946,7 +2124,10 @@ u            → Hello, World\!（再び戻る）
 :e app.rb:42:10         42行目10列にジャンプして開く
 </code></pre>
 
-<p>大きいファイル（デフォルト閾値以上）は先頭部分を先に表示し、残りをバックグラウンドで読み込みます。statusline に <code>[load]</code> と表示されます。</p>
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>大きいファイル（デフォルト閾値以上）は先頭部分を先に表示し、残りをバックグラウンドで読み込みます。statusline に <code>[load]</code> と表示されます。詳しくは<a href="#ch-streams--非同期ファイルロード">ストリーム連携</a>を参照してください。</p>
+</div>
 
 <p>実践例 — エラーメッセージからファイルを開く:</p>
 
@@ -1985,7 +2166,12 @@ u            → Hello, World\!（再び戻る）
 :run                    直前のコマンドを再実行（または runprg の値を使用）
 </code></pre>
 
-<p><code>:run</code> は PTY 経由でリアルタイムにストリーム表示し、<code>Ctrl-C</code> で停止できます。</p>
+<p><span id="ch-files--idx-0"><code>:run</code></span> は PTY 経由でリアルタイムにストリーム表示し、<code>Ctrl-C</code> で停止できます。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>:run</code> の詳細や <code>:follow</code> によるログ監視については<a href="#ch-streams">ストリーム連携</a>の章で詳しく解説しています。</p>
+</div>
 
 <h2 id="ch-files--ヘルプ">4.6 ヘルプ</h2>
 
@@ -2002,6 +2188,13 @@ u            → Hello, World\!（再び戻る）
 <pre><code>（RuVim 操作中に Ctrl-z）
 $ fg    ← RuVim に復帰
 </code></pre>
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:ch-files--1">
+      <p>複数のバッファを効率的に管理する方法は<a href="#ch-buffers">バッファ管理</a>の章で詳しく解説しています。 <a href="#fnref:ch-files--1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-files.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -2034,7 +2227,12 @@ $ fg    ← RuVim に復帰
   <li>ペースト操作</li>
 </ul>
 
-<p>オペレータとモーションの組み合わせは、Vim 系エディタの最も強力な武器です。「何をするか」と「どこまでか」を分離することで、少数のコマンドの掛け合わせから無数の操作を生み出せます。一度この文法を体得すれば、新しいモーションを覚えるたびにすべてのオペレータと組み合わせられる — つまり知識が掛け算で増えていきます。</p>
+<p><span id="ch-operators-motions--idx-0">オペレータ</span>と<span id="ch-operators-motions--idx-1">モーション</span>の組み合わせは、Vim 系エディタの最も強力な武器です。「何をするか」と「どこまでか」を分離することで、少数のコマンドの掛け合わせから無数の操作を生み出せます。一度この文法を体得すれば、新しいモーションを覚えるたびにすべてのオペレータと組み合わせられる — つまり知識が掛け算で増えていきます。</p>
+
+<div class="admonition admonition-important">
+<p class="admonition-title">Important</p>
+<p>この章は RuVim の核心です。<a href="#ch-basic-movement">基本の移動</a>で学んだコマンドがすべてモーションとして使え、<a href="#ch-text-objects">テキストオブジェクト</a>と組み合わせるとさらに強力になります。</p>
+</div>
 
 <h2 id="ch-operators-motions--オペレータ-モーション文法">5.2 オペレータ + モーション文法</h2>
 
@@ -2051,7 +2249,7 @@ c    変更（削除して Insert mode）
 =    自動インデント
 </code></pre>
 
-<p>モーション（どこまで）は第2章で学んだ移動コマンドです。</p>
+<p>モーション（どこまで）は<a href="#ch-basic-movement">基本の移動</a>で学んだ移動コマンドです。</p>
 
 <p>組み合わせの考え方:</p>
 
@@ -2164,7 +2362,7 @@ Esc
 =gg   現在行からバッファ先頭までインデント
 </code></pre>
 
-<p>Ruby filetype ではネスト構造に基づく自動インデントが適用されます。</p>
+<p>Ruby <span id="ch-operators-motions--idx-2">filetype</span> ではネスト構造に基づく<span id="ch-operators-motions--idx-3">自動インデント</span>が適用されます。詳しくは<a href="#ch-syntax-languages--オートインデント">シンタックスハイライトと言語サポート</a>を参照してください。</p>
 
 <h2 id="ch-operators-motions--行単位のシフト">5.7 行単位のシフト</h2>
 
@@ -2178,7 +2376,10 @@ Esc
 P    カーソルの前にペースト
 </code></pre>
 
-<p>ヤンクしたテキストが行単位（linewise）の場合、<code>p</code> はカーソルの下の行にペーストし、<code>P</code> はカーソルの上の行にペーストします。</p>
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p><span id="ch-operators-motions--idx-4">ヤンク</span>したテキストが行単位（linewise）の場合、<code>p</code> はカーソルの下の行にペーストし、<code>P</code> はカーソルの上の行にペーストします。<a href="#ch-dot-macro-register--レジスタ">レジスタ</a>を使えば複数のテキストを同時に保持できます。</p>
+</div>
 
 <p>操作例 — 行の入れ替え:</p>
 
@@ -2259,11 +2460,16 @@ end
   <li>引用符やカッコのテキストオブジェクト</li>
 </ul>
 
-<p>テキストオブジェクトは「カーソルが構造の中にあるだけで、その構造全体を選択できる」という画期的な仕組みです。プログラミングでは括弧や引用符で囲まれた構造を頻繁に操作しますが、テキストオブジェクトを使えば「開始位置に移動して、終了位置まで範囲指定して…」という手順が一発で済みます。</p>
+<p><span id="ch-text-objects--idx-0">テキストオブジェクト</span>は「カーソルが構造の中にあるだけで、その構造全体を選択できる」という画期的な仕組みです。プログラミングでは括弧や引用符で囲まれた構造を頻繁に操作しますが、テキストオブジェクトを使えば「開始位置に移動して、終了位置まで範囲指定して…」という手順が一発で済みます。</p>
 
 <h2 id="ch-text-objects--テキストオブジェクトとは">6.2 テキストオブジェクトとは</h2>
 
-<p>テキストオブジェクトは「構造化された範囲」を指定するモーションの一種です。<code>i</code> は “inner”（内側）、<code>a</code> は “a”（外側、区切り文字を含む）を意味します。</p>
+<p>テキストオブジェクトは「構造化された範囲」を指定するモーションの一種です。<code>i</code> は “inner”（内側）、<code>a</code> は “a”（外側、区切り文字を含む）を意味します。<a href="#ch-operators-motions">オペレータ</a>と組み合わせて使います。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>ci"</code> (引用符の中身を変更) と <code>ci)</code> (括弧の中身を変更) は特に使用頻度が高いコマンドです。まずこの2つを覚えましょう。</p>
+</div>
 
 <h2 id="ch-text-objects--単語オブジェクト">6.3 単語オブジェクト</h2>
 
@@ -2427,7 +2633,12 @@ result = process_data(new_arg1, new_arg2)
   <li><code>%</code> による括弧マッチング</li>
 </ul>
 
-<p>行の中での移動に <code>h</code> や <code>l</code> を連打するのは非効率です。<code>f</code>/<code>t</code> を使えば、行内の任意の文字に一瞬でジャンプできます。特にプログラミングでは括弧やカンマ、ドットなど、目印になる文字が豊富にあるため、これらのコマンドが非常に強力に働きます。</p>
+<p>行の中での移動に <code>h</code> や <code>l</code> を連打するのは非効率です。<span id="ch-inline-movement--idx-0"><code>f</code>/<code>t</code></span> を使えば、行内の任意の文字に一瞬でジャンプできます。特にプログラミングでは括弧やカンマ、ドットなど、目印になる文字が豊富にあるため、これらのコマンドが非常に強力に働きます。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>f</code>/<code>t</code> は<a href="#ch-operators-motions">オペレータ</a>と組み合わせると特に強力です。例えば <code>df)</code> で「<code>)</code> まで削除」ができます。</p>
+</div>
 
 <h2 id="ch-inline-movement--行内文字検索">7.2 行内文字検索</h2>
 
@@ -2497,6 +2708,11 @@ result = data.select { |x| x &gt; 0 }.sum
 
 <p>カーソルが <code>{</code> 上にあれば対応する <code>}</code> へ、<code>}</code> 上にあれば対応する <code>{</code> へジャンプします。</p>
 
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p><span id="ch-inline-movement--idx-1"><code>%</code></span> は <code>()</code>, <code>[]</code>, <code>{}</code> の3種類の括弧に対応しています。</p>
+</div>
+
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-inline-movement.md" target="_blank" rel="noopener">View on GitHub</a>
     </div>
@@ -2532,7 +2748,7 @@ n           同方向に次のマッチへ
 N           逆方向に次のマッチへ
 </code></pre>
 
-<p>検索パターンは Ruby 正規表現です。</p>
+<p>検索パターンは <span id="ch-search-replace--idx-0">Ruby 正規表現</span>です<sup id="fnref:ch-search-replace--1"><a href="#fn:ch-search-replace--1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。</p>
 
 <p>操作例:</p>
 
@@ -2566,6 +2782,11 @@ n        → さらに次の "total" へ
 
 <h2 id="ch-search-replace--検索オプション">8.4 検索オプション</h2>
 
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><span id="ch-search-replace--idx-1"><code>smartcase</code></span> を有効にすると、小文字だけのパターンでは case-insensitive、大文字を含むパターンでは case-sensitive になります。検索の利便性が大幅に向上するので、<a href="#ch-config">設定ファイル</a>で有効化しておくことをお勧めします。</p>
+</div>
+
 <pre><code>:set ignorecase      大文字小文字を無視
 :set smartcase       ignorecase 有効時、大文字を含むパターンは case-sensitive
 :set hlsearch        マッチをハイライト表示（デフォルト有効）
@@ -2582,6 +2803,11 @@ n        → さらに次の "total" へ
 :10,20s/old/new/g     10-20行の全マッチを置換
 :'&lt;,'&gt;s/old/new/g     Visual 選択範囲の全マッチを置換
 </code></pre>
+
+<div class="admonition admonition-warning">
+<p class="admonition-title">Warning</p>
+<p><code>g</code> フラグを忘れると、各行の<strong>最初の</strong>マッチしか置換されません。全マッチを置換したい場合は必ず <code>g</code> を付けてください。</p>
+</div>
 
 <p>フラグ:</p>
 
@@ -2667,7 +2893,10 @@ end
 :g/def/normal A;        def を含む行の末尾にセミコロン追加
 </code></pre>
 
-<p><code>:global</code> の undo は一括です — 1回の <code>u</code> で全変更が元に戻ります。</p>
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p><span id="ch-search-replace--idx-2"><code>:global</code></span> の undo は一括です — 1回の <code>u</code> で全変更が元に戻ります。</p>
+</div>
 
 <p>実践例 — ログレベルの整理:</p>
 
@@ -2680,6 +2909,13 @@ end
 # コメントアウトされた行を一括削除:
 :g/^\s*#/d
 </code></pre>
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:ch-search-replace--1">
+      <p>Vim とは異なり、RuVim では Ruby の <code>Regexp</code> がそのまま使えます。<code>\d</code>, <code>\w</code>, <code>(?:...)</code> など Ruby の正規表現構文がすべて有効です。詳しくは<a href="#appendix-e">Vimとの違い</a>を参照してください。 <a href="#fnref:ch-search-replace--1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-search-replace.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -2704,7 +2940,7 @@ end
   <li>テキストオブジェクトによる選択</li>
 </ul>
 
-<p>Visual mode は「先に範囲を見て確認してから操作する」という安心感のある編集スタイルを提供します。オペレータ+モーションに慣れるまでの橋渡しとしても優れていますし、熟練者にとっても矩形選択などの独自の強みがあります。</p>
+<p><span id="ch-visual-mode--idx-0">Visual mode</span> は「先に範囲を見て確認してから操作する」という安心感のある編集スタイルを提供します。<a href="#ch-operators-motions">オペレータ+モーション</a>に慣れるまでの橋渡しとしても優れていますし、熟練者にとっても矩形選択などの独自の強みがあります。</p>
 
 <h2 id="ch-visual-mode--visual-mode-の3種類">9.2 Visual mode の3種類</h2>
 
@@ -2749,6 +2985,11 @@ d        ← 3行削除
 
 <h2 id="ch-visual-mode--矩形選択ctrl-v">9.5 矩形選択（<code>Ctrl-v</code>）</h2>
 
+<div class="admonition admonition-caution">
+<p class="admonition-title">Caution</p>
+<p><span id="ch-visual-mode--idx-1">矩形選択</span>は最小限の対応です。Vim の矩形挿入（<code>I</code>/<code>A</code>）には対応していません。</p>
+</div>
+
 <pre><code>Ctrl-v   矩形選択開始
 h/j/k/l  矩形を調整
 y        矩形範囲をヤンク
@@ -2777,7 +3018,7 @@ line_three = 3
 
 <h2 id="ch-visual-mode--visual-mode-でのテキストオブジェクト">9.6 Visual mode でのテキストオブジェクト</h2>
 
-<p>Visual mode 中にテキストオブジェクトを使うと、選択範囲がそのオブジェクトに更新されます。</p>
+<p>Visual mode 中に<a href="#ch-text-objects">テキストオブジェクト</a>を使うと、選択範囲がそのオブジェクトに更新されます。</p>
 
 <pre><code>v        ← 選択開始
 iw       ← 単語を選択
@@ -2825,7 +3066,12 @@ jj       範囲を広げる
   <li>レジスタの使い方</li>
 </ul>
 
-<p>繰り返し作業を効率化する仕組みは、エディタの真価を発揮するポイントです。<code>.</code> コマンドは「直前と同じことをもう一回」、マクロは「一連の操作をまるごと再生」。これらを使いこなすと、100行の定型的な変更も数秒で完了できるようになります。</p>
+<p>繰り返し作業を効率化する仕組みは、エディタの真価を発揮するポイントです。<span id="ch-dot-macro-register--idx-0"><code>.</code> コマンド</span>は「直前と同じことをもう一回」、<span id="ch-dot-macro-register--idx-1">マクロ</span>は「一連の操作をまるごと再生」。これらを使いこなすと、100行の定型的な変更も数秒で完了できるようになります。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>.</code> は RuVim で最も便利なコマンドの一つです。「検索 → 編集 → <code>n.</code> で次へ」のパターンだけでも日常の編集が劇的に速くなります。</p>
+</div>
 
 <h2 id="ch-dot-macro-register--ドットリピート">10.2 ドットリピート（<code>.</code>）</h2>
 
@@ -2932,7 +3178,7 @@ q                            ← 記録停止
 
 <h2 id="ch-dot-macro-register--レジスタ">10.5 レジスタ</h2>
 
-<p>RuVim にはテキストを保存する複数のレジスタがあります。</p>
+<p>RuVim にはテキストを保存する複数の<span id="ch-dot-macro-register--idx-2">レジスタ</span>があります。</p>
 
 <table>
   <thead>
@@ -2968,7 +3214,7 @@ q                            ← 記録停止
     </tr>
     <tr>
       <td><code>"+</code></td>
-      <td>システムクリップボード</td>
+      <td><span id="ch-dot-macro-register--idx-3">システムクリップボード</span></td>
     </tr>
     <tr>
       <td><code>"*</code></td>
@@ -2976,6 +3222,11 @@ q                            ← 記録停止
     </tr>
   </tbody>
 </table>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>クリップボード連携にはシステムに <code>xclip</code>（Linux X11）や <code>wl-copy</code>（Wayland）などが必要です。詳しくは<a href="#appendix-f--クリップボードが使えない">トラブルシューティング</a>を参照してください。</p>
+</div>
 
 <p>レジスタの指定:</p>
 
@@ -3020,7 +3271,12 @@ q                            ← 記録停止
   <li>ジャンプリストの活用</li>
 </ul>
 
-<p>コードを読む作業は「あちこちを行き来する旅」のようなものです。関数の定義を確認して呼び出し元に戻り、テストを見て実装に戻る — この往復を効率化するのがマークとジャンプリストです。「さっき見ていた場所」にワンキーで戻れる安心感は、コードリーディングの質を大きく変えます。</p>
+<p>コードを読む作業は「あちこちを行き来する旅」のようなものです。関数の定義を確認して呼び出し元に戻り、テストを見て実装に戻る — この往復を効率化するのが<span id="ch-marks-jumps--idx-0">マーク</span>と<span id="ch-marks-jumps--idx-1">ジャンプリスト</span>です。「さっき見ていた場所」にワンキーで戻れる安心感は、コードリーディングの質を大きく変えます。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>まず <code>Ctrl-o</code>（戻る）と <code>Ctrl-i</code>（進む）だけ覚えましょう。検索やバッファ切替のたびにジャンプリストに自動記録されるので、明示的なマーク設定なしでも「さっきの場所」に戻れます。</p>
+</div>
 
 <h2 id="ch-marks-jumps--マークの設定">11.2 マークの設定</h2>
 
@@ -3071,7 +3327,10 @@ Ctrl-i    次の位置へ進む（newer）
 ``        正確な位置で前の位置へ戻る
 </code></pre>
 
-<p>注意: ターミナルでは <code>Ctrl-i</code> と <code>Tab</code> は同じキーコードです。</p>
+<div class="admonition admonition-warning">
+<p class="admonition-title">Warning</p>
+<p>ターミナルでは <code>Ctrl-i</code> と <code>Tab</code> は同じキーコードです。そのため、RuVim では <code>Ctrl-i</code> がジャンプリストの「進む」に割り当てられている場合、<code>Tab</code> キーも同じ動作になります。</p>
+</div>
 
 <p>操作例 — 定義とリファレンスを行き来する:</p>
 
@@ -3151,6 +3410,11 @@ items = [
 <pre><code>gf    カーソル下のファイル名を開く
 </code></pre>
 
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><span id="ch-misc-editing--idx-0"><code>gf</code></span> はコードリーディングの強力な味方です。<code>require</code> 文、エラーメッセージの <code>file:line</code>、Markdown のリンクなど、さまざまな文脈で使えます。</p>
+</div>
+
 <ul>
   <li><code>file:line</code> 形式で開くと指定行にジャンプ</li>
   <li><code>file:line:col</code> 形式で開くと指定行・桁にジャンプ</li>
@@ -3158,7 +3422,7 @@ items = [
   <li>Markdown では <code>[text](path)</code> のリンクを認識</li>
 </ul>
 
-<p><code>path</code> オプションと <code>suffixesadd</code> オプションでファイル探索ディレクトリと拡張子補完を設定できます。</p>
+<p><a href="#ch-options"><code>path</code></a> オプションと <a href="#ch-options"><code>suffixesadd</code></a> オプションでファイル探索ディレクトリと拡張子補完を設定できます。</p>
 
 <p>実践例 — require 文からファイルを開く:</p>
 
@@ -3198,7 +3462,7 @@ items = [
 
 <h2 id="ch-misc-editing--g-フィルタバッファ">12.6 <code>g/</code> — フィルタバッファ</h2>
 
-<p><code>g/</code> キーバインド（または <code>:filter</code>）は、検索パターンにマッチする行だけを集めたフィルタバッファを作成します。</p>
+<p><span id="ch-misc-editing--idx-1"><code>g/</code></span> キーバインド（または <span id="ch-misc-editing--idx-2"><code>:filter</code></span>）は、検索パターンにマッチする行だけを集めたフィルタバッファを作成します。</p>
 
 <pre><code>/pattern         まず検索
 g/               マッチ行のフィルタバッファを作成
@@ -3221,6 +3485,11 @@ g/               マッチ行のフィルタバッファを作成
 </code></pre>
 
 <p><code>gitcommit</code> filetype ではデフォルトで有効です。辞書は <code>/usr/share/dict/words</code> を使用します。</p>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>スペルチェックは<a href="#ch-search-workflow--スペルチェック">検索ワークフロー</a>でも解説しています。</p>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-misc-editing.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -3253,7 +3522,12 @@ g/               マッチ行のフィルタバッファを作成
   <li><code>hidden</code> オプション</li>
 </ul>
 
-<p>実際のプロジェクトでは、ソースコード、テスト、設定ファイルなど多数のファイルを同時に扱います。バッファ管理を理解すると、開いたファイルを閉じずにメモリに保持したまま自由に行き来できるようになり、「あのファイルどこだっけ」と迷うことがなくなります。</p>
+<p>実際のプロジェクトでは、ソースコード、テスト、設定ファイルなど多数のファイルを同時に扱います。<span id="ch-buffers--idx-0">バッファ</span>管理を理解すると、開いたファイルを閉じずにメモリに保持したまま自由に行き来できるようになり、「あのファイルどこだっけ」と迷うことがなくなります。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>バッファは「メモリ上のファイル」、<a href="#ch-windows">ウィンドウ</a>は「バッファの表示窓」、<a href="#ch-tabs">タブ</a>は「ウィンドウレイアウトの集合」です。この3つの関係を理解すると複数ファイルの扱いが楽になります。</p>
+</div>
 
 <h2 id="ch-buffers--バッファとは">13.2 バッファとは</h2>
 
@@ -3315,7 +3589,10 @@ g/               マッチ行のフィルタバッファを作成
 <pre><code>:set hidden    未保存バッファを残したまま別バッファに移動可能に
 </code></pre>
 
-<p><code>hidden</code> が有効だと、<code>:e</code> や <code>:buffer</code> で未保存変更があっても <code>\!</code> なしで切り替えられます。</p>
+<div class="admonition admonition-important">
+<p class="admonition-title">Important</p>
+<p><span id="ch-buffers--idx-1"><code>hidden</code></span> を有効にすると、未保存バッファがあっても <code>!</code> なしで他のバッファに切り替えられます。複数ファイルを扱うなら<a href="#ch-config">設定ファイル</a>で有効化しておくことを強くお勧めします。</p>
+</div>
 
 <h2 id="ch-buffers--autowrite-オプション">13.8 <code>autowrite</code> オプション</h2>
 
@@ -3346,7 +3623,7 @@ g/               マッチ行のフィルタバッファを作成
   <li>ネスト分割</li>
 </ul>
 
-<p>テストを書きながら実装を見たい。ログを監視しながらコードを書きたい。ウィンドウ分割を使えば、画面を分割して複数のファイルを同時に見ることができます。1つのターミナルの中で完結するため、tmux や別のターミナルウィンドウを用意する必要がありません。</p>
+<p>テストを書きながら実装を見たい。ログを監視しながらコードを書きたい。<span id="ch-windows--idx-0">ウィンドウ分割</span>を使えば、画面を分割して複数のファイルを同時に見ることができます。1つのターミナルの中で完結するため、tmux や別のターミナルウィンドウを用意する必要がありません。</p>
 
 <h2 id="ch-windows--ウィンドウの分割">14.2 ウィンドウの分割</h2>
 
@@ -3388,7 +3665,10 @@ Ctrl-w k     上のウィンドウへ
 Ctrl-w l     右のウィンドウへ
 </code></pre>
 
-<p><code>Shift+矢印キー</code> でも移動できます（1ウィンドウのときは自動で分割）。</p>
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>Shift+矢印キー</code> でも移動できます。1ウィンドウのときは自動で分割される「スマート分割」が働きます — これは RuVim 独自の機能です。</p>
+</div>
 
 <h2 id="ch-windows--ウィンドウのクローズ">14.4 ウィンドウのクローズ</h2>
 
@@ -3414,7 +3694,7 @@ Ctrl-w =     全ウィンドウのサイズを均等化
 
 <h2 id="ch-windows--ネスト分割">14.7 ネスト分割</h2>
 
-<p>RuVim はツリー構造のレイアウトをサポートしています。<code>:vsplit</code> 後に <code>:split</code> すると、右ウィンドウだけが上下に分割されます。</p>
+<p>RuVim は<span id="ch-windows--idx-1">ツリー構造</span>のレイアウトをサポートしています<sup id="fnref:ch-windows--1"><a href="#fn:ch-windows--1" class="footnote" rel="footnote" role="doc-noteref">1</a></sup>。<code>:vsplit</code> 後に <code>:split</code> すると、右ウィンドウだけが上下に分割されます。</p>
 
 <div class="mermaid">
 graph TD
@@ -3426,6 +3706,13 @@ graph TD
 </div>
 
 <p>同方向の連続分割は自動的にフラット化されます。</p>
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:ch-windows--1">
+      <p>Vim ではウィンドウのネスト構造に制限がありますが、RuVim ではツリー構造で自由にネストできます。詳しくは<a href="#appendix-e">Vimとの違い</a>を参照してください。 <a href="#fnref:ch-windows--1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-windows.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -3449,7 +3736,7 @@ graph TD
   <li>CLI からの複数タブ起動</li>
 </ul>
 
-<p>ウィンドウ分割は「同時に見比べたいファイル」に向いていますが、タブは「作業のコンテキストを切り替える」のに適しています。たとえば、「機能Aの実装」タブと「機能Bのレビュー」タブを分けておけば、頭の切り替えもスムーズです。</p>
+<p><a href="#ch-windows">ウィンドウ分割</a>は「同時に見比べたいファイル」に向いていますが、<span id="ch-tabs--idx-0">タブ</span>は「作業のコンテキストを切り替える」のに適しています。たとえば、「機能Aの実装」タブと「機能Bのレビュー」タブを分けておけば、頭の切り替えもスムーズです。</p>
 
 <h2 id="ch-tabs--タブの操作">15.2 タブの操作</h2>
 
@@ -3490,7 +3777,7 @@ ruvim -O file1.txt file2.txt    # 垂直分割
   <li>分割レイアウト</li>
 </ul>
 
-<p>を持ちます。バッファはタブ間で共有されます。</p>
+<p>を持ちます。<a href="#ch-buffers">バッファ</a>はタブ間で共有されます。</p>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-tabs.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -3516,7 +3803,12 @@ ruvim -O file1.txt file2.txt    # 垂直分割
   <li>スペルチェック</li>
 </ul>
 
-<p>バグの原因を追いかけるとき、リファクタリングで影響範囲を確認するとき、検索ワークフローが武器になります。quickfix list を使えば、プロジェクト全体の検索結果を一覧にして、一つずつ確認しながらジャンプできます。手動でファイルを開いて grep するよりも格段に速く、見落としも減ります。</p>
+<p>バグの原因を追いかけるとき、リファクタリングで影響範囲を確認するとき、検索ワークフローが武器になります。<span id="ch-search-workflow--idx-0">quickfix list</span> を使えば、プロジェクト全体の検索結果を一覧にして、一つずつ確認しながらジャンプできます。手動でファイルを開いて grep するよりも格段に速く、見落としも減ります。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>バッファ内の<a href="#ch-search-replace">検索と置換</a>はすでに学びました。この章ではプロジェクト全体を横断する検索を扱います。</p>
+</div>
 
 <h2 id="ch-search-workflow--quickfix-list">16.2 quickfix list</h2>
 
@@ -3564,7 +3856,12 @@ Enter                        ← 選択した結果へジャンプ
 :lgrep pattern [files...]    外部 grep を実行 → location list
 </code></pre>
 
-<p>grep プログラムは <code>grepprg</code> オプションで設定できます（デフォルト: <code>grep -nH</code>）。</p>
+<p>grep プログラムは <a href="#ch-options"><code>grepprg</code> オプション</a>で設定できます（デフォルト: <code>grep -nH</code>）。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><a href="https://github.com/BurntSushi/ripgrep">ripgrep</a> を使っている場合は、<a href="#ch-config">設定ファイル</a>で <code>set "grepprg=rg --vimgrep"</code> とすると高速に検索できます。</p>
+</div>
 
 <p>操作例:</p>
 
@@ -3618,7 +3915,7 @@ g/           マッチ行のフィルタバッファを作成
   <li>blame, status, diff, log, branch, commit, grep</li>
 </ul>
 
-<p>バージョン管理はソフトウェア開発の基盤です。エディタの中から直接 Git を操作できると、「コードを書く → 差分を確認 → コミットする」という流れが途切れません。blame で「誰がなぜこう書いたか」を即座に調べられるのも、コードの理解に大きく貢献します。</p>
+<p>バージョン管理はソフトウェア開発の基盤です。エディタの中から直接 <span id="ch-git--idx-0">Git</span> を操作できると、「コードを書く → 差分を確認 → コミットする」という流れが途切れません。<span id="ch-git--idx-1">blame</span> で「誰がなぜこう書いたか」を即座に調べられるのも、コードの理解に大きく貢献します。</p>
 
 <h2 id="ch-git--git-コマンドへのアクセス">17.2 Git コマンドへのアクセス</h2>
 
@@ -3690,7 +3987,12 @@ flowchart LR
 <pre><code>:git commit
 </code></pre>
 
-<p>コミットメッセージ編集バッファが開きます。<code>#</code> で始まる行はコメント（git status 情報）。Insert mode で開始。<code>:w</code> または <code>:wq</code> でコミット実行、<code>:q\!</code> でキャンセル。</p>
+<p>コミットメッセージ編集バッファが開きます。<code>#</code> で始まる行はコメント（git status 情報）。Insert mode で開始。<code>:w</code> または <code>:wq</code> でコミット実行、<code>:q!</code> でキャンセル。</p>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>コミットメッセージバッファでは <code>gitcommit</code> <a href="#ch-syntax-languages">filetype</a> が自動設定され、<a href="#ch-misc-editing--スペルチェック">スペルチェック</a>がデフォルトで有効になります。</p>
+</div>
 
 <h2 id="ch-git--git-grep">17.9 Git Grep</h2>
 
@@ -3708,7 +4010,12 @@ flowchart LR
 :git rebase -i HEAD~3
 </code></pre>
 
-<p>Tab 補完で git サブコマンドを補完できます。</p>
+<p>Tab <a href="#ch-completion">補完</a>で git サブコマンドを補完できます。</p>
+
+<div class="admonition admonition-caution">
+<p class="admonition-title">Caution</p>
+<p><a href="#ch-security">Restricted mode</a> (<code>-Z</code>) では <code>:git</code> コマンドは無効化されます。</p>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-git.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -3731,7 +4038,7 @@ flowchart LR
   <li><code>:gh link</code> / <code>:gh browse</code> / <code>:gh pr</code></li>
 </ul>
 
-<p>コードレビューで「この行を見て」と伝えたいとき、GitHub の URL を手でコピーするのは面倒です。<code>:gh link</code> を使えば、エディタ上の現在行の GitHub URL を一瞬で生成・コピーできます。チーム開発のコミュニケーションがスムーズになります。</p>
+<p>コードレビューで「この行を見て」と伝えたいとき、<span id="ch-github--idx-0">GitHub</span> の URL を手でコピーするのは面倒です。<span id="ch-github--idx-1"><code>:gh link</code></span> を使えば、エディタ上の現在行の GitHub URL を一瞬で生成・コピーできます。チーム開発のコミュニケーションがスムーズになります。</p>
 
 <h2 id="ch-github--github-リンクの生成">18.2 GitHub リンクの生成</h2>
 
@@ -3762,7 +4069,12 @@ flowchart LR
 :gh pr status
 </code></pre>
 
-<p>Tab 補完で gh サブコマンドを補完できます。</p>
+<p>Tab <a href="#ch-completion">補完</a>で gh サブコマンドを補完できます。</p>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p><a href="#ch-git">Git 連携</a>と同様、<a href="#ch-security">Restricted mode</a> (<code>-Z</code>) では <code>:gh</code> コマンドは無効化されます。</p>
+</div>
 
     <div class="edit-link">
       <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/tutorial_book_src/ch-github.md" target="_blank" rel="noopener">View on GitHub</a>
@@ -3794,7 +4106,12 @@ flowchart LR
   <li>主要オプションの解説</li>
 </ul>
 
-<p>道具は自分の手に合うように調整してこそ真価を発揮します。RuVim のオプション設定を使いこなせば、行番号の表示、インデント幅、検索の挙動など、自分の作業スタイルに合ったエディタ環境を構築できます。一度設定すれば init.rb に書いて永続化できるので、繰り返し手動で設定する必要もありません。</p>
+<p>道具は自分の手に合うように調整してこそ真価を発揮します。RuVim の<span id="ch-options--idx-0">オプション</span>設定を使いこなせば、行番号の表示、インデント幅、検索の挙動など、自分の作業スタイルに合ったエディタ環境を構築できます。一度設定すれば <a href="#ch-config">init.rb</a> に書いて永続化できるので、繰り返し手動で設定する必要もありません。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>おすすめの初期設定は<a href="#appendix-g">G. おすすめ初期設定</a>にまとまっています。まずそちらをベースにカスタマイズするのがお勧めです。</p>
+</div>
 
 <h2 id="ch-options--set-の構文">19.2 <code>:set</code> の構文</h2>
 
@@ -4261,7 +4578,12 @@ flowchart LR
   <li>CLI オプションとの組み合わせ</li>
 </ul>
 
-<p>設定ファイルは「あなた専用のエディタ」を作るための設計図です。一度 init.rb を書いておけば、どのマシンでも同じ環境を再現できます。キーバインドの追加やオプションの永続化はもちろん、Ruby の力を借りて独自のコマンドを定義することもできます。</p>
+<p><span id="ch-config--idx-0">設定ファイル</span>は「あなた専用のエディタ」を作るための設計図です。一度 init.rb を書いておけば、どのマシンでも同じ環境を再現できます。キーバインドの追加や<a href="#ch-options">オプション</a>の永続化はもちろん、Ruby の力を借りて独自のコマンドを定義することもできます。</p>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p>より高度なカスタマイズ（独自コマンドの定義など）は <a href="#ch-plugin-api">Plugin API</a> の章で詳しく解説しています。</p>
+</div>
 
 <h2 id="ch-config--設定ファイルの場所">20.2 設定ファイルの場所</h2>
 
@@ -4319,7 +4641,10 @@ nmap "K", desc: "Show method name" do |ctx, **|
 end
 </code></pre>
 
-<p>ftplugin の <code>nmap</code>/<code>imap</code> は filetype-local として登録され、そのファイルタイプのバッファでのみ有効です。</p>
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p><span id="ch-config--idx-1">ftplugin</span> の <code>nmap</code>/<code>imap</code> は filetype-local として登録され、その<a href="#ch-syntax-languages--filetype-検出">ファイルタイプ</a>のバッファでのみ有効です。</p>
+</div>
 
 <h2 id="ch-config--configdsl-メソッド一覧">20.5 ConfigDSL メソッド一覧</h2>
 
@@ -4403,7 +4728,7 @@ ruvim -c 'set number' file.txt         # 起動後に実行
   <li><code>:ruby</code> による対話的な Ruby 実行</li>
 </ul>
 
-<p>RuVim の真骨頂は Ruby で書かれたエディタであるという点です。Plugin API を使えば、エディタの内部状態に直接アクセスして、自分だけのコマンドやキーバインドを定義できます。Vim script を覚える必要はありません — Ruby の知識がそのまま活かせます。</p>
+<p>RuVim の真骨頂は Ruby で書かれたエディタであるという点です。<span id="ch-plugin-api--idx-0">Plugin API</span> を使えば、エディタの内部状態に直接アクセスして、自分だけのコマンドやキーバインドを定義できます。Vim script を覚える必要はありません — Ruby の知識がそのまま活かせます。</p>
 
 <h2 id="ch-plugin-api--内部コマンドの定義">21.2 内部コマンドの定義</h2>
 
@@ -4487,7 +4812,7 @@ ctx.buffer.modified?      # 変更あり?
 ctx.buffer.line_at(row)   # 指定行の内容
 
 # 編集（undo グループで囲む）
-ctx.buffer.begin_change_group
+ctx.buffer.begin_change_group     # 必ず対で呼ぶこと
 ctx.buffer.insert_text(row, col, "text")
 ctx.buffer.end_change_group
 </code></pre>
@@ -4508,6 +4833,11 @@ ctx.window.clamp_to_buffer(ctx.buffer)
 </code></pre>
 
 <p><code>ctx</code>, <code>editor</code>, <code>buffer</code>, <code>window</code> を参照できます。stdout/stderr の出力は <code>[Ruby Output]</code> バッファに表示されます。</p>
+
+<div class="admonition admonition-caution">
+<p class="admonition-title">Caution</p>
+<p><span id="ch-plugin-api--idx-1"><code>:ruby</code></span> は任意の Ruby コードを実行します。<a href="#ch-security">Restricted mode</a> (<code>-Z</code>) では無効化されます。</p>
+</div>
 
 <p>実践例 — バッファ内の行をソート:</p>
 
@@ -4546,7 +4876,7 @@ require File.expand_path("plugins/my_tools", __dir__)
   <li>on_save フック</li>
 </ul>
 
-<p>シンタックスハイライトは「目が先にコードの構造を把握する」ための仕組みです。キーワード、文字列、コメントが色分けされていると、コードの意図を読み取る速度が格段に上がります。RuVim は 26 言語に対応し、言語ごとの自動インデントや保存時チェックも備えています。</p>
+<p><span id="ch-syntax-languages--idx-0">シンタックスハイライト</span>は「目が先にコードの構造を把握する」ための仕組みです。キーワード、文字列、コメントが色分けされていると、コードの意図を読み取る速度が格段に上がります。RuVim は 26 言語に対応し、言語ごとの自動インデントや保存時チェックも備えています。</p>
 
 <h2 id="ch-syntax-languages--対応言語26言語">22.2 対応言語（26言語）</h2>
 
@@ -4721,7 +5051,7 @@ require File.expand_path("plugins/my_tools", __dir__)
   </tbody>
 </table>
 
-<p>加えて TSV, CSV, 画像ファイル（PNG/JPG/GIF/BMP/WEBP）は Rich View 用の filetype として検出されます。</p>
+<p>加えて TSV, CSV, 画像ファイル（PNG/JPG/GIF/BMP/WEBP）は <a href="#ch-rich-view">Rich View</a> 用の filetype として検出されます。</p>
 
 <p>言語モジュールの継承関係:</p>
 
@@ -4766,10 +5096,15 @@ flowchart TD
 <p>ファイル保存時に lang モジュールの <code>on_save</code> フックが呼ばれます。</p>
 
 <ul>
-  <li>Ruby: <code>ruby -wc</code> で構文チェック → エラーを quickfix list に展開</li>
+  <li>Ruby: <code>ruby -wc</code> で構文チェック → エラーを <a href="#ch-search-workflow--quickfix-list">quickfix list</a> に展開</li>
   <li>C: <code>gcc</code> でチェック</li>
   <li>C++: <code>g++</code> でチェック</li>
 </ul>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>on_save フックが不要な場合は無効化できます:</p>
+</div>
 
 <pre><code>:set noonsavehook     保存時フックを無効化
 :set onsavehook       有効に戻す
@@ -4799,7 +5134,7 @@ flowchart TD
   <li>画像表示</li>
 </ul>
 
-<p>データはそのままの形式で読むよりも、適切に整形して表示した方が理解しやすくなります。Rich View モードは、TSV/CSV をテーブルに、Markdown をリッチテキストに、JSON をインデント付きで表示します。データファイルを「見る」だけなら、わざわざ別のツールを起動する必要はありません。</p>
+<p>データはそのままの形式で読むよりも、適切に整形して表示した方が理解しやすくなります。<span id="ch-rich-view--idx-0">Rich View</span> モードは、TSV/CSV をテーブルに、Markdown をリッチテキストに、JSON をインデント付きで表示します。データファイルを「見る」だけなら、わざわざ別のツールを起動する必要はありません。</p>
 
 <h2 id="ch-rich-view--rich-view-の起動">23.2 Rich View の起動</h2>
 
@@ -4875,7 +5210,12 @@ Bob   | 25  | Osaka
 
 <h2 id="ch-rich-view--画像表示">23.6 画像表示</h2>
 
-<p>画像ファイル（PNG/JPG/GIF/BMP/WEBP）を開くと、自動的に Rich View として表示されます。sixel 対応ターミナルでは画像がインライン表示されます。</p>
+<p>画像ファイル（PNG/JPG/GIF/BMP/WEBP）を開くと、自動的に Rich View として表示されます。<span id="ch-rich-view--idx-1">sixel</span> 対応ターミナルでは画像がインライン表示されます。</p>
+
+<div class="admonition admonition-note">
+<p class="admonition-title">Note</p>
+<p>sixel に対応したターミナル（例: WezTerm, foot, mlterm）が必要です。非対応ターミナルでは画像のメタ情報のみ表示されます。</p>
+</div>
 
 <pre><code>:e photo.png     画像ファイルを開く
 </code></pre>
@@ -4921,7 +5261,7 @@ Bob   | 25  | Osaka
   <li>非同期ファイルロード</li>
 </ul>
 
-<p>外部コマンドの出力やログファイルの更新をリアルタイムにエディタ内で確認できるのは、RuVim の大きな強みです。ターミナルマルチプレクサを使わなくても、<code>:run</code> でテストを実行しながら結果を確認したり、<code>:follow</code> でログを監視したりできます。データの「流れ」をエディタで捉えましょう。</p>
+<p>外部コマンドの出力やログファイルの更新をリアルタイムにエディタ内で確認できるのは、RuVim の大きな強みです。ターミナルマルチプレクサを使わなくても、<span id="ch-streams--idx-0"><code>:run</code></span> でテストを実行しながら結果を確認したり、<span id="ch-streams--idx-1"><code>:follow</code></span> でログを監視したりできます。データの「流れ」をエディタで捉えましょう。</p>
 
 <h2 id="ch-streams--stdin-パイプ">24.2 stdin パイプ</h2>
 
@@ -4952,6 +5292,11 @@ git log | ruvim
   <li>変更のあるバッファは実行前に自動保存</li>
   <li>statusline に実行状態を表示</li>
 </ul>
+
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><a href="#ch-windows">ウィンドウ分割</a>と組み合わせると、コードと実行結果を同時に確認しながら開発できます。</p>
+</div>
 
 <p>ファイルタイプ別のデフォルト <code>runprg</code>:</p>
 
@@ -5067,7 +5412,7 @@ RUVIM_ASYNC_FILE_PREFIX_BYTES=4194304 ruvim huge.log
   <li>履歴</li>
 </ul>
 
-<p>補完機能はタイピング量を減らすだけでなく、「何が使えるのか」を発見する手段でもあります。コマンドライン補完で利用可能な Ex コマンドやオプションを探索し、Insert mode 補完でバッファ内の変数名を素早く入力しましょう。</p>
+<p><span id="ch-completion--idx-0">補完</span>機能はタイピング量を減らすだけでなく、「何が使えるのか」を発見する手段でもあります。コマンドライン補完で利用可能な Ex コマンドや<a href="#ch-options">オプション</a>を探索し、Insert mode 補完でバッファ内の変数名を素早く入力しましょう。</p>
 
 <h2 id="ch-completion--command-line-補完">25.2 Command-line 補完</h2>
 
@@ -5143,7 +5488,7 @@ Down    次の履歴を呼び出す
   <li>Unicode 幅の設定</li>
 </ul>
 
-<p>信頼できないファイルを開くことがある以上、セキュリティへの配慮は欠かせません。Restricted mode を使えば、シェル実行や Ruby eval を無効にした安全な閲覧環境を作れます。また、readonly モードは「うっかり変更してしまった」事故を防ぎます。</p>
+<p>信頼できないファイルを開くことがある以上、セキュリティへの配慮は欠かせません。<span id="ch-security--idx-0">Restricted mode</span> を使えば、シェル実行や Ruby eval を無効にした安全な閲覧環境を作れます。また、readonly モードは「うっかり変更してしまった」事故を防ぎます。</p>
 
 <h2 id="ch-security--restricted-mode--z">26.2 Restricted mode (<code>-Z</code>)</h2>
 
@@ -5162,7 +5507,10 @@ Down    次の履歴を呼び出す
   <li>Ruby 構文チェック（on_save）</li>
 </ul>
 
-<p>信頼できないファイルを安全に閲覧するのに適しています。</p>
+<div class="admonition admonition-caution">
+<p class="admonition-title">Caution</p>
+<p>信頼できないファイルを開く際は必ず <code>-Z</code> を使いましょう。<a href="#ch-plugin-api"><code>:ruby</code></a>、<a href="#ch-git"><code>:git</code></a>、<a href="#ch-github"><code>:gh</code></a> なども無効化されます。</p>
+</div>
 
 <h2 id="ch-security--readonly-mode--r">26.3 Readonly mode (<code>-R</code>)</h2>
 
@@ -5183,7 +5531,7 @@ Down    次の履歴を呼び出す
 <p>RuVim には以下のセキュリティ対策が含まれています:</p>
 
 <ul>
-  <li><strong>Sixel DoS 保護</strong>: PNG デコーダで画像サイズ上限（50M ピクセル）、Zlib 展開サイズ上限（200MB）、URL ダウンロードサイズ上限（10MB）を設定</li>
+  <li><strong><a href="#ch-rich-view--画像表示">Sixel</a> DoS 保護</strong>: PNG デコーダで画像サイズ上限（50M ピクセル）、Zlib 展開サイズ上限（200MB）、URL ダウンロードサイズ上限（10MB）を設定</li>
   <li><strong>特殊ファイルの拒否</strong>: FIFO・デバイス・ソケット等の特殊ファイルは <code>File.file?</code> チェックで拒否</li>
   <li><strong>制御文字のサニタイズ</strong>: Rich view レンダリング時にバッファ内容の制御文字（ESC 含む）を無害化し、ターミナルエスケープインジェクションを防止</li>
   <li><strong><code>:grep</code> のシェルインジェクション対策</strong>: argv 配列で安全に実行（シェル経由ではない）</li>
@@ -6839,13 +7187,13 @@ Down    次の履歴を呼び出す
 <h2 id="appendix-e--ruvim-の独自機能">E.1 RuVim の独自機能</h2>
 
 <ul>
-  <li><strong>Ruby DSL 設定</strong>: init.rb で Ruby の全機能を利用可能（Vim script 不要）</li>
-  <li><strong><code>:ruby</code> コマンド</strong>: 実行中に Ruby eval が可能</li>
-  <li><strong>Rich View モード</strong>: TSV/CSV/Markdown/JSON/画像の構造化表示</li>
-  <li><strong>Follow mode</strong>: <code>:follow</code> / <code>-f</code> でファイル追従（<code>tail -f</code> 相当）</li>
-  <li><strong>ストリーム連携</strong>: stdin パイプ、<code>:run</code> でリアルタイム出力表示</li>
-  <li><strong>検索は Ruby 正規表現</strong>: Vim regex ではなく Ruby の Regexp を使用</li>
-  <li><strong>ネスト分割</strong>: ツリー構造のウィンドウレイアウト</li>
+  <li><strong><a href="#ch-config">Ruby DSL 設定</a></strong>: init.rb で Ruby の全機能を利用可能（Vim script 不要）</li>
+  <li><strong><a href="#ch-plugin-api"><code>:ruby</code> コマンド</a></strong>: 実行中に Ruby eval が可能</li>
+  <li><strong><a href="#ch-rich-view">Rich View モード</a></strong>: TSV/CSV/Markdown/JSON/画像の構造化表示</li>
+  <li><strong><a href="#ch-streams--follow-コマンド">Follow mode</a></strong>: <code>:follow</code> / <code>-f</code> でファイル追従（<code>tail -f</code> 相当）</li>
+  <li><strong><a href="#ch-streams">ストリーム連携</a></strong>: stdin パイプ、<code>:run</code> でリアルタイム出力表示</li>
+  <li><strong>検索は <a href="#ch-search-replace--検索">Ruby 正規表現</a></strong>: Vim regex ではなく Ruby の Regexp を使用</li>
+  <li><strong><a href="#ch-windows--ネスト分割">ネスト分割</a></strong>: ツリー構造のウィンドウレイアウト</li>
   <li><strong>Shift+矢印キー</strong>: スマート分割（1ウィンドウなら分割、2つ以上ならフォーカス移動）</li>
 </ul>
 
@@ -6886,8 +7234,12 @@ Down    次の履歴を呼び出す
 
 <h2 id="appendix-f--表示が崩れる">F.1 表示が崩れる</h2>
 
+<div class="admonition admonition-tip">
+<p class="admonition-title">Tip</p>
+<p><code>Ctrl-z</code> でサスペンドし、<code>fg</code> で復帰すると全面再描画されます。多くの表示崩れはこれで解決します。</p>
+</div>
+
 <ul>
-  <li><code>Ctrl-z</code> でサスペンドし、<code>fg</code> で復帰すると全面再描画される</li>
   <li>ターミナルリサイズ後は自動で再描画される</li>
   <li>CJK 文字の幅がずれる場合: <code>RUVIM_AMBIGUOUS_WIDTH=2 ruvim</code> を試す</li>
 </ul>
@@ -6913,7 +7265,7 @@ Down    次の履歴を呼び出す
 <h2 id="appendix-f--大きいファイルの読み込みが遅い">F.4 大きいファイルの読み込みが遅い</h2>
 
 <pre><code class="language-bash"># 同期ロードに切替
-ruvim --cmd 'set syncload' huge.log
+ruvim --sync-load huge.log
 
 # 閾値を調整
 RUVIM_ASYNC_FILE_THRESHOLD_BYTES=33554432 ruvim huge.log
@@ -6958,7 +7310,7 @@ ruvim --startuptime timing.log file.txt
   <section class="chapter" id="chapter-appendix-g" style="display: none;">
     <h1 id="appendix-g--おすすめ初期設定">G. おすすめ初期設定</h1>
 
-<p>RuVim を初めて使う方向けのおすすめ <code>init.rb</code> です。以下を <code>~/.config/ruvim/init.rb</code> に保存してください。</p>
+<p>RuVim を初めて使う方向けのおすすめ <code>init.rb</code> です。以下を <code>~/.config/ruvim/init.rb</code> に保存してください。各オプションの詳細は<a href="#ch-options">オプション設定</a>と<a href="#ch-config">設定ファイル</a>を参照してください。</p>
 
 <pre><code class="language-ruby"># ~/.config/ruvim/init.rb
 # RuVim 初心者向けおすすめ設定
@@ -7061,11 +7413,313 @@ set "wildignore=*.o,*.pyc,*.class,__pycache__,.git"
       <a href="#" class="nav-prev" onclick="showChapter('appendix-f'); return false;">&larr; F. トラブルシューティング</a>
     </nav>
   </section>
+  <section class="chapter index-chapter" id="chapter-__index__" style="display: none;">
+    <h1>索引</h1>
+    <div class="index-group">
+      <h2 class="index-letter">:</h2>
+      <dl class="index-entries">
+        <dt>:filter</dt>
+        <dd><a href="#ch-misc-editing--idx-2" onclick="showChapterAndScroll('ch-misc-editing', 'ch-misc-editing--idx-2'); return false;">12. その他の便利な編集コマンド</a></dd>
+        <dt>:follow</dt>
+        <dd><a href="#ch-streams--idx-1" onclick="showChapterAndScroll('ch-streams', 'ch-streams--idx-1'); return false;">24. ストリーム連携</a></dd>
+        <dt>:global</dt>
+        <dd><a href="#ch-search-replace--idx-2" onclick="showChapterAndScroll('ch-search-replace', 'ch-search-replace--idx-2'); return false;">8. 検索と置換</a></dd>
+        <dt>:ruby</dt>
+        <dd><a href="#ch-plugin-api--idx-1" onclick="showChapterAndScroll('ch-plugin-api', 'ch-plugin-api--idx-1'); return false;">21. Plugin API</a></dd>
+        <dt>:run</dt>
+        <dd><a href="#ch-files--idx-0" onclick="showChapterAndScroll('ch-files', 'ch-files--idx-0'); return false;">4. ファイルを開いて編集する</a></dd>
+        <dd><a href="#ch-streams--idx-0" onclick="showChapterAndScroll('ch-streams', 'ch-streams--idx-0'); return false;">24. ストリーム連携</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">F</h2>
+      <dl class="index-entries">
+        <dt>f</dt>
+        <dt class="index-sub">t</dt>
+        <dd class="index-sub"><a href="#ch-inline-movement--idx-0" onclick="showChapterAndScroll('ch-inline-movement', 'ch-inline-movement--idx-0'); return false;">7. 行内の高速移動</a></dd>
+        <dt>filetype</dt>
+        <dd><a href="#ch-operators-motions--idx-2" onclick="showChapterAndScroll('ch-operators-motions', 'ch-operators-motions--idx-2'); return false;">5. オペレータとモーション</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">G</h2>
+      <dl class="index-entries">
+        <dt>Git</dt>
+        <dt class="index-sub">Git 連携</dt>
+        <dd class="index-sub"><a href="#ch-intro--idx-7" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-7'); return false;">1. RuVimとは</a></dd>
+        <dd class="index-sub"><a href="#ch-git--idx-0" onclick="showChapterAndScroll('ch-git', 'ch-git--idx-0'); return false;">17. Git 連携</a></dd>
+        <dt class="index-sub">git blame</dt>
+        <dd class="index-sub"><a href="#ch-git--idx-1" onclick="showChapterAndScroll('ch-git', 'ch-git--idx-1'); return false;">17. Git 連携</a></dd>
+        <dt>GitHub</dt>
+        <dt class="index-sub">:gh link</dt>
+        <dd class="index-sub"><a href="#ch-github--idx-1" onclick="showChapterAndScroll('ch-github', 'ch-github--idx-1'); return false;">18. GitHub 連携</a></dd>
+        <dt class="index-sub">GitHub 連携</dt>
+        <dd class="index-sub"><a href="#ch-intro--idx-8" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-8'); return false;">1. RuVimとは</a></dd>
+        <dd class="index-sub"><a href="#ch-github--idx-0" onclick="showChapterAndScroll('ch-github', 'ch-github--idx-0'); return false;">18. GitHub 連携</a></dd>
+        <dt>gf</dt>
+        <dd><a href="#ch-misc-editing--idx-0" onclick="showChapterAndScroll('ch-misc-editing', 'ch-misc-editing--idx-0'); return false;">12. その他の便利な編集コマンド</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">H</h2>
+      <dl class="index-entries">
+        <dt>hidden</dt>
+        <dd><a href="#ch-buffers--idx-1" onclick="showChapterAndScroll('ch-buffers', 'ch-buffers--idx-1'); return false;">13. バッファ管理</a></dd>
+        <dt>hjkl</dt>
+        <dd><a href="#ch-basic-movement--idx-0" onclick="showChapterAndScroll('ch-basic-movement', 'ch-basic-movement--idx-0'); return false;">2. 基本の移動</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">I</h2>
+      <dl class="index-entries">
+        <dt>Insert mode</dt>
+        <dd><a href="#ch-intro--idx-11" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-11'); return false;">1. RuVimとは</a></dd>
+        <dd><a href="#ch-basic-editing--idx-0" onclick="showChapterAndScroll('ch-basic-editing', 'ch-basic-editing--idx-0'); return false;">3. テキストの入力と基本編集</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">N</h2>
+      <dl class="index-entries">
+        <dt>Normal mode</dt>
+        <dd><a href="#ch-intro--idx-10" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-10'); return false;">1. RuVimとは</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">P</h2>
+      <dl class="index-entries">
+        <dt>Plugin API</dt>
+        <dd><a href="#ch-plugin-api--idx-0" onclick="showChapterAndScroll('ch-plugin-api', 'ch-plugin-api--idx-0'); return false;">21. Plugin API</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">Q</h2>
+      <dl class="index-entries">
+        <dt>quickfix</dt>
+        <dd><a href="#ch-search-workflow--idx-0" onclick="showChapterAndScroll('ch-search-workflow', 'ch-search-workflow--idx-0'); return false;">16. 検索ワークフロー</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">R</h2>
+      <dl class="index-entries">
+        <dt>Restricted mode</dt>
+        <dd><a href="#ch-security--idx-0" onclick="showChapterAndScroll('ch-security', 'ch-security--idx-0'); return false;">26. セキュリティと起動オプション</a></dd>
+        <dt>Rich View</dt>
+        <dd><a href="#ch-intro--idx-6" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-6'); return false;">1. RuVimとは</a></dd>
+        <dd><a href="#ch-rich-view--idx-0" onclick="showChapterAndScroll('ch-rich-view', 'ch-rich-view--idx-0'); return false;">23. Rich View モード</a></dd>
+        <dt>RuVim</dt>
+        <dd><a href="#ch-intro--idx-0" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-0'); return false;">1. RuVimとは</a></dd>
+        <dd><a href="#ch-intro--idx-1" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-1'); return false;">1. RuVimとは</a></dd>
+        <dt>Ruby</dt>
+        <dd><a href="#ch-intro--idx-2" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-2'); return false;">1. RuVimとは</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">S</h2>
+      <dl class="index-entries">
+        <dt>sixel</dt>
+        <dd><a href="#ch-rich-view--idx-1" onclick="showChapterAndScroll('ch-rich-view', 'ch-rich-view--idx-1'); return false;">23. Rich View モード</a></dd>
+        <dt>smartcase</dt>
+        <dd><a href="#ch-search-replace--idx-1" onclick="showChapterAndScroll('ch-search-replace', 'ch-search-replace--idx-1'); return false;">8. 検索と置換</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">U</h2>
+      <dl class="index-entries">
+        <dt>Undo</dt>
+        <dt class="index-sub">Redo</dt>
+        <dd class="index-sub"><a href="#ch-basic-editing--idx-1" onclick="showChapterAndScroll('ch-basic-editing', 'ch-basic-editing--idx-1'); return false;">3. テキストの入力と基本編集</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">V</h2>
+      <dl class="index-entries">
+        <dt>Visual mode</dt>
+        <dd><a href="#ch-visual-mode--idx-0" onclick="showChapterAndScroll('ch-visual-mode', 'ch-visual-mode--idx-0'); return false;">9. Visual mode</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ウ</h2>
+      <dl class="index-entries">
+        <dt>ウィンドウ</dt>
+        <dd><a href="#ch-windows--idx-0" onclick="showChapterAndScroll('ch-windows', 'ch-windows--idx-0'); return false;">14. ウィンドウ分割</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">オ</h2>
+      <dl class="index-entries">
+        <dt>オプション</dt>
+        <dd><a href="#ch-options--idx-0" onclick="showChapterAndScroll('ch-options', 'ch-options--idx-0'); return false;">19. オプション設定</a></dd>
+        <dt>オペレータ</dt>
+        <dd><a href="#ch-operators-motions--idx-0" onclick="showChapterAndScroll('ch-operators-motions', 'ch-operators-motions--idx-0'); return false;">5. オペレータとモーション</a></dd>
+        <dt>オートインデント</dt>
+        <dd><a href="#ch-operators-motions--idx-3" onclick="showChapterAndScroll('ch-operators-motions', 'ch-operators-motions--idx-3'); return false;">5. オペレータとモーション</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ク</h2>
+      <dl class="index-entries">
+        <dt>クリップボード</dt>
+        <dd><a href="#ch-dot-macro-register--idx-3" onclick="showChapterAndScroll('ch-dot-macro-register', 'ch-dot-macro-register--idx-3'); return false;">10. ドットリピート・マクロ・レジスタ</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">シ</h2>
+      <dl class="index-entries">
+        <dt>シンタックスハイライト</dt>
+        <dd><a href="#ch-intro--idx-5" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-5'); return false;">1. RuVimとは</a></dd>
+        <dd><a href="#ch-syntax-languages--idx-0" onclick="showChapterAndScroll('ch-syntax-languages', 'ch-syntax-languages--idx-0'); return false;">22. シンタックスハイライトと言語サポート</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ジ</h2>
+      <dl class="index-entries">
+        <dt>ジャンプリスト</dt>
+        <dd><a href="#ch-marks-jumps--idx-1" onclick="showChapterAndScroll('ch-marks-jumps', 'ch-marks-jumps--idx-1'); return false;">11. マークとジャンプリスト</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ス</h2>
+      <dl class="index-entries">
+        <dt>スクロール</dt>
+        <dd><a href="#ch-basic-movement--idx-2" onclick="showChapterAndScroll('ch-basic-movement', 'ch-basic-movement--idx-2'); return false;">2. 基本の移動</a></dd>
+        <dt>ストリーム連携</dt>
+        <dd><a href="#ch-intro--idx-9" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-9'); return false;">1. RuVimとは</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">タ</h2>
+      <dl class="index-entries">
+        <dt>タブページ</dt>
+        <dd><a href="#ch-tabs--idx-0" onclick="showChapterAndScroll('ch-tabs', 'ch-tabs--idx-0'); return false;">15. タブページ</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">テ</h2>
+      <dl class="index-entries">
+        <dt>テキストオブジェクト</dt>
+        <dd><a href="#ch-text-objects--idx-0" onclick="showChapterAndScroll('ch-text-objects', 'ch-text-objects--idx-0'); return false;">6. テキストオブジェクト</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ド</h2>
+      <dl class="index-entries">
+        <dt>ドットリピート</dt>
+        <dd><a href="#ch-dot-macro-register--idx-0" onclick="showChapterAndScroll('ch-dot-macro-register', 'ch-dot-macro-register--idx-0'); return false;">10. ドットリピート・マクロ・レジスタ</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ネ</h2>
+      <dl class="index-entries">
+        <dt>ネスト分割</dt>
+        <dd><a href="#ch-windows--idx-1" onclick="showChapterAndScroll('ch-windows', 'ch-windows--idx-1'); return false;">14. ウィンドウ分割</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">バ</h2>
+      <dl class="index-entries">
+        <dt>バッファ</dt>
+        <dd><a href="#ch-buffers--idx-0" onclick="showChapterAndScroll('ch-buffers', 'ch-buffers--idx-0'); return false;">13. バッファ管理</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">フ</h2>
+      <dl class="index-entries">
+        <dt>フィルタバッファ</dt>
+        <dd><a href="#ch-misc-editing--idx-1" onclick="showChapterAndScroll('ch-misc-editing', 'ch-misc-editing--idx-1'); return false;">12. その他の便利な編集コマンド</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">マ</h2>
+      <dl class="index-entries">
+        <dt>マクロ</dt>
+        <dd><a href="#ch-dot-macro-register--idx-1" onclick="showChapterAndScroll('ch-dot-macro-register', 'ch-dot-macro-register--idx-1'); return false;">10. ドットリピート・マクロ・レジスタ</a></dd>
+        <dt>マーク</dt>
+        <dd><a href="#ch-marks-jumps--idx-0" onclick="showChapterAndScroll('ch-marks-jumps', 'ch-marks-jumps--idx-0'); return false;">11. マークとジャンプリスト</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">モ</h2>
+      <dl class="index-entries">
+        <dt>モーション</dt>
+        <dd><a href="#ch-operators-motions--idx-1" onclick="showChapterAndScroll('ch-operators-motions', 'ch-operators-motions--idx-1'); return false;">5. オペレータとモーション</a></dd>
+        <dt>モーダル編集</dt>
+        <dd><a href="#ch-intro--idx-3" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-3'); return false;">1. RuVimとは</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">ヤ</h2>
+      <dl class="index-entries">
+        <dt>ヤンク</dt>
+        <dd><a href="#ch-operators-motions--idx-4" onclick="showChapterAndScroll('ch-operators-motions', 'ch-operators-motions--idx-4'); return false;">5. オペレータとモーション</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">レ</h2>
+      <dl class="index-entries">
+        <dt>レジスタ</dt>
+        <dd><a href="#ch-dot-macro-register--idx-2" onclick="showChapterAndScroll('ch-dot-macro-register', 'ch-dot-macro-register--idx-2'); return false;">10. ドットリピート・マクロ・レジスタ</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">単</h2>
+      <dl class="index-entries">
+        <dt>単語移動</dt>
+        <dd><a href="#ch-basic-movement--idx-1" onclick="showChapterAndScroll('ch-basic-movement', 'ch-basic-movement--idx-1'); return false;">2. 基本の移動</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">括</h2>
+      <dl class="index-entries">
+        <dt>括弧マッチング</dt>
+        <dd><a href="#ch-inline-movement--idx-1" onclick="showChapterAndScroll('ch-inline-movement', 'ch-inline-movement--idx-1'); return false;">7. 行内の高速移動</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">正</h2>
+      <dl class="index-entries">
+        <dt>正規表現</dt>
+        <dd><a href="#ch-search-replace--idx-0" onclick="showChapterAndScroll('ch-search-replace', 'ch-search-replace--idx-0'); return false;">8. 検索と置換</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">永</h2>
+      <dl class="index-entries">
+        <dt>永続 Undo</dt>
+        <dd><a href="#ch-basic-editing--idx-2" onclick="showChapterAndScroll('ch-basic-editing', 'ch-basic-editing--idx-2'); return false;">3. テキストの入力と基本編集</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">矩</h2>
+      <dl class="index-entries">
+        <dt>矩形選択</dt>
+        <dd><a href="#ch-visual-mode--idx-1" onclick="showChapterAndScroll('ch-visual-mode', 'ch-visual-mode--idx-1'); return false;">9. Visual mode</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">補</h2>
+      <dl class="index-entries">
+        <dt>補完</dt>
+        <dd><a href="#ch-completion--idx-0" onclick="showChapterAndScroll('ch-completion', 'ch-completion--idx-0'); return false;">25. 補完</a></dd>
+      </dl>
+    </div>
+    <div class="index-group">
+      <h2 class="index-letter">設</h2>
+      <dl class="index-entries">
+        <dt>設定</dt>
+        <dt class="index-sub">Ruby DSL</dt>
+        <dd class="index-sub"><a href="#ch-intro--idx-4" onclick="showChapterAndScroll('ch-intro', 'ch-intro--idx-4'); return false;">1. RuVimとは</a></dd>
+        <dt class="index-sub">ftplugin</dt>
+        <dd class="index-sub"><a href="#ch-config--idx-1" onclick="showChapterAndScroll('ch-config', 'ch-config--idx-1'); return false;">20. 設定ファイル</a></dd>
+        <dt class="index-sub">init.rb</dt>
+        <dd class="index-sub"><a href="#ch-config--idx-0" onclick="showChapterAndScroll('ch-config', 'ch-config--idx-0'); return false;">20. 設定ファイル</a></dd>
+      </dl>
+    </div>
+  </section>
 </main>
 
 <script>
 (function() {
-  var chapters = ["cover", "part1", "ch-intro", "ch-basic-movement", "ch-basic-editing", "ch-files", "part2", "ch-operators-motions", "ch-text-objects", "ch-inline-movement", "ch-search-replace", "ch-visual-mode", "ch-dot-macro-register", "ch-marks-jumps", "ch-misc-editing", "part3", "ch-buffers", "ch-windows", "ch-tabs", "ch-search-workflow", "ch-git", "ch-github", "part4", "ch-options", "ch-config", "ch-plugin-api", "ch-syntax-languages", "ch-rich-view", "ch-streams", "ch-completion", "ch-security", "appendix-a", "appendix-b", "appendix-c", "appendix-d", "appendix-e", "appendix-f", "appendix-g"];
+  var chapters = ["cover", "part1", "ch-intro", "ch-basic-movement", "ch-basic-editing", "ch-files", "part2", "ch-operators-motions", "ch-text-objects", "ch-inline-movement", "ch-search-replace", "ch-visual-mode", "ch-dot-macro-register", "ch-marks-jumps", "ch-misc-editing", "part3", "ch-buffers", "ch-windows", "ch-tabs", "ch-search-workflow", "ch-git", "ch-github", "part4", "ch-options", "ch-config", "ch-plugin-api", "ch-syntax-languages", "ch-rich-view", "ch-streams", "ch-completion", "ch-security", "appendix-a", "appendix-b", "appendix-c", "appendix-d", "appendix-e", "appendix-f", "appendix-g", "__index__"];
   var currentChapter = null;
 
   function showChapter(slug) {
@@ -7092,6 +7746,26 @@ set "wildignore=*.o,*.pyc,*.class,__pycache__,.git"
     if (searchInput && searchInput.value) {
       highlightContent(searchInput.value);
     }
+
+    // Render mermaid/KaTeX in newly visible chapter if not yet rendered
+    renderSpecialBlocks(slug);
+  }
+
+  function renderSpecialBlocks(slug) {
+    var section = document.getElementById('chapter-' + slug);
+    if (!section) return;
+    if (typeof mermaid !== 'undefined') {
+      var unrendered = section.querySelectorAll('.mermaid:not([data-processed])');
+      if (unrendered.length > 0) mermaid.run({nodes: unrendered});
+    }
+    if (typeof katex !== 'undefined') {
+      section.querySelectorAll('.math-block[data-math]').forEach(function(el) {
+        if (el.childNodes.length === 0) {
+          try { katex.render(el.getAttribute('data-math'), el, {displayMode: true, throwOnError: false}); }
+          catch(e) { el.textContent = el.getAttribute('data-math'); }
+        }
+      });
+    }
   }
 
   function showChapterAndScroll(slug, headingId) {
@@ -7115,6 +7789,18 @@ set "wildignore=*.o,*.pyc,*.class,__pycache__,.git"
     if (chapters.indexOf(hash) !== -1) {
       showChapter(hash);
       return;
+    }
+
+    // Check for footnote links (fn: or fnref:)
+    var fnMatch = hash.match(/^(?:fn|fnref):(.+?)--/);
+    if (fnMatch) {
+      var fnChSlug = fnMatch[1];
+      if (chapters.indexOf(fnChSlug) !== -1) {
+        if (currentChapter !== fnChSlug) showChapter(fnChSlug);
+        var fnTarget = document.getElementById(hash);
+        if (fnTarget) fnTarget.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
     }
 
     // Check for deep link (chapter--heading)
@@ -7231,9 +7917,36 @@ set "wildignore=*.o,*.pyc,*.class,__pycache__,.git"
     localStorage.setItem('ligarb-theme', next);
   });
 
-  // Expose to onclick handlers
+  // Footnote link click handler — scroll within current chapter without triggering chapter switch
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a[href^="#fn:"], a[href^="#fnref:"]');
+    if (!link) return;
+    var targetId = link.getAttribute('href').substring(1);
+    var target = document.getElementById(targetId);
+    if (target) {
+      e.preventDefault();
+      history.replaceState(null, '', '#' + targetId);
+      target.scrollIntoView({ behavior: 'smooth' });
+    }
+  });
+
+  // Add title attribute to footnote references for hover preview
+  document.querySelectorAll('sup a[href^="#fn:"]').forEach(function(link) {
+    var targetId = link.getAttribute('href').substring(1);
+    var footnoteLi = document.getElementById(targetId);
+    if (footnoteLi) {
+      // Clone to strip the back-reference link, then get text
+      var clone = footnoteLi.cloneNode(true);
+      var backlinks = clone.querySelectorAll('a[href^="#fnref:"]');
+      backlinks.forEach(function(bl) { bl.remove(); });
+      link.title = clone.textContent.trim();
+    }
+  });
+
+  // Expose to onclick handlers and external scripts
   window.showChapter = showChapter;
   window.showChapterAndScroll = showChapterAndScroll;
+  window.renderSpecialBlocks = function() { if (currentChapter) renderSpecialBlocks(currentChapter); };
 
   // Initialize
   handleHash();
@@ -7245,7 +7958,7 @@ set "wildignore=*.o,*.pyc,*.class,__pycache__,.git"
 <script src="js/mermaid.min.js"></script>
 <script>
 mermaid.initialize({startOnLoad: false});
-mermaid.run({querySelector: '.mermaid'});
+renderSpecialBlocks();
 </script>
 </body>
 </html>

@@ -9,7 +9,7 @@
 - 保存操作
 - Undo / Redo
 
-テキストを入力できなければエディタとは呼べません。この章では Insert mode の多彩な入り方と、「間違えたら戻す」ための Undo/Redo を学びます。Insert mode への入り方を使い分けるだけで、無駄なカーソル移動がぐっと減ります。
+テキストを入力できなければエディタとは呼べません。この章では [Insert mode](#index:Insert mode) の多彩な入り方と、「間違えたら戻す」ための [Undo](#index:Undo/Redo) / Redo を学びます。Insert mode への入り方を使い分けるだけで、無駄なカーソル移動がぐっと減ります。
 
 ## Insert mode への入り方
 
@@ -21,6 +21,9 @@ A    行末から挿入
 o    現在行の下に新しい行を開いて挿入
 O    現在行の上に新しい行を開いて挿入
 ```
+
+> [!TIP]
+> `i` と `a` の使い分け: カーソルの**前**に挿入したいなら `i`、**後ろ**なら `a`。行頭・行末には大文字の `I`/`A` がそれぞれ対応します。
 
 操作例 — 行末にセミコロンを追加:
 
@@ -124,10 +127,10 @@ u       直前の変更を取り消す（Undo）
 Ctrl-r  取り消した変更をやり直す（Redo）
 ```
 
-Undo の粒度:
-
-- Normal mode のコマンド（`x`, `dd` など）: 1コマンド = 1 undo 単位
-- Insert mode: 入ってから出るまでの全入力 = 1 undo 単位
+> [!NOTE]
+> Undo の粒度は Vim と同様です:
+> - Normal mode のコマンド（`x`, `dd` など）: 1コマンド = 1 undo 単位
+> - Insert mode: 入ってから出るまでの全入力 = 1 undo 単位
 
 操作例:
 
@@ -141,11 +144,15 @@ u            → Hello, World\!（再び戻る）
 
 ## 永続 Undo
 
-RuVim はデフォルトで undo 履歴をファイルに保存します。エディタを閉じて再度開いても、undo/redo が使えます。
+RuVim はデフォルトで [undo 履歴](#index:永続 Undo) をファイルに保存します。エディタを閉じて再度開いても、undo/redo が使えます。
 
 ```
 :set undofile       有効化（デフォルトで有効）
 :set noundofile     無効化
 ```
 
-undo ファイルの保存先: `~/.local/share/ruvim/undo/`（`undodir` オプションで変更可能）
+undo ファイルの保存先: `~/.local/share/ruvim/undo/`（[`undodir` オプション](ch-options.md)で変更可能）
+
+---
+
+テキスト入力の基本を身につけたら、次は[ファイルを開いて編集する](ch-files.md)方法を学びましょう。

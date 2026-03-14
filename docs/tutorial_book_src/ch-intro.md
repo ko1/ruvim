@@ -4,7 +4,7 @@
 
 ## この章で学ぶこと
 
-- RuVim の概要とインストール方法
+- [RuVim](#index) の概要とインストール方法
 - 起動と終了の方法
 - モードの概念
 
@@ -12,16 +12,19 @@
 
 ## RuVim の概要
 
-RuVim は Ruby で実装された Vim ライクなターミナルエディタです。Ruby 標準ライブラリのみで動作し、Vim の操作感を維持しつつ、Ruby ネイティブな拡張性を備えています。
+[RuVim](#index) は [Ruby](#index) で実装された Vim ライクなターミナルエディタです。Ruby 標準ライブラリのみで動作し、Vim の操作感を維持しつつ、Ruby ネイティブな拡張性を備えています。
+
+> [!NOTE]
+> RuVim は外部 gem に依存しません。Ruby さえあればすぐに使い始められます。
 
 主な特徴:
 
-- Vim 互換のモーダル編集（Normal / Insert / Visual / Command-line モード）
-- Ruby DSL による設定とプラグイン
-- 26 言語のシンタックスハイライト
-- TSV/CSV/Markdown/JSON/画像の Rich View モード
-- Git / GitHub 連携
-- ストリーム連携（stdin パイプ、`:run`、`:follow`）
+- Vim 互換の[モーダル編集](#index)（Normal / Insert / Visual / Command-line モード）
+- [Ruby DSL](#index:設定/Ruby DSL) による設定とプラグイン
+- 26 言語の[シンタックスハイライト](#index)
+- TSV/CSV/Markdown/JSON/画像の [Rich View](#index:Rich View) モード
+- [Git](#index:Git/Git 連携) / [GitHub](#index:GitHub/GitHub 連携) 連携
+- [ストリーム連携](#index)（stdin パイプ、`:run`、`:follow`）
 
 ## インストール
 
@@ -31,11 +34,8 @@ RuVim は gem としてインストールできます。
 gem install ruvim
 ```
 
-開発環境で直接実行する場合:
-
-```bash
-ruby -Ilib exe/ruvim
-```
+> [!TIP]
+> 開発環境で直接実行する場合は `ruby -Ilib exe/ruvim` でも起動できます。
 
 ## 起動
 
@@ -86,7 +86,10 @@ RuVim は Vim と同様に「モーダル」なエディタです。モードに
 | Command-line | Ex コマンド入力 | `:`, `/`, `?` | `Enter`(実行), `Esc`(取消) |
 | Rich | 構造化データ閲覧 | `gr`, `:rich` | `Esc`, `Ctrl-c` |
 
-起動直後は **Normal mode** です。
+起動直後は **[Normal mode](#index:Normal mode)** です。
+
+> [!IMPORTANT]
+> Vim 系エディタが初めての方へ: 起動直後にキーを押しても文字は入力されません。まず `i` で [Insert mode](#index:Insert mode) に入ってからテキストを入力してください。
 
 モードの遷移を図で示すと:
 
@@ -118,6 +121,9 @@ flowchart LR
 :wqa      全バッファ保存して終了
 ```
 
+> [!TIP]
+> 「終了できない！」と焦ったら、まず `Esc` を何回か押して Normal mode に戻り、`:q!` で強制終了できます。
+
 操作例 — ファイルを開いて保存して終了:
 
 ```
@@ -132,3 +138,7 @@ Esc                  ← Normal mode に戻る
 ## サスペンド
 
 全モード共通で `Ctrl-z` を押すとシェルに戻ります（サスペンド）。`fg` で復帰できます。
+
+---
+
+次の章では[基本の移動](ch-basic-movement.md)を学びます。`h`/`j`/`k`/`l` を覚えれば、マウスなしでコード中を自在に移動できるようになります。
