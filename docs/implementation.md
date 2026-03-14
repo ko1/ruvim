@@ -1077,9 +1077,133 @@ end
 
 同じ行の内容が変わらない限り、シンタックスハイライトの計算をスキップできる。LRU ではなくサイズ上限付きのハッシュだが、描画ループでは通常画面に表示されている行だけが参照されるため、実用的には十分だ。
 
-### レイアウト合成
+### レイアウト合成 — 分割ウィンドウの描画
 
-複数ウィンドウのレイアウトは、レイアウトツリーを走査して各画面行の「行計画（row plan）」を構築することで実現する。各行計画は、どのウィンドウの何行目をどのカラムからどの幅で描画するかを記述する。ウィンドウ間にはセパレータ（`│` や `─`）が描画される。
+複数ウィンドウが分割されているとき、それぞれのウィンドウを正しい位置に描画する必要がある。この処理は 3 段階で行われる。
+
+#### 1. 矩形の計算
+
+レイアウトツリーを再帰的に走査し、各ウィンドウに **矩形（top, left, height, width）** を割り当てる。
+
+```ruby
+def compute_tree_rects(node, top:, left:, height:, width:)
+  if node[:type] == :window
+    return { node[:id] => { top:, left:, height:, width: } }
+  end
+
+  children = node[:children]
+  case node[:type]
+  when :vsplit
+    sep_count = children.length - 1
+    usable = width - sep_count        # セパレータ 1 カラム分を差し引く
+    widths = weighted_split_sizes(usable, children.length, node[:weights])
+    cur_left = left
+    children.each_with_index do |child, i|
+      w = widths[i]
+      rects.merge!(compute_tree_rects(child, top:, left: cur_left, height:, width: w))
+      cur_left += w + 1               # +1 はセパレータ分
+    end
+  when :hsplit
+    # 同様に height を分割し、cur_top を進める
+  end
+end
+```
+
+`:vsplit` では幅を子ノード数で分割し、子と子の間に 1 カラムのセパレータ用スペースを確保する。`:hsplit` では高さを分割し、1 行分のセパレータ行を挟む。`:weights` がある場合は重み付き分割（ユーザーが `Ctrl-W >` でリサイズした結果）を使う。
+
+ウィンドウが 1 つだけなら、画面全体がそのウィンドウの矩形になる。
+
+#### 2. 各ウィンドウの事前描画
+
+矩形が決まったら、全ウィンドウの内容を **先に** 文字列の配列として描画しておく。
+
+```ruby
+editor.window_order.each do |win_id|
+  rect = rects[win_id]
+  gutter_w = number_column_width(editor, window, buffer)
+  content_w = rect[:width] - gutter_w
+  window_rows_cache[win_id] = window_render_rows(editor, window, buffer,
+    height: rect[:height], gutter_w:, content_w:)
+end
+```
+
+各ウィンドウは自分に割り当てられた矩形の幅と高さだけを気にし、画面全体の座標は知らない。
+
+#### 3. 行計画（row plan）による合成
+
+最後に、画面の各行について「何を左から右に並べるか」を記述した **行計画** を構築する。
+
+```ruby
+def fill_row_plans(node, rects, plans, ...)
+  if node[:type] == :window
+    rect[:height].times do |dy|
+      row_no = rect[:top] + dy
+      plans[row_no] << { type: :window, id: node[:id] }
+    end
+  elsif node[:type] == :vsplit
+    children.each_with_index do |child, i|
+      fill_row_plans(child, ...)
+      # 子と子の間にセパレータを挿入
+      plans[row_no] << { type: :vsep } if i < children.length - 1
+    end
+  elsif node[:type] == :hsplit
+    children.each_with_index do |child, i|
+      fill_row_plans(child, ...)
+      # 子と子の間に水平セパレータ行を挿入
+      plans[sep_row] << { type: :hsep, width: w } if i < children.length - 1
+    end
+  end
+end
+```
+
+行計画のピース型は 4 つある。
+
+| ピース型 | 描画内容 |
+|----------|----------|
+| `:window` | そのウィンドウの事前描画済み行（`window_rows_cache` から取得） |
+| `:vsep` | 垂直セパレータ `\|`（1 カラム） |
+| `:hsep` | 水平セパレータ `-` の繰り返し |
+| `:blank` | 空白埋め |
+
+最終出力では、各画面行の行計画を左から順に連結するだけだ。
+
+```ruby
+1.upto(text_rows) do |row_no|
+  pieces = +""
+  row_plans[row_no].each do |piece|
+    case piece[:type]
+    when :window then pieces << window_rows_cache[piece[:id]][dy]
+    when :vsep   then pieces << "|"
+    when :hsep   then pieces << "-" * piece[:width]
+    end
+  end
+  lines[row_no] = pieces
+end
+```
+
+具体例として、3 分割のレイアウトを見てみよう。
+
+```
+{ type: :hsplit, children: [
+    { type: :window, id: 1 },                    # 上半分
+    { type: :vsplit, children: [
+        { type: :window, id: 2 },                # 左下
+        { type: :window, id: 3 }                 # 右下
+    ]}
+]}
+```
+
+ターミナルが 80×24 の場合、矩形は次のように計算される。
+
+```
+Window 1: top=1,  left=1,  height=11, width=80   ← 上半分
+----------- 水平セパレータ行（row 12）-----------
+Window 2: top=13, left=1,  height=11, width=39   ← 左下
+|  ← 垂直セパレータ（col 40）
+Window 3: top=13, left=41, height=11, width=40   ← 右下
+```
+
+row 12 の行計画は `[{ type: :hsep, width: 80 }]`、row 13〜23 の行計画は `[{ type: :window, id: 2 }, { type: :vsep }, { type: :window, id: 3 }]` となる。
 
 ### バッファ文字列から画面セルへの変換
 
@@ -1129,18 +1253,7 @@ end
 
 ### 描画のレイヤー構造
 
-Cell 配列ができたら、各セルに色を重ねていく。色の決定は **優先度順** で、最初にマッチした条件が採用される。
-
-```
-カーソル位置     → 反転表示 (\e[7m)
-ビジュアル選択   → 反転表示 (\e[7m)
-検索ハイライト   → 黄色背景 (\e[43m)
-カラーカラム     → 灰色背景
-カーソル行       → 背景色
-シンタックス色   → 各言語モジュールの色 + スペルチェック下線（併用可）
-スペルチェック   → 赤下線 (\e[4;31m)
-なし             → 素の文字
-```
+Cell 配列ができたら、各セルに色を重ねていく。色の決定は **優先度順** で、最初にマッチした条件が採用される（カーソル > ビジュアル選択 > 検索 > シンタックス色 > 素の文字）。色レイヤーの詳細は [13. シンタックスハイライト — 色を付ける](#13-シンタックスハイライト--色を付ける) の「描画時の色レイヤー統合」を参照。
 
 ```ruby
 cells.each do |cell|
@@ -1226,6 +1339,110 @@ end
 
 ウィンドウの `col_offset`（水平スクロール量）はバッファ座標（文字インデックス）で保持し、描画時に画面座標に変換する。カーソル位置 `cursor_x` もバッファ座標だ。レイアウトツリーから算出された矩形のオフセットを加算して、最終的なターミナル座標（`\e[行;列H` で使う値）を得る。
 
+### 折り返し（Wrap）
+
+`wrap` オプション（デフォルト有効）が有効なとき、ウィンドウ幅に収まらない長い行は **複数の表示行に折り返される**。水平スクロールの代わりに、行を分割して表示するのだ。
+
+#### セグメント分割
+
+折り返しの単位は **セグメント** と呼ぶ。1 つのバッファ行が N 個のセグメントに分割され、各セグメントが 1 つの表示行になる。
+
+```ruby
+def compute_wrapped_segments(line, width:, tabstop:, linebreak:, showbreak:, indent_prefix:)
+  segs = []
+  start_col = 0
+  first = true
+
+  while start_col < line.length
+    display_prefix = first ? "" : "#{showbreak}#{indent_prefix}"
+    prefix_w = DisplayWidth.display_width(display_prefix, tabstop:)
+    avail = [width - prefix_w, 1].max
+
+    # 利用可能な幅に収まるだけの Cell を切り出す
+    cells, = TextMetrics.clip_cells_for_width(line[start_col..], avail, ...)
+    break if cells.empty?
+
+    # linebreak: 単語の途中で折り返さない
+    if linebreak && cells.length > 1
+      break_idx = linebreak_break_index(cells, line)
+      cells = cells[0..break_idx] if break_idx
+    end
+
+    segs << { source_col_start: start_col, display_prefix: display_prefix }
+    start_col = cells.last.source_col + 1
+  end
+  segs.freeze
+end
+```
+
+処理の流れはこうだ。
+
+1. `clip_cells_for_width` で、利用可能な幅に収まるだけの Cell を取得する
+2. `linebreak` オプションが有効なら、空白位置で折り返して単語を分断しない
+3. 各セグメントに `source_col_start`（バッファ行内の開始文字位置）と `display_prefix`（折り返し行の先頭に表示する文字列）を記録する
+
+#### 折り返し関連オプション
+
+| オプション | 効果 |
+|-----------|------|
+| `wrap` | 折り返しの有効/無効。無効の場合は水平スクロール |
+| `linebreak` | 単語の途中で折り返さない（空白位置で分割） |
+| `showbreak` | 折り返し行の先頭に表示する文字列（例: `"↪ "`） |
+| `breakindent` | 折り返し行に元の行のインデントを引き継ぐ |
+
+`showbreak` と `breakindent` は **`display_prefix`** として結合され、2 行目以降のセグメントの先頭に表示される。例えば `showbreak` が `"↪ "` で元の行が 4 スペースインデントなら、`display_prefix` は `"↪     "` になる。この分だけ利用可能な幅（`avail`）が減る。
+
+#### 描画
+
+`wrapped_window_render_rows` は、セグメント単位でループする。
+
+```ruby
+def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+  rows = []
+  row_idx = window.row_offset
+  seg_skip = window.wrap_seg_offset      # 先頭行の先頭セグメントのスキップ数
+
+  while rows.length < height
+    line = buffer.line_at(row_idx)
+    segments = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
+
+    segments.each_with_index do |seg, seg_i|
+      next seg_skip -= 1 if seg_skip > 0  # スクロール済みセグメントをスキップ
+      break if rows.length >= height
+
+      # 行番号は各バッファ行の最初のセグメントにだけ表示
+      gutter = render_gutter_prefix(editor, window, buffer,
+                 seg_i.zero? ? row_idx : nil, gutter_w)
+      rows << gutter + render_text_segment(line, ...,
+                source_col_start: seg[:source_col_start],
+                display_prefix: seg[:display_prefix])
+    end
+    row_idx += 1
+  end
+  rows
+end
+```
+
+行番号ガターは各バッファ行の **最初のセグメントにだけ** 表示し、折り返し行は空白ガターにする。これにより、折り返しが起きていても元のバッファ行の区切りが視覚的にわかる。
+
+#### スクロールとカーソル追従
+
+折り返しモードでは、ウィンドウは 2 つのオフセットでスクロール位置を管理する。
+
+- **`row_offset`**: 画面最上部に表示するバッファ行番号
+- **`wrap_seg_offset`**: その行の先頭から何セグメントスキップするか
+
+`ensure_visible_under_wrap` は、カーソルが画面内に収まるようにこの 2 つを調整する。
+
+```
+1. カーソルがある行のセグメントを計算
+2. row_offset からカーソル行までの視覚行数を積算
+3. カーソル行が画面に収まらない → row_offset を進める（上の行を押し出す）
+4. カーソル行自体が画面より長い → wrap_seg_offset でセグメント単位スキップ
+```
+
+重要なのは、折り返しモードでは `col_offset`（水平スクロール）は使わないことだ。すべての文字が折り返しによって表示されるため、水平スクロールが不要になる。
+
 ---
 
 ## 13. シンタックスハイライト — 色を付ける
@@ -1291,6 +1508,70 @@ end
 Prism を使うことで、正規表現では正しく扱えないケース（ヒアドキュメント、文字列補間内のコード、複数行コメントなど）も正確に色付けできる。
 
 他の言語（JSON, YAML, Markdown, C, Go, Rust, Python, ...）は正規表現ベースの `apply_regex` で実装されている。言語ごとのモジュールは `autoload` で必要になるまでロードされない。
+
+### 色の重ね方 — apply_regex の優先度制御
+
+正規表現ベースの言語モジュールでは、`color_columns` の中で `apply_regex` を **呼ぶ順序** が色の優先度を決める。
+
+C 言語の例を見てみよう。
+
+```ruby
+def color_columns(text)
+  cols = {}
+  apply_regex(cols, text, CHAR_RE, STRING_COLOR)         # 1. 文字リテラル
+  apply_regex(cols, text, STRING_RE, STRING_COLOR)        # 2. 文字列
+  apply_regex(cols, text, KEYWORD_RE, KEYWORD_COLOR)      # 3. キーワード
+  apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)        # 4. 数値
+  apply_regex(cols, text, CONSTANT_RE, CONSTANT_COLOR)    # 5. 定数
+  apply_regex(cols, text, PREPROCESSOR_RE, "\e[35m")      # 6. プリプロセッサ
+  apply_regex(cols, text, BLOCK_COMMENT_RE, COMMENT_COLOR, override: true)  # 7. ブロックコメント
+  apply_regex(cols, text, LINE_COMMENT_RE, COMMENT_COLOR, override: true)   # 8. 行コメント
+  cols
+end
+```
+
+`apply_regex` は `cols` ハッシュに `{ 文字位置 => 色 }` を書き込む。デフォルトでは **既に色が付いている位置はスキップする**（`override: false`）。
+
+```ruby
+def apply_regex(cols, text, regex, color, override: false)
+  text.to_enum(:scan, regex).each do
+    m = Regexp.last_match
+    (m.begin(0)...m.end(0)).each do |idx|
+      next if cols.key?(idx) && !override  # 既に色があればスキップ
+      cols[idx] = color
+    end
+  end
+end
+```
+
+つまり、**先に呼ばれた regex が勝つ**。文字列中の `if` がキーワード色にならないのは、`STRING_RE` が先に適用されて文字列内の位置に色が付いており、後から `KEYWORD_RE` がマッチしてもスキップされるからだ。
+
+ただし `override: true` を指定すると、既存の色を上書きする。コメントに使われるのがこのパターンだ。`// TODO: fix this` のような行では、まず `KEYWORD_RE` 等が個別のトークンに色を付けるが、最後に `LINE_COMMENT_RE` が `override: true` で全体をコメント色に塗り替える。
+
+この仕組みにより、各言語モジュールは正規表現の適用順序を変えるだけで、色の優先度を柔軟に制御できる。
+
+### 描画時の色レイヤー統合
+
+言語モジュールが返す `{ 文字位置 => 色 }` ハッシュは、描画パイプラインでさらに他の色情報と重ね合わされる。`render_cells` では以下の優先度でチェックする。
+
+```
+1. カーソル位置      → 反転表示 (\e[7m)
+2. ビジュアル選択    → 反転表示 (\e[7m)
+3. 検索ハイライト    → 黄色背景 (\e[43m)
+4. カラーカラム      → 灰色背景
+5. カーソル行背景    → 背景色
+6. シンタックス色    → 各言語モジュールの色（スペルチェック下線と併用可）
+7. スペルチェック    → 赤下線 (\e[4;31m)
+8. なし              → 素の文字
+```
+
+重要なポイントは、すべての色情報が **同じインターフェース**（`{ 文字位置 => 値 }` のハッシュ）で提供されることだ。シンタックスハイライト、検索マッチ、スペルチェックが同じ形式なので、描画コードは色の出所を知る必要がない。
+
+シンタックス色とスペルチェックだけは **併用可能** だ。文字にシンタックス色がある位置がスペルミスでもある場合、`"#{syntax_color}\e[4;31m#{glyph}\e[m"` のように ANSI コードを連結して、色付き + 赤下線の両方を適用する。
+
+### キャッシュ
+
+シンタックスハイライトの計算結果は `[言語モジュール, 行テキスト]` をキーとしてキャッシュされる（上限 2048 エントリ）。行が編集されると新しい文字列オブジェクトが生成されるため、自動的にキャッシュミスし、再計算される。明示的な invalidation は不要だ。
 
 ### インデント支援
 
