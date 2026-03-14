@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logo.svg" alt="RuVim" width="480">
+</p>
+
 # RuVim
 
 Ruby で実装した Vim ライクなターミナルエディタです。
