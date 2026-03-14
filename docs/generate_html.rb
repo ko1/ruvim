@@ -493,7 +493,10 @@ function updateActive() {
   links.forEach(a => a.classList.remove('active'));
   if (current && linkMap[current]) {
     linkMap[current].classList.add('active');
-    linkMap[current].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    // Only auto-scroll sidebar when it is visible on screen (desktop)
+    if (window.innerWidth > 768) {
+      linkMap[current].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
   }
   ticking = false;
 }
