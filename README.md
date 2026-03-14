@@ -104,7 +104,7 @@ ruby -Ilib exe/ruvim
 - Git: `Ctrl-g` で `:git` プリセット入力。blame / status / diff / log / branch / commit / grep
 - シェル: `:!cmd`, `:r !cmd`（出力を挿入）, `:w !cmd`（バッファをパイプ）
 
-詳しくは `docs/tutorial.md` を参照してください。
+詳しくは [docs/tutorial.md](docs/tutorial.md) を参照してください。
 
 ## 設定
 
@@ -120,18 +120,40 @@ filetype ごとの設定:
 
 `--clean` で user config / ftplugin を無効化できます。
 
-詳しくは `docs/config.md` を参照してください。
+詳しくは [docs/config.md](docs/config.md) を参照してください。
 
 ## ドキュメント
 
-- `docs/tutorial.md` - 使い方
-- `docs/spec.md` - 実装仕様 / 設計
-- `docs/command.md` - コマンド一覧
-- `docs/binding.md` - キーバインド
-- `docs/config.md` - 設定
-- `docs/plugin.md` - 拡張 / plugin 的な書き方（現状）
-- `docs/vim_diff.md` - Vim との差分
-- `docs/todo.md` - TODO / 次フェーズ案
+### はじめに
+
+| ドキュメント | 内容 |
+|---|---|
+| [tutorial.md](docs/tutorial.md) | 基本操作のチュートリアル。起動・移動・編集・保存の流れをひと通り学べます |
+| [tutorial_book.md](docs/tutorial_book.md) | 完全ガイド（チュートリアルブック）。基本から応用・カスタマイズまで網羅した一冊。[HTML 版](docs/tutorial_book.html)もあります |
+
+### リファレンス
+
+| ドキュメント | 内容 |
+|---|---|
+| [command.md](docs/command.md) | コマンド一覧。Normal / Insert / Ex の全コマンドを分類ごとに掲載 |
+| [binding.md](docs/binding.md) | キーバインディング一覧。モード別・レイヤー別に全バインドを掲載 |
+| [config.md](docs/config.md) | 設定リファレンス。`init.rb` の書き方と `:set` オプションの全項目 |
+| [plugin.md](docs/plugin.md) | 拡張の書き方。正式な plugin API はまだありませんが、`init.rb` でできることをまとめています |
+
+### Vim ユーザー向け
+
+| ドキュメント | 内容 |
+|---|---|
+| [vim_diff.md](docs/vim_diff.md) | Vim との違い。RuVim 独自の機能や挙動の差分をまとめています |
+
+### 開発者向け
+
+| ドキュメント | 内容 |
+|---|---|
+| [spec.md](docs/spec.md) | 仕様書。アーキテクチャ・設計方針・各サブシステムの詳細 |
+| [implementation.md](docs/implementation.md) | 実装解説記事。「Ruby でテキストエディタを作る」をテーマに内部設計を解説 |
+| [todo.md](docs/todo.md) | TODO リスト。今後の開発予定と検討中の機能 |
+| [done.md](docs/done.md) | 完了項目。実装済みの機能をカテゴリ別に記録 |
 
 ## 開発
 
