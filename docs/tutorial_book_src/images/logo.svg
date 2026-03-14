@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" width="640" height="320">
+  <defs>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#FF4757"/>
+      <stop offset="100%" stop-color="#FF6B81"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2ED573"/>
+      <stop offset="100%" stop-color="#17B95E"/>
+    </linearGradient>
+    <clipPath id="clip">
+      <rect x="0" y="0" width="640" height="320" rx="24"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#clip)">
+    <!-- Background -->
+    <rect width="640" height="320" fill="#0F0F17"/>
+
+    <!-- Subtle grid lines for terminal feel -->
+    <g stroke="#1A1A2A" stroke-width="0.5" opacity="0.6">
+      <line x1="0" y1="80" x2="640" y2="80"/>
+      <line x1="0" y1="160" x2="640" y2="160"/>
+      <line x1="0" y1="240" x2="640" y2="240"/>
+    </g>
+
+    <!-- Accent bar top -->
+    <rect width="640" height="3" fill="url(#accent)"/>
+
+    <!-- Terminal prompt style: > -->
+    <text x="40" y="188" font-family="'SF Mono','JetBrains Mono','Fira Code',monospace"
+          font-size="96" font-weight="300" fill="#333346">$</text>
+
+    <!-- "ruvim" logotype -->
+    <g transform="translate(110, 80)">
+      <!-- "ru" — bold, warm white -->
+      <text x="0" y="110" font-family="'Inter','Helvetica Neue','Arial',sans-serif"
+            font-size="128" font-weight="900" fill="url(#accent)"
+            letter-spacing="-4">ru</text>
+      <!-- "v" -->
+      <text x="148" y="110" font-family="'Inter','Helvetica Neue','Arial',sans-serif"
+            font-size="128" font-weight="300" fill="url(#mint)"
+            letter-spacing="-4">v</text>
+      <!-- "i" — blinking like a cursor -->
+      <text x="210" y="110" font-family="'Inter','Helvetica Neue','Arial',sans-serif"
+            font-size="128" font-weight="300" fill="url(#mint)"
+            letter-spacing="-4">i<animate attributeName="opacity" values="1;0;1" dur="2s" repeatCount="indefinite"/></text>
+      <!-- "m" -->
+      <text x="236" y="110" font-family="'Inter','Helvetica Neue','Arial',sans-serif"
+            font-size="128" font-weight="300" fill="url(#mint)"
+            letter-spacing="-4">m</text>
+    </g>
+
+    <!-- Bottom info line -->
+    <text x="40" y="280" font-family="'SF Mono','JetBrains Mono','Fira Code',monospace"
+          font-size="13" fill="#333346" letter-spacing="2">NORMAL</text>
+    <text x="600" y="280" font-family="'SF Mono','JetBrains Mono','Fira Code',monospace"
+          font-size="13" fill="#333346" letter-spacing="1" text-anchor="end">ruby-powered</text>
+
+    <!-- Accent bar bottom -->
+    <rect y="317" width="640" height="3" fill="url(#mint)"/>
+  </g>
+</svg>

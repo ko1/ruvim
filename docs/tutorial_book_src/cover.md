@@ -1,5 +1,7 @@
 # RuVim 完全ガイド
 
+![RuVim](images/logo.svg)
+
 **Ruby で書かれた Vim ライクなターミナルエディタ**
 
 ---
