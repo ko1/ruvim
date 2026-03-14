@@ -255,7 +255,7 @@ App
 
 ### Docs (docs/)
 
-`spec.md` (feature spec), `command.md`, `binding.md`, `config.md`, `tutorial.md`, `vim_diff.md`, `plugin.md`, `todo.md`, `done.md`, `implementation.md` (実装解説記事)
+`spec.md` (feature spec), `command.md`, `binding.md`, `config.md`, `tutorial.md`, `vim_diff.md`, `plugin.md`, `todo.md`, `done.md`, `tutorial_book_src/` (完全ガイド ligarb ソース), `tutorial_book/` (完全ガイド HTML ビルド), `impl_book_src/` (実装解説 ligarb ソース), `impl_book/` (実装解説 HTML ビルド)
 
 ## Debugging (Lumitrace)
 

@@ -1,0 +1,4036 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RuVim 実装解説</title>
+<style>
+/* === Reset & Base === */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --sidebar-width: 280px;
+  --color-bg: #ffffff;
+  --color-text: #1a1a1a;
+  --color-text-muted: #666666;
+  --color-border: #e0e0e0;
+  --color-sidebar-bg: #f5f5f5;
+  --color-sidebar-hover: #e8e8e8;
+  --color-accent: #2563eb;
+  --color-accent-light: #dbeafe;
+  --color-code-bg: #f8f8f8;
+  --color-code-border: #e5e5e5;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-bg);
+  line-height: 1.7;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* === Sidebar === */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--color-sidebar-bg);
+  border-right: 1px solid var(--color-border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 1.5rem 1rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.book-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+.book-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.book-title a:hover {
+  color: var(--color-accent);
+}
+
+.book-author {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.search-box {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.4rem 1.8rem 0.4rem 0.6rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  outline: none;
+}
+
+.search-clear {
+  display: none;
+  position: absolute;
+  right: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+}
+
+.search-clear:hover {
+  color: var(--color-text);
+}
+
+.search-box input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+
+/* TOC */
+.toc {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+}
+
+.toc ul {
+  list-style: none;
+}
+
+.toc > ul > li {
+  margin-bottom: 0.25rem;
+}
+
+.toc a {
+  display: block;
+  padding: 0.3rem 1rem;
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: 0.88rem;
+  border-left: 3px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.toc a:hover {
+  background: var(--color-sidebar-hover);
+}
+
+.toc a.toc-h1 {
+  font-weight: 600;
+}
+
+.toc a.toc-h2 {
+  padding-left: 1.8rem;
+  font-size: 0.84rem;
+}
+
+.toc a.toc-h3 {
+  padding-left: 2.6rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.toc-chapter.active > a.toc-h1 {
+  border-left-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-light);
+}
+
+/* Part & Appendix titles in TOC */
+.toc-part-title {
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  color: var(--color-text) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding-top: 0.6rem !important;
+  padding-bottom: 0.3rem !important;
+  border-left-color: transparent !important;
+}
+
+.toc-part > ul {
+  margin-bottom: 0.5rem;
+}
+
+.toc-appendix-title {
+  display: block;
+  padding: 0.6rem 1rem 0.3rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.toc-appendix > ul {
+  margin-bottom: 0.5rem;
+}
+
+/* Sidebar toggle */
+.sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 200;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.4rem 0.6rem;
+  font-size: 1.2rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* === Main Content === */
+.content {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  max-width: 800px;
+  padding: 2.5rem 3rem;
+}
+
+.chapter h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.chapter h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.chapter h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.chapter h4,
+.chapter h5,
+.chapter h6 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.chapter p {
+  margin-bottom: 1rem;
+}
+
+.chapter ul,
+.chapter ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.chapter li {
+  margin-bottom: 0.3rem;
+}
+
+.chapter li > ul,
+.chapter li > ol {
+  margin-top: 0.3rem;
+  margin-bottom: 0;
+}
+
+/* Links */
+.chapter a {
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.chapter a:hover {
+  text-decoration: underline;
+}
+
+/* Code */
+.chapter code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: 3px;
+  padding: 0.15em 0.35em;
+}
+
+.chapter pre {
+  background: var(--color-code-bg);
+  border: 1px solid var(--color-code-border);
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  overflow-x: auto;
+  margin-bottom: 1.2rem;
+  line-height: 1.5;
+}
+
+.chapter pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+/* Tables */
+.chapter table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.2rem;
+  font-size: 0.92rem;
+}
+
+.chapter th,
+.chapter td {
+  border: 1px solid var(--color-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.chapter th {
+  background: var(--color-sidebar-bg);
+  font-weight: 600;
+}
+
+/* Blockquote */
+.chapter blockquote {
+  border-left: 4px solid var(--color-accent);
+  padding: 0.5rem 1rem;
+  margin-bottom: 1rem;
+  color: var(--color-text-muted);
+  background: var(--color-code-bg);
+  border-radius: 0 4px 4px 0;
+}
+
+.chapter blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* Images */
+.chapter img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
+/* Horizontal rule */
+.chapter hr {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 2rem 0;
+}
+
+/* Task lists */
+.chapter .task-list-item {
+  list-style: none;
+  margin-left: -1.5rem;
+}
+
+.chapter .task-list-item input[type="checkbox"] {
+  margin-right: 0.5rem;
+}
+
+/* Search highlight */
+mark.search-highlight {
+  background: #fef08a;
+  color: inherit;
+  padding: 0.1em 0;
+  border-radius: 2px;
+}
+
+/* === Dark Mode === */
+[data-theme="dark"] {
+  --color-bg: #1a1a2e;
+  --color-text: #e0e0e0;
+  --color-text-muted: #a0a0a0;
+  --color-border: #333;
+  --color-sidebar-bg: #16213e;
+  --color-sidebar-hover: #1a1a3a;
+  --color-accent: #4dabf7;
+  --color-accent-light: #1c3a5c;
+  --color-code-bg: #0f172a;
+  --color-code-border: #2d3748;
+}
+
+[data-theme="dark"] .search-box input {
+  background: var(--color-code-bg);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] mark.search-highlight {
+  background: #854d0e;
+  color: #fef08a;
+}
+
+[data-theme="dark"] .hljs {
+  background: var(--color-code-bg) !important;
+  color: #e0e0e0 !important;
+}
+
+/* Theme toggle */
+.sidebar-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 0.2rem 0.4rem;
+  font-size: 1rem;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  color: var(--color-text);
+  background: var(--color-sidebar-hover);
+}
+
+/* === Part / Appendix TOC === */
+.toc-part {
+  margin-top: 0.5rem;
+}
+
+.toc-part-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  padding: 0.6rem 1rem 0.3rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.toc-part-title:hover {
+  color: var(--color-text);
+}
+
+.toc-appendix {
+  margin-top: 0.5rem;
+}
+
+.toc-appendix-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-muted);
+  padding: 0.6rem 1rem 0.3rem;
+  border-top: 1px solid var(--color-border);
+}
+
+/* === Chapter Navigation === */
+.chapter-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+  gap: 1rem;
+}
+
+.nav-prev,
+.nav-next {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  color: var(--color-accent);
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  transition: background 0.15s, border-color 0.15s;
+  max-width: 45%;
+}
+
+.nav-prev:hover,
+.nav-next:hover {
+  background: var(--color-accent-light);
+  border-color: var(--color-accent);
+  text-decoration: none;
+}
+
+.nav-next {
+  text-align: right;
+  margin-left: auto;
+}
+
+/* === Edit Link === */
+.edit-link {
+  margin-top: 2rem;
+  text-align: right;
+}
+
+.edit-link a {
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+}
+
+.edit-link a:hover {
+  color: var(--color-accent);
+}
+
+/* === Footnotes === */
+.chapter .footnotes {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.88rem;
+}
+
+.chapter .footnotes ol {
+  padding-left: 1.5rem;
+}
+
+.chapter sup a {
+  color: var(--color-accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.chapter sup a:hover {
+  text-decoration: underline;
+}
+
+/* === Responsive === */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-toggle {
+    display: block;
+  }
+
+  .content {
+    margin-left: 0;
+    padding: 2rem 1.5rem;
+    padding-top: 3.5rem;
+  }
+}
+
+/* === Print === */
+@media print {
+  .sidebar,
+  .sidebar-toggle,
+  .chapter-nav,
+  .edit-link {
+    display: none !important;
+  }
+
+  .content {
+    margin-left: 0;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .chapter {
+    display: block !important;
+    page-break-before: always;
+  }
+
+  .chapter:first-child {
+    page-break-before: avoid;
+  }
+
+  .chapter pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+}
+
+</style>
+<link rel="stylesheet" href="css/highlight.css">
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-header-top">
+      <h1 class="book-title"><a href="#cover" onclick="showChapter('cover'); return false;">RuVim 実装解説</a></h1>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode">&#9790;</button>
+    </div>
+    <p class="book-author">Claude Code (asked by @ko1)</p>
+  </div>
+  <div class="search-box">
+    <input type="text" id="toc-search" placeholder="Search..." autocomplete="off">
+    <button class="search-clear" id="search-clear" type="button" aria-label="Clear search">&times;</button>
+  </div>
+  <nav class="toc" id="toc">
+    <ul>
+      <li class="toc-chapter" data-chapter="ch-overview">
+        <a href="#ch-overview" class="toc-h1" onclick="showChapter('ch-overview')">1. 全体像 — エディタとは何をするプログラムか</a>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-startup">
+        <a href="#ch-startup" class="toc-h1" onclick="showChapter('ch-startup')">2. 起動シーケンス — App の初期化</a>
+        <ul>
+          <li>
+            <a href="#ch-startup--シグナルパイプ" class="toc-h2" onclick="showChapterAndScroll('ch-startup', 'ch-startup--シグナルパイプ')">2.1 シグナルパイプ</a>
+          </li>
+          <li>
+            <a href="#ch-startup--起動時間の計測" class="toc-h2" onclick="showChapterAndScroll('ch-startup', 'ch-startup--起動時間の計測')">2.2 起動時間の計測</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-mainloop">
+        <a href="#ch-mainloop" class="toc-h1" onclick="showChapter('ch-mainloop')">3. メインループ — イベント駆動の心臓部</a>
+        <ul>
+          <li>
+            <a href="#ch-mainloop--タイムアウトの管理" class="toc-h2" onclick="showChapterAndScroll('ch-mainloop', 'ch-mainloop--タイムアウトの管理')">3.1 タイムアウトの管理</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-terminal">
+        <a href="#ch-terminal" class="toc-h1" onclick="showChapter('ch-terminal')">4. ターミナル制御 — 端末を乗っ取る</a>
+        <ul>
+          <li>
+            <a href="#ch-terminal--ロー-raw-モード" class="toc-h2" onclick="showChapterAndScroll('ch-terminal', 'ch-terminal--ロー-raw-モード')">4.1 ロー (Raw) モード</a>
+          </li>
+          <li>
+            <a href="#ch-terminal--エスケープシーケンスによる端末制御" class="toc-h2" onclick="showChapterAndScroll('ch-terminal', 'ch-terminal--エスケープシーケンスによる端末制御')">4.2 エスケープシーケンスによる端末制御</a>
+          </li>
+          <li>
+            <a href="#ch-terminal--sixel-サポート検出" class="toc-h2" onclick="showChapterAndScroll('ch-terminal', 'ch-terminal--sixel-サポート検出')">4.3 Sixel サポート検出</a>
+          </li>
+          <li>
+            <a href="#ch-terminal--シェルへの一時退避" class="toc-h2" onclick="showChapterAndScroll('ch-terminal', 'ch-terminal--シェルへの一時退避')">4.4 シェルへの一時退避</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-key-input">
+        <a href="#ch-key-input" class="toc-h1" onclick="showChapter('ch-key-input')">5. キー入力 — 生のバイト列を意味に変える</a>
+        <ul>
+          <li>
+            <a href="#ch-key-input--esc-キーの曖昧さ" class="toc-h2" onclick="showChapterAndScroll('ch-key-input', 'ch-key-input--esc-キーの曖昧さ')">5.1 ESC キーの曖昧さ</a>
+          </li>
+          <li>
+            <a href="#ch-key-input--ウェイクアップ-io" class="toc-h2" onclick="showChapterAndScroll('ch-key-input', 'ch-key-input--ウェイクアップ-io')">5.2 ウェイクアップ I/O</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-keymap">
+        <a href="#ch-keymap" class="toc-h1" onclick="showChapter('ch-keymap')">6. キーマッピング — 層状の解決とプレフィックスインデックス</a>
+        <ul>
+          <li>
+            <a href="#ch-keymap--layermap-プレフィックスインデックス付きハッシュ" class="toc-h2" onclick="showChapterAndScroll('ch-keymap', 'ch-keymap--layermap-プレフィックスインデックス付きハッシュ')">6.1 LayerMap — プレフィックスインデックス付きハッシュ</a>
+          </li>
+          <li>
+            <a href="#ch-keymap--4-層の解決" class="toc-h2" onclick="showChapterAndScroll('ch-keymap', 'ch-keymap--4-層の解決')">6.2 4 層の解決</a>
+          </li>
+          <li>
+            <a href="#ch-keymap--マッチの-4-状態" class="toc-h2" onclick="showChapterAndScroll('ch-keymap', 'ch-keymap--マッチの-4-状態')">6.3 マッチの 4 状態</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-dispatch">
+        <a href="#ch-dispatch" class="toc-h1" onclick="showChapter('ch-dispatch')">7. コマンドディスパッチ — キーから動作へ</a>
+        <ul>
+          <li>
+            <a href="#ch-dispatch--normal-モードコマンドの実行" class="toc-h2" onclick="showChapterAndScroll('ch-dispatch', 'ch-dispatch--normal-モードコマンドの実行')">7.1 Normal モードコマンドの実行</a>
+          </li>
+          <li>
+            <a href="#ch-dispatch--ex-コマンドの解析パイプライン" class="toc-h2" onclick="showChapterAndScroll('ch-dispatch', 'ch-dispatch--ex-コマンドの解析パイプライン')">7.2 Ex コマンドの解析パイプライン</a>
+          </li>
+          <li>
+            <a href="#ch-dispatch--レンジの解析" class="toc-h2" onclick="showChapterAndScroll('ch-dispatch', 'ch-dispatch--レンジの解析')">7.3 レンジの解析</a>
+          </li>
+          <li>
+            <a href="#ch-dispatch--substitute-のパース" class="toc-h2" onclick="showChapterAndScroll('ch-dispatch', 'ch-dispatch--substitute-のパース')">7.4 substitute のパース</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-key-handler">
+        <a href="#ch-key-handler" class="toc-h1" onclick="showChapter('ch-key-handler')">8. KeyHandler — 状態機械の集合体</a>
+        <ul>
+          <li>
+            <a href="#ch-key-handler--normal-モードのキー処理" class="toc-h2" onclick="showChapterAndScroll('ch-key-handler', 'ch-key-handler--normal-モードのキー処理')">8.1 Normal モードのキー処理</a>
+          </li>
+          <li>
+            <a href="#ch-key-handler--オペレータ-モーション" class="toc-h2" onclick="showChapterAndScroll('ch-key-handler', 'ch-key-handler--オペレータ-モーション')">8.2 オペレータ + モーション</a>
+          </li>
+          <li>
+            <a href="#ch-key-handler--ドットリピート" class="toc-h2" onclick="showChapterAndScroll('ch-key-handler', 'ch-key-handler--ドットリピート')">8.3 ドットリピート</a>
+          </li>
+          <li>
+            <a href="#ch-key-handler--マクロ" class="toc-h2" onclick="showChapterAndScroll('ch-key-handler', 'ch-key-handler--マクロ')">8.4 マクロ</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-buffer">
+        <a href="#ch-buffer" class="toc-h1" onclick="showChapter('ch-buffer')">9. バッファ — テキストの器</a>
+        <ul>
+          <li>
+            <a href="#ch-buffer--データ構造" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--データ構造')">9.1 データ構造</a>
+          </li>
+          <li>
+            <a href="#ch-buffer--ファイルの読み込みとエンコーディング" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--ファイルの読み込みとエンコーディング')">9.2 ファイルの読み込みとエンコーディング</a>
+          </li>
+          <li>
+            <a href="#ch-buffer--undoredo-スナップショット方式" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--undoredo-スナップショット方式')">9.3 Undo/Redo — スナップショット方式</a>
+          </li>
+          <li>
+            <a href="#ch-buffer--チェンジグループ" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--チェンジグループ')">9.4 チェンジグループ</a>
+          </li>
+          <li>
+            <a href="#ch-buffer--永続-undo" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--永続-undo')">9.5 永続 Undo</a>
+          </li>
+          <li>
+            <a href="#ch-buffer--ストリーム対応" class="toc-h2" onclick="showChapterAndScroll('ch-buffer', 'ch-buffer--ストリーム対応')">9.6 ストリーム対応</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-window">
+        <a href="#ch-window" class="toc-h1" onclick="showChapter('ch-window')">10. ウィンドウ — バッファへの窓</a>
+        <ul>
+          <li>
+            <a href="#ch-window--グラフェム単位のカーソル移動" class="toc-h2" onclick="showChapterAndScroll('ch-window', 'ch-window--グラフェム単位のカーソル移動')">10.1 グラフェム単位のカーソル移動</a>
+          </li>
+          <li>
+            <a href="#ch-window--垂直移動と-preferred_x" class="toc-h2" onclick="showChapterAndScroll('ch-window', 'ch-window--垂直移動と-preferred_x')">10.2 垂直移動と preferred_x</a>
+          </li>
+          <li>
+            <a href="#ch-window--スクロールの確保" class="toc-h2" onclick="showChapterAndScroll('ch-window', 'ch-window--スクロールの確保')">10.3 スクロールの確保</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-editor">
+        <a href="#ch-editor" class="toc-h1" onclick="showChapter('ch-editor')">11. エディタ — 状態の統括者</a>
+        <ul>
+          <li>
+            <a href="#ch-editor--オプションシステム" class="toc-h2" onclick="showChapterAndScroll('ch-editor', 'ch-editor--オプションシステム')">11.1 オプションシステム</a>
+          </li>
+          <li>
+            <a href="#ch-editor--レイアウトツリー" class="toc-h2" onclick="showChapterAndScroll('ch-editor', 'ch-editor--レイアウトツリー')">11.2 レイアウトツリー</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-screen">
+        <a href="#ch-screen" class="toc-h1" onclick="showChapter('ch-screen')">12. 画面描画 — Screen と差分レンダリング</a>
+        <ul>
+          <li>
+            <a href="#ch-screen--2-フェーズレンダリング" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--2-フェーズレンダリング')">12.1 2 フェーズレンダリング</a>
+          </li>
+          <li>
+            <a href="#ch-screen--キャッシュ" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--キャッシュ')">12.2 キャッシュ</a>
+          </li>
+          <li>
+            <a href="#ch-screen--レイアウト合成-分割ウィンドウの描画" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--レイアウト合成-分割ウィンドウの描画')">12.3 レイアウト合成 — 分割ウィンドウの描画</a>
+          </li>
+          <li>
+            <a href="#ch-screen--1-矩形の計算" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--1-矩形の計算')">12.4 1. 矩形の計算</a>
+          </li>
+          <li>
+            <a href="#ch-screen--2-各ウィンドウの事前描画" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--2-各ウィンドウの事前描画')">12.5 2. 各ウィンドウの事前描画</a>
+          </li>
+          <li>
+            <a href="#ch-screen--3-行計画row-planによる合成" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--3-行計画row-planによる合成')">12.6 3. 行計画（row plan）による合成</a>
+          </li>
+          <li>
+            <a href="#ch-screen--バッファ文字列から画面セルへの変換" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--バッファ文字列から画面セルへの変換')">12.7 バッファ文字列から画面セルへの変換</a>
+          </li>
+          <li>
+            <a href="#ch-screen--描画のレイヤー構造" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--描画のレイヤー構造')">12.8 描画のレイヤー構造</a>
+          </li>
+          <li>
+            <a href="#ch-screen--高速パス-色も特殊文字もない行" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--高速パス-色も特殊文字もない行')">12.9 高速パス — 色も特殊文字もない行</a>
+          </li>
+          <li>
+            <a href="#ch-screen--編集による再描画の流れ" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--編集による再描画の流れ')">12.10 編集による再描画の流れ</a>
+          </li>
+          <li>
+            <a href="#ch-screen--座標系の変換" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--座標系の変換')">12.11 座標系の変換</a>
+          </li>
+          <li>
+            <a href="#ch-screen--折り返しwrap" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--折り返しwrap')">12.12 折り返し（Wrap）</a>
+          </li>
+          <li>
+            <a href="#ch-screen--セグメント分割" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--セグメント分割')">12.13 セグメント分割</a>
+          </li>
+          <li>
+            <a href="#ch-screen--折り返し関連オプション" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--折り返し関連オプション')">12.14 折り返し関連オプション</a>
+          </li>
+          <li>
+            <a href="#ch-screen--描画" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--描画')">12.15 描画</a>
+          </li>
+          <li>
+            <a href="#ch-screen--スクロールとカーソル追従" class="toc-h2" onclick="showChapterAndScroll('ch-screen', 'ch-screen--スクロールとカーソル追従')">12.16 スクロールとカーソル追従</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-syntax">
+        <a href="#ch-syntax" class="toc-h1" onclick="showChapter('ch-syntax')">13. シンタックスハイライト — 色を付ける</a>
+        <ul>
+          <li>
+            <a href="#ch-syntax--langbase-色付けの基盤" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--langbase-色付けの基盤')">13.1 Lang::Base — 色付けの基盤</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--langruby-prism-による正確なハイライト" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--langruby-prism-による正確なハイライト')">13.2 Lang::Ruby — Prism による正確なハイライト</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--色の重ね方-apply_regex-の優先度制御" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--色の重ね方-apply_regex-の優先度制御')">13.3 色の重ね方 — apply_regex の優先度制御</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--描画時の色レイヤー統合" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--描画時の色レイヤー統合')">13.4 描画時の色レイヤー統合</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--キャッシュ" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--キャッシュ')">13.5 キャッシュ</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--インデント支援" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--インデント支援')">13.6 インデント支援</a>
+          </li>
+          <li>
+            <a href="#ch-syntax--on_save-フック" class="toc-h2" onclick="showChapterAndScroll('ch-syntax', 'ch-syntax--on_save-フック')">13.7 on_save フック</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-unicode">
+        <a href="#ch-unicode" class="toc-h1" onclick="showChapter('ch-unicode')">14. Unicode 対応 — 文字幅の深淵</a>
+        <ul>
+          <li>
+            <a href="#ch-unicode--問題" class="toc-h2" onclick="showChapterAndScroll('ch-unicode', 'ch-unicode--問題')">14.1 問題</a>
+          </li>
+          <li>
+            <a href="#ch-unicode--displaywidth-モジュール" class="toc-h2" onclick="showChapterAndScroll('ch-unicode', 'ch-unicode--displaywidth-モジュール')">14.2 DisplayWidth モジュール</a>
+          </li>
+          <li>
+            <a href="#ch-unicode--コードポイント範囲の分類" class="toc-h2" onclick="showChapterAndScroll('ch-unicode', 'ch-unicode--コードポイント範囲の分類')">14.3 コードポイント範囲の分類</a>
+          </li>
+          <li>
+            <a href="#ch-unicode--曖昧幅文字" class="toc-h2" onclick="showChapterAndScroll('ch-unicode', 'ch-unicode--曖昧幅文字')">14.4 曖昧幅文字</a>
+          </li>
+          <li>
+            <a href="#ch-unicode--タブの可変幅" class="toc-h2" onclick="showChapterAndScroll('ch-unicode', 'ch-unicode--タブの可変幅')">14.5 タブの可変幅</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-c-extension">
+        <a href="#ch-c-extension" class="toc-h1" onclick="showChapter('ch-c-extension')">15. C 拡張 — ホットパスの高速化</a>
+        <ul>
+          <li>
+            <a href="#ch-c-extension--デュアル実装パターン" class="toc-h2" onclick="showChapterAndScroll('ch-c-extension', 'ch-c-extension--デュアル実装パターン')">15.1 デュアル実装パターン</a>
+          </li>
+          <li>
+            <a href="#ch-c-extension--c-拡張の実装" class="toc-h2" onclick="showChapterAndScroll('ch-c-extension', 'ch-c-extension--c-拡張の実装')">15.2 C 拡張の実装</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-streams">
+        <a href="#ch-streams" class="toc-h1" onclick="showChapter('ch-streams')">16. ストリーム — 非同期 I/O と外部プロセス</a>
+        <ul>
+          <li>
+            <a href="#ch-streams--stream-階層" class="toc-h2" onclick="showChapterAndScroll('ch-streams', 'ch-streams--stream-階層')">16.1 Stream 階層</a>
+          </li>
+          <li>
+            <a href="#ch-streams--streamrun-pty-による外部コマンド実行" class="toc-h2" onclick="showChapterAndScroll('ch-streams', 'ch-streams--streamrun-pty-による外部コマンド実行')">16.2 Stream::Run — PTY による外部コマンド実行</a>
+          </li>
+          <li>
+            <a href="#ch-streams--streammixer-イベントの合流" class="toc-h2" onclick="showChapterAndScroll('ch-streams', 'ch-streams--streammixer-イベントの合流')">16.3 StreamMixer — イベントの合流</a>
+          </li>
+          <li>
+            <a href="#ch-streams--大規模ファイルの非同期読み込み" class="toc-h2" onclick="showChapterAndScroll('ch-streams', 'ch-streams--大規模ファイルの非同期読み込み')">16.4 大規模ファイルの非同期読み込み</a>
+          </li>
+          <li>
+            <a href="#ch-streams--自動追従" class="toc-h2" onclick="showChapterAndScroll('ch-streams', 'ch-streams--自動追従')">16.5 自動追従</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-sixel">
+        <a href="#ch-sixel" class="toc-h1" onclick="showChapter('ch-sixel')">17. Sixel — ターミナルに画像を描く</a>
+        <ul>
+          <li>
+            <a href="#ch-sixel--sixel-プロトコルの仕様" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--sixel-プロトコルの仕様')">17.1 Sixel プロトコルの仕様</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--データ構造" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--データ構造')">17.2 データ構造</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--ラスター属性" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--ラスター属性')">17.3 ラスター属性</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--カラーレジスタ" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--カラーレジスタ')">17.4 カラーレジスタ</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--バンドベースのエンコーディング" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--バンドベースのエンコーディング')">17.5 バンドベースのエンコーディング</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--色の重ね塗り" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--色の重ね塗り')">17.6 色の重ね塗り</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--pure-ruby-png-デコーダ" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--pure-ruby-png-デコーダ')">17.7 Pure Ruby PNG デコーダ</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--チャンク解析" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--チャンク解析')">17.8 チャンク解析</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--idat-の解凍とフィルタリング" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--idat-の解凍とフィルタリング')">17.9 IDAT の解凍とフィルタリング</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--安全対策" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--安全対策')">17.10 安全対策</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--減色-median-cut-量子化" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--減色-median-cut-量子化')">17.11 減色 — Median-Cut 量子化</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--5-ビットヒストグラム" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--5-ビットヒストグラム')">17.12 5 ビットヒストグラム</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--median-cut-の分割" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--median-cut-の分割')">17.13 Median-Cut の分割</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--パレット色の算出" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--パレット色の算出')">17.14 パレット色の算出</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--リサイズ-nearest-neighbor" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--リサイズ-nearest-neighbor')">17.15 リサイズ — Nearest-Neighbor</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--ターミナル能力の検出" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--ターミナル能力の検出')">17.16 ターミナル能力の検出</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--da1-device-attributes-による-sixel-対応検出" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--da1-device-attributes-による-sixel-対応検出')">17.17 DA1 (Device Attributes) による Sixel 対応検出</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--セルサイズの取得" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--セルサイズの取得')">17.18 セルサイズの取得</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--画面統合-sixel_covered-マーカー" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--画面統合-sixel_covered-マーカー')">17.19 画面統合 — SIXEL_COVERED マーカー</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--img2sixel-フォールバックと二段構え" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--img2sixel-フォールバックと二段構え')">17.20 img2sixel フォールバックと二段構え</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--キャッシュ戦略" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--キャッシュ戦略')">17.21 キャッシュ戦略</a>
+          </li>
+          <li>
+            <a href="#ch-sixel--画像ファイルの-richview" class="toc-h2" onclick="showChapterAndScroll('ch-sixel', 'ch-sixel--画像ファイルの-richview')">17.22 画像ファイルの RichView</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-config">
+        <a href="#ch-config" class="toc-h1" onclick="showChapter('ch-config')">18. 設定システム — Ruby DSL による拡張</a>
+        <ul>
+          <li>
+            <a href="#ch-config--configdsl-basicobject-による安全なサンドボックス" class="toc-h2" onclick="showChapterAndScroll('ch-config', 'ch-config--configdsl-basicobject-による安全なサンドボックス')">18.1 ConfigDSL — BasicObject による安全なサンドボックス</a>
+          </li>
+          <li>
+            <a href="#ch-config--ファイルタイプ別設定" class="toc-h2" onclick="showChapterAndScroll('ch-config', 'ch-config--ファイルタイプ別設定')">18.2 ファイルタイプ別設定</a>
+          </li>
+          <li>
+            <a href="#ch-config--ブロック付きキーマップ" class="toc-h2" onclick="showChapterAndScroll('ch-config', 'ch-config--ブロック付きキーマップ')">18.3 ブロック付きキーマップ</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-testing">
+        <a href="#ch-testing" class="toc-h1" onclick="showChapter('ch-testing')">19. テスト戦略 — エディタをどうテストするか</a>
+        <ul>
+          <li>
+            <a href="#ch-testing--テストヘルパー" class="toc-h2" onclick="showChapterAndScroll('ch-testing', 'ch-testing--テストヘルパー')">19.1 テストヘルパー</a>
+          </li>
+          <li>
+            <a href="#ch-testing--統合テスト-appscenariotest" class="toc-h2" onclick="showChapterAndScroll('ch-testing', 'ch-testing--統合テスト-appscenariotest')">19.2 統合テスト — AppScenarioTest</a>
+          </li>
+          <li>
+            <a href="#ch-testing--ユニットテスト" class="toc-h2" onclick="showChapterAndScroll('ch-testing', 'ch-testing--ユニットテスト')">19.3 ユニットテスト</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-design-patterns">
+        <a href="#ch-design-patterns" class="toc-h1" onclick="showChapter('ch-design-patterns')">20. 設計パターンと判断の記録</a>
+        <ul>
+          <li>
+            <a href="#ch-design-patterns--依存注入-dependency-injection" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--依存注入-dependency-injection')">20.1 依存注入 (Dependency Injection)</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--遅延ロード-lazy-loading" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--遅延ロード-lazy-loading')">20.2 遅延ロード (Lazy Loading)</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--フリーズしたシングルトン" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--フリーズしたシングルトン')">20.3 フリーズしたシングルトン</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--コールバックとしてのラムダ" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--コールバックとしてのラムダ')">20.4 コールバックとしてのラムダ</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--状態機械としてのペンディング状態" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--状態機械としてのペンディング状態')">20.5 状態機械としてのペンディング状態</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--エラー境界としての-commanderror" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--エラー境界としての-commanderror')">20.6 エラー境界としての CommandError</a>
+          </li>
+          <li>
+            <a href="#ch-design-patterns--モノトニッククロックの一貫した使用" class="toc-h2" onclick="showChapterAndScroll('ch-design-patterns', 'ch-design-patterns--モノトニッククロックの一貫した使用')">20.7 モノトニッククロックの一貫した使用</a>
+          </li>
+        </ul>
+      </li>
+      <li class="toc-chapter" data-chapter="ch-epilogue">
+        <a href="#ch-epilogue" class="toc-h1" onclick="showChapter('ch-epilogue')">21. おわりに</a>
+      </li>
+    </ul>
+  </nav>
+</div>
+
+<button class="sidebar-toggle" id="sidebar-toggle" aria-label="Toggle sidebar">&#9776;</button>
+
+<main class="content" id="content">
+  <section class="chapter cover-page" id="chapter-cover" style="display: none;">
+    <h1 id="cover--ruvim-実装解説">RuVim 実装解説</h1>
+
+<p><strong>Ruby でテキストエディタを作る</strong></p>
+
+<hr />
+
+<p>この本では、Ruby で書かれた Vim 風テキストエディタ <strong>RuVim</strong> の実装を、設計思想からコードの細部まで深く解説する。</p>
+
+<p>対象読者は、エディタのプログラミングに興味がある人、あるいは「面白いプログラムの中身を覗きたい」という好奇心を持つプログラマである。</p>
+
+<p>ターミナル制御、キー入力の解析、状態機械によるモード管理、差分レンダリング、Unicode の文字幅処理、C 拡張による高速化、非同期ストリーム、Sixel 画像表示 — テキストエディタの実装には、ソフトウェアエンジニアリングの多くの側面が凝縮されている。</p>
+
+<hr />
+
+<pre><code>$ gem install ruvim
+$ ruvim
+</code></pre>
+
+  </section>
+  <section class="chapter" id="chapter-ch-overview" style="display: none;">
+    <h1 id="ch-overview--全体像-エディタとは何をするプログラムか">1. 全体像 — エディタとは何をするプログラムか</h1>
+
+<blockquote>
+  <p>「簡素にして品格あり」 — 千利休</p>
+</blockquote>
+
+<p>テキストエディタは、一見シンプルなプログラムに見える。テキストを読み込み、ユーザーの入力に応じて編集し、ファイルに保存する。しかし実際に作ってみると、そこには驚くほど多くの技術的課題がある。</p>
+
+<ul>
+  <li><strong>ターミナル制御</strong>: 端末をロー（raw）モードに切り替え、エスケープシーケンスで画面を制御する</li>
+  <li><strong>キー入力の解釈</strong>: マルチバイトのエスケープシーケンスを正しくパースし、タイムアウトで曖昧さを解消する</li>
+  <li><strong>モード管理</strong>: Normal, Insert, Visual, Command-line など複数のモードで異なる振る舞いをする</li>
+  <li><strong>テキスト操作</strong>: undo/redo、テキストオブジェクト、レジスタ、マクロなど</li>
+  <li><strong>Unicode</strong>: 結合文字、CJK 全角文字、絵文字の表示幅を正しく扱う</li>
+  <li><strong>非同期 I/O</strong>: 外部コマンドの実行結果をリアルタイムに表示する</li>
+  <li><strong>画面描画の最適化</strong>: フレームごとの差分だけを端末に送る</li>
+</ul>
+
+<p>RuVim のアーキテクチャは、これらの関心事を明確に分離している。</p>
+
+<pre><code>CLI (exe/ruvim) → CLI.parse() → App.new() → App.run_ui_loop()
+  Input.read_key() → KeymapManager.resolve() → Dispatcher.dispatch()
+  → GlobalCommands.&lt;method&gt;() → Editor state update → Screen.render() → Terminal.write()
+</code></pre>
+
+<p>主要なオブジェクトの依存関係は以下の通りだ。</p>
+
+<pre><code>App
+├── Terminal ──── stdin/stdout I/O
+├── Input ─────── キーボード入力パース（Terminal から読む）
+├── Screen ────── 描画（Terminal に書く）
+├── KeymapManager ── キーからコマンドへの解決
+├── Dispatcher ──── コマンドルーティング
+├── Editor ──────── バッファ、ウィンドウ、モード等の状態
+├── StreamMixer ─── 非同期ストリームの調整
+├── KeyHandler ──── キー処理、モード遷移、ペンディング状態
+└── ConfigLoader ── ユーザー設定の読み込み
+</code></pre>
+
+<p>すべてのオブジェクトは <code>App</code> が生成し、依存注入（Dependency Injection）で結合する。グローバル変数やグローバルなシングルトンへの暗黙的な依存は避け、テスタビリティを確保している。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-overview.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('cover'); return false;">&larr; RuVim 実装解説</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-startup'); return false;">2. 起動シーケンス — App の初期化 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-startup" style="display: none;">
+    <h1 id="ch-startup--起動シーケンス-app-の初期化">2. 起動シーケンス — App の初期化</h1>
+
+<blockquote>
+  <p>「始まりは全体の半ばである」 — アリストテレスを引く西田幾多郎</p>
+</blockquote>
+
+<p><code>exe/ruvim</code> のエントリーポイントはたった 3 行だ。</p>
+
+<pre><code class="language-ruby">#!/usr/bin/env ruby
+require "ruvim"
+RuVim::CLI.run(ARGV)
+</code></pre>
+
+<p><code>CLI.run</code> がコマンドライン引数をパースし、<code>App.new</code> を呼ぶ。<code>App</code> のコンストラクタは長いが、やっていることは明確だ。</p>
+
+<pre><code class="language-ruby">def initialize(path: nil, paths: nil, stdin: STDIN, ...)
+  # 1. すべてのサブシステムを生成
+  @terminal = Terminal.new(stdin:, stdout:)
+  @input = Input.new(effective_stdin)
+  @screen = Screen.new(terminal: @terminal)
+  @dispatcher = Dispatcher.new
+  @keymaps = KeymapManager.new
+
+  # 2. シグナル通知用パイプ
+  @signal_r, @signal_w = IO.pipe
+
+  # 3. Editor にサブシステムを注入
+  @editor = Editor.new(restricted_mode:, keymap_manager: @keymaps)
+  @stream_mixer = StreamMixer.new(editor: @editor, signal_w: @signal_w)
+  @editor.stream_mixer = @stream_mixer
+  @key_handler = KeyHandler.new(
+    editor: @editor,
+    dispatcher: @dispatcher,
+    completion: CompletionManager.new(editor: @editor)
+  )
+
+  # 4. Editor にコールバックを注入
+  @editor.app_action_handler = @key_handler.method(:handle_editor_app_action)
+  @editor.suspend_handler = -&gt; { @terminal.suspend_for_tstp; ... }
+  @editor.shell_executor = -&gt;(command) { @terminal.suspend_for_shell(command); ... }
+
+  # 5. 初期化の実行
+  register_builtins!        # 組み込みコマンドを登録
+  bind_default_keys!        # デフォルトキーバインドを設定
+  load_user_config!         # ~/.config/ruvim/init.rb を読む
+  open_startup_paths!(paths) # ファイルを開く
+end
+</code></pre>
+
+<p>特筆すべき設計上のポイントがいくつかある。</p>
+
+<h2 id="ch-startup--シグナルパイプ">2.1 シグナルパイプ</h2>
+
+<p><code>IO.pipe</code> で作った <code>@signal_r</code> / <code>@signal_w</code> のペアは、シグナルハンドラとメインループの通信に使われる。<code>SIGWINCH</code>（ターミナルリサイズ）が来たとき、シグナルハンドラは <code>@signal_w.write_nonblock(".")</code> で 1 バイト書き込む。メインループは <code>IO.select</code> で <code>@signal_r</code> も監視しているので、キー入力がなくても即座にウェイクアップし、画面を再描画できる。</p>
+
+<pre><code class="language-ruby">Signal.trap("WINCH") do
+  @screen.invalidate_cache!
+  @needs_redraw = true
+  @signal_w.write_nonblock(".")
+end
+</code></pre>
+
+<p>シグナルハンドラの中ではブロックする操作（mutex ロック、I/O 待ちなど）は禁止されている。<code>write_nonblock</code> は安全に使える数少ない操作の一つだ。</p>
+
+<h2 id="ch-startup--起動時間の計測">2.2 起動時間の計測</h2>
+
+<p><code>--startuptime</code> オプションを指定すると、初期化の各段階でモノトニッククロックのタイムスタンプを記録し、最後にファイルに出力する。</p>
+
+<pre><code class="language-ruby">def startup_mark(label)
+  return unless @startup&amp;.time_path
+  @startup.timeline &lt;&lt; [label.to_s, monotonic_now]
+end
+
+def monotonic_now
+  Process.clock_gettime(Process::CLOCK_MONOTONIC)
+end
+</code></pre>
+
+<p><code>CLOCK_MONOTONIC</code> を使うのは、システムの壁時計時刻が NTP 調整で前後してもドリフトしないためだ。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-startup.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-overview'); return false;">&larr; 1. 全体像 — エディタとは何をするプログラムか</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-mainloop'); return false;">3. メインループ — イベント駆動の心臓部 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-mainloop" style="display: none;">
+    <h1 id="ch-mainloop--メインループ-イベント駆動の心臓部">3. メインループ — イベント駆動の心臓部</h1>
+
+<blockquote>
+  <p>「流れる水は腐らず」 — 日本のことわざ</p>
+</blockquote>
+
+<p>エディタのメインループは、驚くほどシンプルだ。</p>
+
+<pre><code class="language-ruby">def run
+  @terminal.with_ui do
+    loop do
+      # 1. ストリームイベントを処理
+      @needs_redraw = true if @stream_mixer.drain_events!
+
+      # 2. 必要なら再描画
+      if @needs_redraw
+        @screen.render(@editor)
+        @needs_redraw = false
+      end
+
+      # 3. 終了判定
+      break unless @editor.running?
+
+      # 4. キー入力を待つ
+      key = @input.read_key(
+        wakeup_ios: [@signal_r],
+        timeout: @key_handler.loop_timeout_seconds,
+        esc_timeout: @key_handler.escape_sequence_timeout_seconds
+      )
+
+      # 5. タイムアウト処理
+      if key.nil?
+        @needs_redraw = true if @key_handler.handle_idle_timeout
+        next
+      end
+
+      # 6. キーを処理
+      @key_handler.handle(key)
+      @needs_redraw = true
+
+      # 7. ペースト最適化
+      if @editor.mode == :insert &amp;&amp; @input.has_pending_input?
+        @key_handler.paste_batch = true
+        begin
+          while @editor.mode == :insert &amp;&amp; @input.has_pending_input?
+            batch_key = @input.read_key(timeout: 0, esc_timeout: 0)
+            break unless batch_key
+            @key_handler.handle(batch_key)
+          end
+        ensure
+          @key_handler.paste_batch = false
+        end
+      end
+    end
+  end
+ensure
+  @stream_mixer.shutdown!
+  @key_handler.save_history!
+end
+</code></pre>
+
+<p>ここで注目すべきは <strong>ペースト最適化</strong> だ。ターミナルにテキストをペーストすると、数百〜数千のキー入力が一度にバッファに入る。各キーごとに画面を再描画していたら非常に遅くなる。そこで、インサートモード中にまだ読めるキーが残っている場合（<code>has_pending_input?</code>）、<code>paste_batch = true</code> を設定して再描画を抑制しつつ、一気に処理する。</p>
+
+<pre><code class="language-ruby">def has_pending_input?
+  IO.select([@input], nil, nil, 0) != nil  # タイムアウト 0 = ノンブロッキング
+end
+</code></pre>
+
+<h2 id="ch-mainloop--タイムアウトの管理">3.1 タイムアウトの管理</h2>
+
+<p>メインループの <code>IO.select</code> には 3 種類のタイムアウトが絡み合う。</p>
+
+<ol>
+  <li><strong>ペンディングキータイムアウト</strong> (<code>timeoutlen</code>): <code>d</code> を押した後、次のキー（<code>d</code> で <code>dd</code>、<code>w</code> で <code>dw</code>）を待つ最大時間。デフォルト 1000ms。</li>
+  <li><strong>エスケープシーケンスタイムアウト</strong> (<code>ttimeoutlen</code>): ESC が単独の Escape キーなのか、矢印キーなどのエスケープシーケンスの先頭なのかを判別する時間。デフォルト 50ms。</li>
+  <li><strong>一時メッセージの有効期限</strong>: エコーエリアに表示した一時メッセージが消える時刻。</li>
+</ol>
+
+<p><code>loop_timeout_seconds</code> はこれらの最小値を返す。</p>
+
+<pre><code class="language-ruby">def loop_timeout_seconds
+  now = monotonic_now
+  timeouts = []
+  timeouts &lt;&lt; [@pending_key_deadline - now, 0.0].max if @pending_key_deadline
+  timeouts &lt;&lt; msg_to if (msg_to = @editor.transient_message_timeout_seconds(now:))
+  timeouts.min
+end
+</code></pre>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-mainloop.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-startup'); return false;">&larr; 2. 起動シーケンス — App の初期化</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-terminal'); return false;">4. ターミナル制御 — 端末を乗っ取る &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-terminal" style="display: none;">
+    <h1 id="ch-terminal--ターミナル制御-端末を乗っ取る">4. ターミナル制御 — 端末を乗っ取る</h1>
+
+<blockquote>
+  <p>「道具を極めよ、さすれば道具が手の延長となる」 — 宮本武蔵</p>
+</blockquote>
+
+<p>テキストエディタがターミナル上で動作するには、端末を「乗っ取る」必要がある。通常のシェルでは、ユーザーが Enter を押すまで入力がバッファリングされ、<code>^C</code> でシグナルが送られる。エディタは 1 文字ずつリアルタイムに読みたいし、<code>^C</code> をキーとして受け取りたい。</p>
+
+<h2 id="ch-terminal--ロー-raw-モード">4.1 ロー (Raw) モード</h2>
+
+<p><code>Terminal#with_ui</code> は、端末をロー (raw) モードに切り替えて UI セッションを開始する。</p>
+
+<pre><code class="language-ruby">def with_ui
+  @stdin.raw do
+    write("\e]112\a\e[2 q\e[?1049h\e[?25l")
+    yield
+  ensure
+    write("\e[0 q\e[?25h\e[?1049l")
+  end
+end
+</code></pre>
+
+<p><code>@stdin.raw</code> は Ruby の <code>IO#raw</code> メソッドで、<code>termios</code> の設定を変更して以下を実現する。</p>
+
+<ul>
+  <li><strong>エコーの無効化</strong>: 入力された文字を端末が自動で表示しない</li>
+  <li><strong>行バッファリングの無効化</strong>: Enter を待たず 1 文字ずつ読める</li>
+  <li><strong>シグナル処理の無効化</strong>: <code>^C</code> が SIGINT ではなく <code>\x03</code> というバイトとして読める</li>
+</ul>
+
+<h2 id="ch-terminal--エスケープシーケンスによる端末制御">4.2 エスケープシーケンスによる端末制御</h2>
+
+<p>開始時に送るシーケンスの意味はこうだ。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>シーケンス</th>
+      <th>意味</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>\e]112\a</code></td>
+      <td>カーソル色をリセット</td>
+    </tr>
+    <tr>
+      <td><code>\e[2 q</code></td>
+      <td>カーソルを点滅ブロックに設定</td>
+    </tr>
+    <tr>
+      <td><code>\e[?1049h</code></td>
+      <td><strong>代替スクリーンバッファに切り替え</strong></td>
+    </tr>
+    <tr>
+      <td><code>\e[?25l</code></td>
+      <td>カーソルを非表示</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>代替スクリーンバッファ (<code>?1049h</code>) は重要な概念だ。端末には主画面と代替画面の 2 つのバッファがある。エディタは代替画面で動作し、終了すると主画面に戻る。つまり、エディタを閉じるとシェルの表示がそのまま復元される。<code>less</code> や <code>vim</code> と同じ動作だ。</p>
+
+<p>終了時には逆の操作をする。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>シーケンス</th>
+      <th>意味</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>\e[0 q</code></td>
+      <td>カーソルスタイルをデフォルトに</td>
+    </tr>
+    <tr>
+      <td><code>\e[?25h</code></td>
+      <td>カーソルを表示</td>
+    </tr>
+    <tr>
+      <td><code>\e[?1049l</code></td>
+      <td>主スクリーンバッファに戻る</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="ch-terminal--sixel-サポート検出">4.3 Sixel サポート検出</h2>
+
+<p>RuVim は画像表示のために Sixel プロトコルをサポートしている。端末が Sixel に対応しているかどうかは、Device Attributes (DA1) クエリで検出する。</p>
+
+<pre><code class="language-ruby">def detect_sixel
+  @stdout.write("\e[c")        # DA1 クエリを送信
+  @stdout.flush
+  response = read_terminal_response("c", timeout: 0.5)
+
+  if (m = response.match(/\e\[\?([0-9;]+)c/))
+    attrs = m[1].split(";").map(&amp;:to_i)
+    return attrs.include?(4)   # 属性 4 = Sixel サポート
+  end
+  false
+end
+</code></pre>
+
+<p>端末に「お前の能力を教えろ」とクエリを送り、返ってきた属性リストに <code>4</code> が含まれていれば Sixel 対応だ。この問い合わせ→応答のパターンは <code>read_terminal_response</code> で実装されている。</p>
+
+<pre><code class="language-ruby">def read_terminal_response(terminator, timeout: 0.3)
+  response = +""
+  deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + timeout
+  while Process.clock_gettime(Process::CLOCK_MONOTONIC) &lt; deadline
+    if IO.select([@stdin], nil, nil, 0.05)
+      ch = @stdin.read_nonblock(64, exception: false)
+      break if ch == :wait_readable || ch.nil?
+      response &lt;&lt; ch
+      break if response.include?(terminator)
+    end
+  end
+  response
+end
+</code></pre>
+
+<p>デッドラインまでノンブロッキングで読み続け、ターミネータ文字（<code>"c"</code> や <code>"t"</code>）が見つかったら終了する。古い端末や応答しない端末では単にタイムアウトする。</p>
+
+<h2 id="ch-terminal--シェルへの一時退避">4.4 シェルへの一時退避</h2>
+
+<p><code>:!command</code> でシェルコマンドを実行する際、エディタは一時的に端末を通常モードに戻す。</p>
+
+<pre><code class="language-ruby">def suspend_for_shell(command)
+  shell = ENV["SHELL"].to_s
+  shell = "/bin/sh" if shell.empty?
+  @stdin.cooked do                      # 端末を通常モードに戻す
+    write("\e[0 q\e[?25h\e[?1049l")     # 主画面に切り替え
+    system(shell, "-c", command)         # コマンド実行
+    status = $?
+    write("\r\nPress ENTER or type command to continue")
+    @stdin.raw { @stdin.getc }           # Enter 待ち
+    write("\e[2 q\e[?1049h\e[?25l")     # 代替画面に復帰
+    status
+  end
+end
+</code></pre>
+
+<p><code>system(shell, "-c", command)</code> で引数を配列として渡しているのは、シェルインジェクションを防ぐためだ。ユーザーの入力がそのまま引数文字列としてシェルに渡され、展開やパイプは利用者のシェルが処理する。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-terminal.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-mainloop'); return false;">&larr; 3. メインループ — イベント駆動の心臓部</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-key-input'); return false;">5. キー入力 — 生のバイト列を意味に変える &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-key-input" style="display: none;">
+    <h1 id="ch-key-input--キー入力-生のバイト列を意味に変える">5. キー入力 — 生のバイト列を意味に変える</h1>
+
+<blockquote>
+  <p>「一を聞いて十を知る」 — 論語を引く日本のことわざ</p>
+</blockquote>
+
+<p>ロー (raw) モードの端末から読めるのは、ただのバイト列だ。<code>a</code> を押せば <code>0x61</code> が来るが、矢印キーの ↑ は <code>0x1B 0x5B 0x41</code>（ESC <code>[</code> <code>A</code>）という 3 バイトのシーケンスとして来る。これを意味のあるキーシンボルに変換するのが <code>Input</code> クラスの仕事だ。</p>
+
+<pre><code class="language-ruby">def read_key(timeout: nil, wakeup_ios: [], esc_timeout: nil)
+  ios = [@input, *wakeup_ios].compact
+  readable = IO.select(ios, nil, nil, timeout)
+  return nil unless readable
+
+  ready = readable[0]
+  wakeups = ready - [@input]
+  wakeups.each { |io| drain_io(io) }
+  return nil unless ready.include?(@input)
+
+  ch = @input.getch
+  case ch
+  when "\u0002" then :ctrl_b
+  when "\u0003" then :ctrl_c
+  # ... 他のコントロール文字 ...
+  when "\r", "\n" then :enter
+  when "\u007f", "\b" then :backspace
+  when "\e" then read_escape_sequence(timeout: esc_timeout)
+  else ch
+  end
+end
+</code></pre>
+
+<h2 id="ch-key-input--esc-キーの曖昧さ">5.1 ESC キーの曖昧さ</h2>
+
+<p>ターミナルの入力処理で最も厄介な問題の一つが、ESC キーの曖昧さだ。</p>
+
+<ul>
+  <li>ESC キー単体を押す → <code>0x1B</code> が 1 バイト来る</li>
+  <li>矢印キー ↑ を押す → <code>0x1B 0x5B 0x41</code> が 3 バイト来る</li>
+</ul>
+
+<p>どちらも最初のバイトは <code>0x1B</code>（ESC）だ。これをどう区別するか？ 答は <strong>タイムアウト</strong> だ。</p>
+
+<pre><code class="language-ruby">def read_escape_sequence(timeout: nil)
+  extra = +""
+  recognized = {
+    "[A" =&gt; :up,   "[B" =&gt; :down,
+    "[C" =&gt; :right, "[D" =&gt; :left,
+    "[1;2A" =&gt; :shift_up,  # ... etc
+    "[5~" =&gt; :pageup,
+    "[6~" =&gt; :pagedown
+  }
+  wait = timeout.nil? ? 0.005 : [timeout.to_f, 0.0].max
+  begin
+    while IO.select([@input], nil, nil, wait)
+      extra &lt;&lt; @input.read_nonblock(1)
+      key = recognized[extra]
+      return key if key
+    end
+  rescue IO::WaitReadable, EOFError
+  end
+
+  case extra
+  when "" then :escape    # ESC の後に何も来なかった
+  else [:escape_sequence, extra]  # 未知のシーケンス
+  end
+end
+</code></pre>
+
+<p>ESC を受け取った後、ごく短い時間（デフォルト 5ms, <code>ttimeoutlen</code> で設定可能）だけ追加のバイトを待つ。</p>
+
+<ul>
+  <li>時間内に <code>[A</code> が来たら → <code>:up</code>（矢印キー ↑）</li>
+  <li>何も来なかったら → <code>:escape</code>（ESC 単体）</li>
+</ul>
+
+<p>認識済みのシーケンスに一致した時点で即座に返す。これにより、矢印キーの反応は遅延なく、ESC キーは <code>ttimeoutlen</code> ミリ秒だけ遅延する。Vim の <code>ttimeoutlen</code> と同じ仕組みだ。</p>
+
+<h2 id="ch-key-input--ウェイクアップ-io">5.2 ウェイクアップ I/O</h2>
+
+<p><code>read_key</code> の <code>wakeup_ios</code> パラメータに注目してほしい。メインループではここにシグナルパイプの読み取り端を渡している。</p>
+
+<pre><code class="language-ruby">key = @input.read_key(
+  wakeup_ios: [@signal_r],
+  timeout: @key_handler.loop_timeout_seconds,
+  ...
+)
+</code></pre>
+
+<p><code>IO.select</code> は <code>@input</code>（stdin）と <code>@signal_r</code>（シグナルパイプ）の両方を監視する。ウィンドウリサイズのシグナルが来ると、<code>@signal_r</code> が読み取り可能になり、<code>IO.select</code> から復帰する。ウェイクアップ I/O からのデータは <code>drain_io</code> で捨てて、<code>nil</code> を返す（「キーは来なかったがウェイクアップした」）。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-key-input.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-terminal'); return false;">&larr; 4. ターミナル制御 — 端末を乗っ取る</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-keymap'); return false;">6. キーマッピング — 層状の解決とプレフィックスインデックス &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-keymap" style="display: none;">
+    <h1 id="ch-keymap--キーマッピング-層状の解決とプレフィックスインデックス">6. キーマッピング — 層状の解決とプレフィックスインデックス</h1>
+
+<blockquote>
+  <p>「重なりの中に秩序あり」 — 柳宗悦</p>
+</blockquote>
+
+<p>Vim のキーマッピングは奥が深い。<code>dd</code>（行削除）、<code>dw</code>（ワード削除）、<code>d3w</code>（3 ワード削除）のように、複数キーの組み合わせでコマンドが決まる。さらに、ファイルタイプやバッファ固有のマッピングが通常のマッピングを上書きできる。</p>
+
+<h2 id="ch-keymap--layermap-プレフィックスインデックス付きハッシュ">6.1 LayerMap — プレフィックスインデックス付きハッシュ</h2>
+
+<p><code>KeymapManager</code> の核心は <code>LayerMap</code> だ。これは <code>Hash</code> を継承し、<strong>プレフィックスインデックス</strong> を維持するデータ構造である。</p>
+
+<pre><code class="language-ruby">class LayerMap &lt; Hash
+  def initialize
+    super
+    @prefix_max_len = {}  # prefix → そのプレフィックスを持つキーの最大長
+  end
+
+  def []=(tokens, value)
+    was_new = !key?(tokens)
+    super
+    add_to_prefix_index(tokens) if was_new
+  end
+
+  # このプレフィックスで始まるキーが存在するか？（O(1)）
+  def has_prefix?(prefix)
+    @prefix_max_len.key?(prefix)
+  end
+
+  # このプレフィックスより厳密に長いキーが存在するか？
+  def has_longer_match?(prefix)
+    max = @prefix_max_len[prefix]
+    max ? max &gt; prefix.length : false
+  end
+
+  private
+
+  def add_to_prefix_index(tokens)
+    len = tokens.length
+    len.times do |i|
+      pfx = tokens[0, i + 1].freeze
+      cur = @prefix_max_len[pfx]
+      @prefix_max_len[pfx] = len if cur.nil? || len &gt; cur
+    end
+  end
+end
+</code></pre>
+
+<p>例えば <code>["d", "d"]</code>（<code>dd</code>）というキーを登録すると、プレフィックスインデックスには以下が記録される。</p>
+
+<pre><code>["d"]     → 最大長 2
+["d", "d"] → 最大長 2
+</code></pre>
+
+<p>これにより、ユーザーが <code>d</code> を押した時点で <code>has_prefix?(["d"])</code> が <code>true</code> を返し、「まだ続きがあるかもしれない」と判断できる。全キーをスキャンする必要がなく、O(1) で判定できる。</p>
+
+<h2 id="ch-keymap--4-層の解決">6.2 4 層の解決</h2>
+
+<p>キーの解決は以下の優先順位で行われる。</p>
+
+<pre><code class="language-ruby">def resolve_with_context(mode, pending_tokens, editor:)
+  buffer = editor.current_buffer
+  filetype = detect_filetype(buffer)
+  layers = []
+  layers &lt;&lt; @filetype_maps[filetype][mode]   # 1. ファイルタイプ固有
+  layers &lt;&lt; @buffer_maps[buffer.id]          # 2. バッファ固有
+  layers &lt;&lt; @mode_maps[mode]                 # 3. モード固有
+  layers &lt;&lt; @global_map                      # 4. グローバル
+  resolve_layers(layers, pending_tokens)
+end
+</code></pre>
+
+<p>Vim と同じく、ファイルタイプ固有のマッピングが最優先で、グローバルが最低優先だ。</p>
+
+<h2 id="ch-keymap--マッチの-4-状態">6.3 マッチの 4 状態</h2>
+
+<p>解決結果は 4 つの状態を取る。</p>
+
+<pre><code class="language-ruby">def resolve_layers(layers, pending_tokens)
+  layers.each do |layer|
+    if (exact = layer[pending_tokens])
+      longer = layer.has_longer_match?(pending_tokens)
+      return Match.new(
+        status: (longer ? :ambiguous : :match),
+        invocation: exact
+      )
+    end
+  end
+
+  has_prefix = layers.any? { |layer| layer.has_prefix?(pending_tokens) }
+  Match.new(status: has_prefix ? :pending : :none)
+end
+</code></pre>
+
+<table>
+  <thead>
+    <tr>
+      <th>状態</th>
+      <th>意味</th>
+      <th>例</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>:match</code></td>
+      <td>完全一致、曖昧さなし</td>
+      <td><code>j</code> → <code>cursor.down</code></td>
+    </tr>
+    <tr>
+      <td><code>:ambiguous</code></td>
+      <td>完全一致するが、より長いマッチもありうる</td>
+      <td><code>g</code> は <code>gg</code> の前半にも一致</td>
+    </tr>
+    <tr>
+      <td><code>:pending</code></td>
+      <td>まだ一致しないが、プレフィックスとしては有効</td>
+      <td><code>d</code> はまだ何のコマンドでもない</td>
+    </tr>
+    <tr>
+      <td><code>:none</code></td>
+      <td>何にも一致しない</td>
+      <td>未定義のキー</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code>:ambiguous</code> の場合、タイムアウト（<code>timeoutlen</code>）を設定する。時間内に次のキーが来なければ、現在の完全一致を実行する。来れば、より長いキーシーケンスとして解決を続ける。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-keymap.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-key-input'); return false;">&larr; 5. キー入力 — 生のバイト列を意味に変える</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-dispatch'); return false;">7. コマンドディスパッチ — キーから動作へ &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-dispatch" style="display: none;">
+    <h1 id="ch-dispatch--コマンドディスパッチ-キーから動作へ">7. コマンドディスパッチ — キーから動作へ</h1>
+
+<blockquote>
+  <p>「知行合一」 — 王陽明を受けた日本の儒学者たち</p>
+</blockquote>
+
+<p>キーマッピングの解決によって得られた <code>CommandInvocation</code> は、<code>Dispatcher</code> によってコマンドハンドラに送られる。</p>
+
+<h2 id="ch-dispatch--normal-モードコマンドの実行">7.1 Normal モードコマンドの実行</h2>
+
+<pre><code class="language-ruby">def dispatch(editor, invocation)
+  spec = @command_registry.fetch(invocation.id)
+  ctx = Context.new(editor:, invocation:)
+  @command_host.call(spec.call, ctx,
+    argv: invocation.argv,
+    kwargs: invocation.kwargs,
+    bang: invocation.bang,
+    count: invocation.count
+  )
+end
+</code></pre>
+
+<ul>
+  <li><code>CommandRegistry</code> はシングルトンで、コマンド ID → スペック（ハンドラ関数、説明文など）のマップを持つ</li>
+  <li><code>Context</code> は <code>editor</code>, <code>invocation</code> をバンドルし、コマンドハンドラに渡す文脈オブジェクト</li>
+  <li><code>GlobalCommands</code> がすべてのコマンドハンドラのホストとなる</li>
+</ul>
+
+<h2 id="ch-dispatch--ex-コマンドの解析パイプライン">7.2 Ex コマンドの解析パイプライン</h2>
+
+<p><code>:</code> で始まるコマンドラインは、より複雑な解析パイプラインを通る。</p>
+
+<pre><code class="language-ruby">def dispatch_ex(editor, line)
+  # 1. シェルコマンド
+  if raw.start_with?("!")
+    @command_host.shell_command(ctx, command:)
+    return
+  end
+
+  # 2. レンジプレフィックスの解析（例: %s, 1,5d, '&lt;,'&gt;）
+  range_result = parse_range(raw, editor)
+
+  # 3. global/vglobal コマンドの検出
+  if (glob = parse_global(rest))
+    @command_host.global_command(ctx, **kwargs)
+    return
+  end
+
+  # 4. substitute コマンドの検出
+  if (sub = parse_substitute(rest))
+    @command_host.substitute(ctx, **kwargs)
+    return
+  end
+
+  # 5. 通常の Ex コマンドとして解析
+  parsed = parse_ex(rest)
+  spec = @ex_registry.resolve(parsed.name)
+  @command_host.call(spec.call, ctx, ...)
+end
+</code></pre>
+
+<h2 id="ch-dispatch--レンジの解析">7.3 レンジの解析</h2>
+
+<p>Vim のレンジ指定は複雑だ。<code>%</code>（ファイル全体）、<code>.</code>（現在行）、<code>$</code>（最終行）、<code>'a</code>（マーク位置）、数字、<code>+</code>/<code>-</code> オフセットをサポートする。</p>
+
+<pre><code class="language-ruby">def parse_address(str, pos, editor)
+  ch = str[pos]
+  case ch
+  when /\d/
+    m = str[pos..].match(/\A(\d+)/)
+    base = m[1].to_i - 1   # 1-based → 0-based
+  when "."
+    base = editor.current_window.cursor_y
+  when "$"
+    base = editor.current_buffer.line_count - 1
+  when "'"
+    mark_ch = str[pos + 1]
+    loc = editor.mark_location(mark_ch)
+    base = loc[:row]
+  end
+
+  # +N / -N オフセットの後続解析
+  while new_pos &lt; str.length
+    case str[new_pos]
+    when "+" then base += ...
+    when "-" then base -= ...
+    else break
+    end
+  end
+
+  base = [[base, 0].max, max_line].min   # クランプ
+  [base, new_pos]
+end
+</code></pre>
+
+<h2 id="ch-dispatch--substitute-のパース">7.4 substitute のパース</h2>
+
+<p><code>:s/pattern/replacement/flags</code> は区切り文字（通常は <code>/</code>）で分割されるが、実際には任意の文字を区切りに使える（<code>:s#old#new#g</code> のように）。区切り文字の中で <code>\</code> によるエスケープも扱う。</p>
+
+<pre><code class="language-ruby">def parse_substitute(line)
+  return nil unless raw.match?(/\As[^a-zA-Z]/)
+
+  delim = raw[1]                  # 2 文字目が区切り
+  pat, i = parse_delimited_segment(raw, 2, delim)
+  rep, i = parse_delimited_segment(raw, i, delim)
+  flags_str = raw[i..]
+  { pattern: pat, replacement: rep, flags_str: flags_str }
+end
+</code></pre>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-dispatch.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-keymap'); return false;">&larr; 6. キーマッピング — 層状の解決とプレフィックスインデックス</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-key-handler'); return false;">8. KeyHandler — 状態機械の集合体 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-key-handler" style="display: none;">
+    <h1 id="ch-key-handler--keyhandler-状態機械の集合体">8. KeyHandler — 状態機械の集合体</h1>
+
+<blockquote>
+  <p>「変化に処するは静なるをもって」 — 徳川家康</p>
+</blockquote>
+
+<p><code>KeyHandler</code> はエディタの中で最も複雑なコンポーネントの一つだ。Normal モードのキー入力には、驚くほど多くの「ペンディング状態」がある。</p>
+
+<pre><code class="language-ruby">@operator_pending      # d, y, c, = の後、モーションを待っている
+@register_pending      # " の後、レジスタ名を待っている
+@mark_pending          # m の後、マーク名を待っている
+@jump_pending          # ' や ` の後、マーク名を待っている
+@find_pending          # f, t, F, T の後、文字を待っている
+@replace_pending       # r の後、置換文字を待っている
+@macro_record_pending  # q の後、マクロ名を待っている
+@macro_play_pending    # @ の後、マクロ名を待っている
+</code></pre>
+
+<h2 id="ch-key-handler--normal-モードのキー処理">8.1 Normal モードのキー処理</h2>
+
+<p>キーが来たとき、以下の優先順位で処理される。</p>
+
+<pre><code class="language-ruby">def handle_normal_key(key)
+  case
+  when handle_normal_key_pre_dispatch(key)    # カウント数字の処理
+  when (token = normalize_key_token(key)).nil?
+  when handle_normal_pending_state(token)     # ペンディング状態の解決
+  when handle_normal_direct_token(token)
+  else
+    @pending_keys ||= []
+    @pending_keys &lt;&lt; token
+    resolve_normal_key_sequence                # キーシーケンスの解決
+  end
+end
+</code></pre>
+
+<h2 id="ch-key-handler--オペレータ-モーション">8.2 オペレータ + モーション</h2>
+
+<p>Vim の <code>d</code> + モーション（<code>dw</code>, <code>d$</code>, <code>d3j</code> など）は、オペレータペンディング状態で実現される。</p>
+
+<ol>
+  <li><code>d</code> が押される → <code>start_operator_pending(:delete)</code> でオペレータをセット</li>
+  <li>次のキー（例えば <code>w</code>）が来る → <code>handle_operator_pending_key</code> でモーションとして解決</li>
+  <li>二重オペレータ（<code>dd</code>）も特別に処理：オペレータキーが 2 回来たら行全体に適用</li>
+</ol>
+
+<p>テキストオブジェクト（<code>iw</code>, <code>a(</code>）もモーション接頭辞（<code>i</code>, <code>a</code>, <code>g</code>）として扱い、2 ストロークの入力を待つ。</p>
+
+<h2 id="ch-key-handler--ドットリピート">8.3 ドットリピート</h2>
+
+<p>Vim の <code>.</code> コマンドは、最後の変更操作を繰り返す。これは一見単純だが、「最後の変更操作」の境界を正しく定義するのが難しい。</p>
+
+<pre><code class="language-ruby"># 変更操作の開始時にキャプチャを開始
+def begin_dot_change_capture
+  return if dot_replaying?
+  @dot_change_capture_active = true
+  @dot_change_capture_keys = []
+end
+
+# 各キーを記録
+def append_dot_change_capture_key(key)
+  return unless @dot_change_capture_active
+  @dot_change_capture_keys &lt;&lt; key
+end
+
+# 変更操作の終了時にキャプチャを完了
+def finish_dot_change_capture
+  return unless @dot_change_capture_active
+  @dot_change_capture_active = false
+  @last_change_keys = @dot_change_capture_keys
+  @dot_change_capture_keys = nil
+end
+</code></pre>
+
+<p><code>.</code> が押されると、記録されたキーシーケンスを再生する。</p>
+
+<pre><code class="language-ruby">def repeat_last_change
+  return unless @last_change_keys &amp;&amp; !@last_change_keys.empty?
+  @dot_replay_depth = (@dot_replay_depth || 0) + 1
+  begin
+    @last_change_keys.each { |k| handle(k) }
+  ensure
+    @dot_replay_depth -= 1
+    @dot_replay_depth = nil if @dot_replay_depth &lt;= 0
+  end
+end
+</code></pre>
+
+<p><code>dot_replay_depth</code> による深度追跡は、ドットリピートの再生中にさらにドット用のキャプチャが起動しないようにするためだ。</p>
+
+<h2 id="ch-key-handler--マクロ">8.4 マクロ</h2>
+
+<p>マクロ（<code>q&lt;reg&gt;</code> で記録、<code>@&lt;reg&gt;</code> で再生）は、ドットリピートと似た仕組みだが、名前付きレジスタに保存される。</p>
+
+<pre><code class="language-ruby">MAX_MACRO_DEPTH = 20
+
+def play_macro(name)
+  raise RuVim::CommandError, "Macro depth exceeded" if @macro_play_stack.length &gt;= MAX_MACRO_DEPTH
+  keys = @editor.registers[name]
+  return unless keys
+
+  @macro_play_stack.push(name)
+  suspend_macro_recording do
+    keys.each { |k| handle(k) }
+  end
+ensure
+  @macro_play_stack.pop
+end
+</code></pre>
+
+<p>マクロの再帰呼び出しを防ぐため、最大深度を 20 に制限している。また、マクロの再生中は録音を一時停止する（でないと、再生中のキーが別のマクロに記録されてしまう）。</p>
+
+<p>大文字のレジスタ名（<code>qA</code>）は、既存のマクロに追記する仕様も Vim 互換で実装されている。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-key-handler.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-dispatch'); return false;">&larr; 7. コマンドディスパッチ — キーから動作へ</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-buffer'); return false;">9. バッファ — テキストの器 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-buffer" style="display: none;">
+    <h1 id="ch-buffer--バッファ-テキストの器">9. バッファ — テキストの器</h1>
+
+<blockquote>
+  <p>「器は中身を決め、中身は器を選ぶ」 — 北大路魯山人</p>
+</blockquote>
+
+<p><code>Buffer</code> はテキストデータを保持する器だ。1 つのファイル（または名前なしバッファ）に対応する。</p>
+
+<h2 id="ch-buffer--データ構造">9.1 データ構造</h2>
+
+<p>テキストの内部表現は、<strong>行の配列（<code>Array&lt;String&gt;</code>）</strong> だ。</p>
+
+<pre><code class="language-ruby">def initialize(id:, path: nil, lines: [""], ...)
+  @lines = lines.dup
+  @lines = [""] if @lines.empty?   # 常に最低 1 行を保持
+  @undo_stack = []
+  @redo_stack = []
+  @change_group_depth = 0
+end
+</code></pre>
+
+<p>この選択にはトレードオフがある。</p>
+
+<ul>
+  <li><strong>利点</strong>: 行単位のアクセスが O(1)。Vim の操作モデル（行指向のモーション、<code>dd</code> による行削除、<code>yy</code> による行ヤンク）と自然に対応する。シンタックスハイライトも行単位で処理する。</li>
+  <li><strong>欠点</strong>: 行の挿入・削除は O(n)（配列の移動）。しかし実際には Ruby の <code>Array#insert</code> / <code>Array#delete_at</code> は C 実装の <code>memmove</code> で十分高速。</li>
+</ul>
+
+<p>Rope やピーステーブルのような高度なデータ構造は使わず、シンプルな配列を選んでいる。数百万行のファイルでない限り、この選択は正しい。</p>
+
+<h2 id="ch-buffer--ファイルの読み込みとエンコーディング">9.2 ファイルの読み込みとエンコーディング</h2>
+
+<pre><code class="language-ruby">def self.decode_text(bytes)
+  s = bytes.to_s
+  return s.dup if s.encoding == Encoding::UTF_8 &amp;&amp; s.valid_encoding?
+
+  utf8 = s.dup.force_encoding(Encoding::UTF_8)
+  return utf8 if utf8.valid_encoding?
+
+  ext = Encoding.default_external
+  if ext &amp;&amp; ext != Encoding::UTF_8
+    return utf8.encode(Encoding::UTF_8, invalid: :replace, undef: :replace)
+  end
+
+  utf8.scrub
+end
+</code></pre>
+
+<p>まず UTF-8 として解釈を試み、無効なら外部エンコーディングから変換する。それでもダメなら <code>scrub</code>（不正バイトを置換文字に変える）する。決してクラッシュしない。</p>
+
+<h2 id="ch-buffer--undoredo-スナップショット方式">9.3 Undo/Redo — スナップショット方式</h2>
+
+<p>RuVim のアンドゥは <strong>スナップショット方式</strong> を採用している。変更前の行配列のコピーをスタックに保存する。</p>
+
+<p>ただし、素朴に全行をディープコピー（<code>@lines.map(&amp;:dup)</code>）すると、10 万行のファイルで 100 回の undo を重ねた場合にメモリが爆発する。</p>
+
+<p>RuVim はこの問題を <strong>構造共有（structural sharing）</strong> で解決している。スナップショットは <code>@lines.dup</code>（配列の浅いコピー）だけを取り、個々の文字列オブジェクトは共有する。これが安全なのは、Buffer の全ての変更メソッドが文字列を in-place で変更せず、常に新しい文字列を生成して代入するからだ。</p>
+
+<pre><code class="language-ruby"># insert_char: line.dup.insert() で新しい文字列を作り、@lines[row] に代入
+def insert_char(row, col, char)
+  record_change_before_mutation!
+  line = @lines.fetch(row)
+  @lines[row] = line.dup.insert(col, char)  # 元の line は変更されない
+  @modified = true
+end
+</code></pre>
+
+<p>スナップショットと <code>@lines</code> が同じ文字列オブジェクトを指していても、変更は常に新しいオブジェクトとして作られるので、スナップショット側の文字列は壊れない。</p>
+
+<pre><code class="language-ruby">def record_change_before_mutation!
+  ensure_modifiable!
+  return if @recording_suspended
+
+  if @change_group_depth.positive?
+    unless @group_changed
+      @group_before_snapshot = snapshot
+      @group_changed = true
+    end
+    return
+  end
+
+  @undo_stack &lt;&lt; snapshot
+  @redo_stack.clear
+end
+
+def snapshot
+  { lines: @lines.dup, modified: @modified }  # 浅いコピー: 未変更行は共有
+end
+</code></pre>
+
+<p>この方式により、1 行だけ変更した場合のスナップショットは、配列オブジェクト 1 つ（数十バイト）+ 変更された行の新しい文字列 1 つだけの追加メモリで済む。10 万行のファイルでも、未変更の 99,999 行は参照を共有する。</p>
+
+<h2 id="ch-buffer--チェンジグループ">9.4 チェンジグループ</h2>
+
+<p><code>dw</code>（ワード削除）は複数の低レベル操作（文字削除の繰り返し）から成る。これらをまとめて 1 回の undo で元に戻すために、チェンジグループがある。</p>
+
+<pre><code class="language-ruby">def begin_change_group
+  @change_group_depth += 1
+end
+
+def end_change_group
+  @change_group_depth -= 1
+  return unless @change_group_depth.zero?
+
+  if @group_changed &amp;&amp; @group_before_snapshot
+    @undo_stack &lt;&lt; @group_before_snapshot   # グループの最初のスナップショットだけ保存
+    @redo_stack.clear
+  end
+  @group_before_snapshot = nil
+  @group_changed = false
+end
+</code></pre>
+
+<p>深度カウンタにより、チェンジグループは入れ子にできる。最外周のグループが閉じたときだけスナップショットがスタックにプッシュされる。</p>
+
+<h2 id="ch-buffer--永続-undo">9.5 永続 Undo</h2>
+
+<p>バッファの Undo 履歴はファイルに保存・復元できる。パスは SHA-256 ハッシュで一意に決まる。</p>
+
+<pre><code class="language-ruby">def undo_file_path(undodir)
+  require "digest"
+  hash = Digest::SHA256.hexdigest(File.expand_path(@path))
+  File.join(undodir, hash)
+end
+
+def save_undo_file(undodir)
+  data = Marshal.dump({ undo: @undo_stack, redo: @redo_stack })
+  File.binwrite(uf, data)
+end
+</code></pre>
+
+<p><code>Marshal.dump</code> / <code>Marshal.load</code> による素朴なシリアライズだが、undo スタックの中身は行配列のコピーだけなので、互換性の問題は起きにくい。</p>
+
+<h2 id="ch-buffer--ストリーム対応">9.6 ストリーム対応</h2>
+
+<p>バッファは外部ストリーム（コマンド出力、ファイル監視など）からデータを受け取れる。</p>
+
+<pre><code class="language-ruby">def append_stream_text!(text)
+  return [@lines.length - 1, @lines[-1].length] if text.empty?
+
+  parts = text.split("\n", -1)
+  head = parts.shift || ""
+  @lines[-1] = @lines[-1] + head     # 最終行に追記
+  @lines.concat(parts)               # 残りの行を追加
+  @modified = false                   # ストリーム追記は「変更」扱いしない
+  [@lines.length - 1, @lines[-1].length]
+end
+</code></pre>
+
+<p>ストリームからのデータは undo 履歴に記録しない。また <code>@modified = false</code> として、「保存されていない変更がある」という警告を出さないようにしている。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-buffer.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-key-handler'); return false;">&larr; 8. KeyHandler — 状態機械の集合体</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-window'); return false;">10. ウィンドウ — バッファへの窓 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-window" style="display: none;">
+    <h1 id="ch-window--ウィンドウ-バッファへの窓">10. ウィンドウ — バッファへの窓</h1>
+
+<blockquote>
+  <p>「窓は世界を切り取る額縁である」 — 安藤忠雄</p>
+</blockquote>
+
+<p><code>Window</code> はバッファの特定の領域を表示するビューポートだ。1 つのバッファに対して複数のウィンドウを開ける。ウィンドウはカーソル位置とスクロールオフセットを持つ。</p>
+
+<h2 id="ch-window--グラフェム単位のカーソル移動">10.1 グラフェム単位のカーソル移動</h2>
+
+<p>左右の移動は、バイト単位でも文字単位でもなく、<strong>グラフェム・クラスタ単位</strong> で行う。</p>
+
+<pre><code class="language-ruby">def move_left(buffer, count = 1)
+  @preferred_x = nil
+  count.times do
+    break if @cursor_x &lt;= 0
+    @cursor_x = RuVim::TextMetrics.previous_grapheme_char_index(
+      buffer.line_at(@cursor_y), @cursor_x
+    )
+  end
+  clamp_to_buffer(buffer)
+end
+</code></pre>
+
+<p>グラフェム・クラスタとは、人間が「1 文字」と認識する単位だ。例えば「が」（U+304B U+3099、か + 濁点結合文字）は 2 コードポイントだが 1 グラフェムだ。絵文字の合字（👨‍👩‍👧‍👦）は複数のコードポイントと ZWJ で構成されるが、やはり 1 グラフェムだ。<code>TextMetrics.previous_grapheme_char_index</code> は <code>\X</code> 正規表現（Unicode 拡張グラフェム・クラスタ境界）を使ってこれを正しく処理する。</p>
+
+<h2 id="ch-window--垂直移動と-preferred_x">10.2 垂直移動と preferred_x</h2>
+
+<p>上下に移動するとき、行の長さが異なることがある。<code>@preferred_x</code> は「元いた x 座標」を記憶する。</p>
+
+<pre><code class="language-ruby">def move_up(buffer, count = 1)
+  desired_x = @preferred_x || @cursor_x
+  @cursor_y -= count
+  clamp_to_buffer(buffer)
+  @cursor_x = [desired_x, buffer.line_length(@cursor_y)].min
+  @preferred_x = desired_x
+end
+</code></pre>
+
+<p>例えば 80 文字の行のカラム 75 にカーソルがあり、↑ で 20 文字の行に移動すると、カーソルは 20 文字目に行く。さらに ↑ でまた 80 文字の行に移動すると、カーソルは 75 文字目に戻る。<code>@preferred_x</code> がなければ、20 文字目のままになってしまう。</p>
+
+<p><code>move_left</code> や <code>move_right</code> が <code>@preferred_x = nil</code> をセットしていることに注目。水平移動は preferred_x をリセットする。</p>
+
+<h2 id="ch-window--スクロールの確保">10.3 スクロールの確保</h2>
+
+<pre><code class="language-ruby">def ensure_visible(buffer, height:, width:, tabstop: 2, scrolloff: 0, sidescrolloff: 0)
+  clamp_to_buffer(buffer)
+  so = [[scrolloff, 0].max, [height - 1, 0].max].min
+
+  # 垂直スクロール
+  top_target = @cursor_y - so
+  bottom_target = @cursor_y + so
+  @row_offset = top_target if top_target &lt; @row_offset
+  @row_offset = bottom_target - height + 1 if bottom_target &gt;= @row_offset + height
+
+  # 水平スクロール
+  cursor_screen_col = TextMetrics.screen_col_for_char_index(line, @cursor_x, tabstop:)
+  # ... sidescrolloff に基づく col_offset の調整
+end
+</code></pre>
+
+<p><code>scrolloff</code> はカーソルの上下に常に見えるようにする行数だ。3 に設定すると、カーソルの上下 3 行は常に表示される。<code>sidescrolloff</code> は水平方向の同等の機能だ。</p>
+
+<p>水平スクロールでは画面列（表示幅）と文字インデックス（内部位置）の変換が必要になる。タブや全角文字の存在により、これは単純な 1:1 対応ではない。<code>TextMetrics.screen_col_for_char_index</code> と <code>char_index_for_screen_col</code> がこの変換を担う。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-window.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-buffer'); return false;">&larr; 9. バッファ — テキストの器</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-editor'); return false;">11. エディタ — 状態の統括者 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-editor" style="display: none;">
+    <h1 id="ch-editor--エディタ-状態の統括者">11. エディタ — 状態の統括者</h1>
+
+<blockquote>
+  <p>「全体は部分の総和以上のものである」 — 西田幾多郎</p>
+</blockquote>
+
+<p><code>Editor</code> はアプリケーション全体の状態を管理する中心的なオブジェクトだ。</p>
+
+<ul>
+  <li><strong>バッファの管理</strong>: <code>@buffers</code>（id → Buffer のハッシュ）</li>
+  <li><strong>ウィンドウの管理</strong>: <code>@windows</code>（id → Window のハッシュ）</li>
+  <li><strong>レイアウトツリー</strong>: <code>@layout_tree</code>（ウィンドウ分割の階層構造）</li>
+  <li><strong>タブページ</strong>: <code>@tabpages</code>（レイアウトツリーの配列）</li>
+  <li><strong>モード管理</strong>: <code>@mode</code>（<code>:normal</code>, <code>:insert</code>, <code>:visual_char</code> など）</li>
+  <li><strong>ビジュアル選択</strong>: <code>@visual_state</code></li>
+  <li><strong>レジスタ</strong>: <code>@registers</code></li>
+  <li><strong>マーク</strong>: <code>@marks</code></li>
+  <li><strong>ジャンプリスト</strong>: <code>@jump_list</code></li>
+  <li><strong>Quickfix / ロケーションリスト</strong>: <code>@quickfix_items</code>, <code>@location_lists</code></li>
+  <li><strong>オプション</strong>: グローバル/ウィンドウ/バッファの 3 スコープ</li>
+</ul>
+
+<h2 id="ch-editor--オプションシステム">11.1 オプションシステム</h2>
+
+<p>Vim のオプションは、スコープ（グローバル、ウィンドウローカル、バッファローカル）と型（boolean, number, string）を持つ。</p>
+
+<pre><code class="language-ruby">OPTION_DEFS = {
+  "number"     =&gt; { scope: :window,  type: :bool,   default: false },
+  "tabstop"    =&gt; { scope: :buffer,  type: :number, default: 2 },
+  "filetype"   =&gt; { scope: :buffer,  type: :string, default: "" },
+  "scrolloff"  =&gt; { scope: :global,  type: :number, default: 0 },
+  # ... 51 以上のオプション定義
+}
+</code></pre>
+
+<p><code>effective_option</code> は、ウィンドウローカル → グローバルの順に値を解決する。</p>
+
+<h2 id="ch-editor--レイアウトツリー">11.2 レイアウトツリー</h2>
+
+<p>ウィンドウの分割は木構造で表現される。</p>
+
+<pre><code>{ type: :hsplit, children: [
+    { type: :window, id: 1 },
+    { type: :vsplit, children: [
+        { type: :window, id: 2 },
+        { type: :window, id: 3 }
+    ]}
+]}
+</code></pre>
+
+<p>このツリーを再帰的に走査して、各ウィンドウの矩形（行、列、幅、高さ）を計算する。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-editor.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-window'); return false;">&larr; 10. ウィンドウ — バッファへの窓</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-screen'); return false;">12. 画面描画 — Screen と差分レンダリング &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-screen" style="display: none;">
+    <h1 id="ch-screen--画面描画-screen-と差分レンダリング">12. 画面描画 — Screen と差分レンダリング</h1>
+
+<blockquote>
+  <p>「見えるものだけが全てではない、しかし見えなければ始まらない」 — 小津安二郎</p>
+</blockquote>
+
+<p><code>Screen</code> クラスは、エディタの状態を端末の文字列に変換する。</p>
+
+<h2 id="ch-screen--2-フェーズレンダリング">12.1 2 フェーズレンダリング</h2>
+
+<p>描画は 2 フェーズで行われる。</p>
+
+<ol>
+  <li><strong>フレーム構築</strong>: 各画面行の内容を文字列として構築する</li>
+  <li><strong>差分出力</strong>: 前回のフレームと比較し、変化した行だけを端末に送る</li>
+</ol>
+
+<pre><code class="language-ruby">def render(editor)
+  # フレーム構築
+  new_frame = build_frame(editor, rows, cols)
+
+  # 差分出力
+  if @last_frame
+    new_frame.each_with_index do |line, i|
+      next if line == @last_frame[i]   # 同一なら skip
+      output &lt;&lt; "\e[#{i + 1};1H#{line}\e[K"
+    end
+  else
+    # 初回はフル描画
+  end
+
+  @last_frame = new_frame
+  @terminal.write(output)
+end
+</code></pre>
+
+<p><code>\e[#{i + 1};1H</code> はカーソルを指定行に移動する ANSI シーケンス、<code>\e[K</code> は行末までクリアする。変更のない行はスキップするので、大きなファイルでもスクロールしない限り出力量は少ない。</p>
+
+<h2 id="ch-screen--キャッシュ">12.2 キャッシュ</h2>
+
+<p>パフォーマンスのために 2 つのキャッシュを維持する。</p>
+
+<pre><code class="language-ruby">@syntax_color_cache = {}       # バッファ行内容 → 色情報（上限 2048 エントリ）
+@wrapped_segments_cache = {}   # 行内容 → 折り返しセグメント（上限 1024 エントリ）
+</code></pre>
+
+<p>同じ行の内容が変わらない限り、シンタックスハイライトの計算をスキップできる。LRU ではなくサイズ上限付きのハッシュだが、描画ループでは通常画面に表示されている行だけが参照されるため、実用的には十分だ。</p>
+
+<h2 id="ch-screen--レイアウト合成-分割ウィンドウの描画">12.3 レイアウト合成 — 分割ウィンドウの描画</h2>
+
+<p>複数ウィンドウが分割されているとき、それぞれのウィンドウを正しい位置に描画する必要がある。この処理は 3 段階で行われる。</p>
+
+<h2 id="ch-screen--1-矩形の計算">12.4 1. 矩形の計算</h2>
+
+<p>レイアウトツリーを再帰的に走査し、各ウィンドウに <strong>矩形（top, left, height, width）</strong> を割り当てる。</p>
+
+<pre><code class="language-ruby">def compute_tree_rects(node, top:, left:, height:, width:)
+  if node[:type] == :window
+    return { node[:id] =&gt; { top:, left:, height:, width: } }
+  end
+
+  children = node[:children]
+  case node[:type]
+  when :vsplit
+    sep_count = children.length - 1
+    usable = width - sep_count        # セパレータ 1 カラム分を差し引く
+    widths = weighted_split_sizes(usable, children.length, node[:weights])
+    cur_left = left
+    children.each_with_index do |child, i|
+      w = widths[i]
+      rects.merge!(compute_tree_rects(child, top:, left: cur_left, height:, width: w))
+      cur_left += w + 1               # +1 はセパレータ分
+    end
+  when :hsplit
+    # 同様に height を分割し、cur_top を進める
+  end
+end
+</code></pre>
+
+<p><code>:vsplit</code> では幅を子ノード数で分割し、子と子の間に 1 カラムのセパレータ用スペースを確保する。<code>:hsplit</code> では高さを分割し、1 行分のセパレータ行を挟む。<code>:weights</code> がある場合は重み付き分割（ユーザーが <code>Ctrl-W &gt;</code> でリサイズした結果）を使う。</p>
+
+<p>ウィンドウが 1 つだけなら、画面全体がそのウィンドウの矩形になる。</p>
+
+<h2 id="ch-screen--2-各ウィンドウの事前描画">12.5 2. 各ウィンドウの事前描画</h2>
+
+<p>矩形が決まったら、全ウィンドウの内容を <strong>先に</strong> 文字列の配列として描画しておく。</p>
+
+<pre><code class="language-ruby">editor.window_order.each do |win_id|
+  rect = rects[win_id]
+  gutter_w = number_column_width(editor, window, buffer)
+  content_w = rect[:width] - gutter_w
+  window_rows_cache[win_id] = window_render_rows(editor, window, buffer,
+    height: rect[:height], gutter_w:, content_w:)
+end
+</code></pre>
+
+<p>各ウィンドウは自分に割り当てられた矩形の幅と高さだけを気にし、画面全体の座標は知らない。</p>
+
+<h2 id="ch-screen--3-行計画row-planによる合成">12.6 3. 行計画（row plan）による合成</h2>
+
+<p>最後に、画面の各行について「何を左から右に並べるか」を記述した <strong>行計画</strong> を構築する。</p>
+
+<pre><code class="language-ruby">def fill_row_plans(node, rects, plans, ...)
+  if node[:type] == :window
+    rect[:height].times do |dy|
+      row_no = rect[:top] + dy
+      plans[row_no] &lt;&lt; { type: :window, id: node[:id] }
+    end
+  elsif node[:type] == :vsplit
+    children.each_with_index do |child, i|
+      fill_row_plans(child, ...)
+      # 子と子の間にセパレータを挿入
+      plans[row_no] &lt;&lt; { type: :vsep } if i &lt; children.length - 1
+    end
+  elsif node[:type] == :hsplit
+    children.each_with_index do |child, i|
+      fill_row_plans(child, ...)
+      # 子と子の間に水平セパレータ行を挿入
+      plans[sep_row] &lt;&lt; { type: :hsep, width: w } if i &lt; children.length - 1
+    end
+  end
+end
+</code></pre>
+
+<p>行計画のピース型は 4 つある。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>ピース型</th>
+      <th>描画内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>:window</code></td>
+      <td>そのウィンドウの事前描画済み行（<code>window_rows_cache</code> から取得）</td>
+    </tr>
+    <tr>
+      <td><code>:vsep</code></td>
+      <td>垂直セパレータ <code>\|</code>（1 カラム）</td>
+    </tr>
+    <tr>
+      <td><code>:hsep</code></td>
+      <td>水平セパレータ <code>-</code> の繰り返し</td>
+    </tr>
+    <tr>
+      <td><code>:blank</code></td>
+      <td>空白埋め</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>最終出力では、各画面行の行計画を左から順に連結するだけだ。</p>
+
+<pre><code class="language-ruby">1.upto(text_rows) do |row_no|
+  pieces = +""
+  row_plans[row_no].each do |piece|
+    case piece[:type]
+    when :window then pieces &lt;&lt; window_rows_cache[piece[:id]][dy]
+    when :vsep   then pieces &lt;&lt; "|"
+    when :hsep   then pieces &lt;&lt; "-" * piece[:width]
+    end
+  end
+  lines[row_no] = pieces
+end
+</code></pre>
+
+<p>具体例として、3 分割のレイアウトを見てみよう。</p>
+
+<pre><code>{ type: :hsplit, children: [
+    { type: :window, id: 1 },                    # 上半分
+    { type: :vsplit, children: [
+        { type: :window, id: 2 },                # 左下
+        { type: :window, id: 3 }                 # 右下
+    ]}
+]}
+</code></pre>
+
+<p>ターミナルが 80×24 の場合、矩形は次のように計算される。</p>
+
+<pre><code>Window 1: top=1,  left=1,  height=11, width=80   ← 上半分
+----------- 水平セパレータ行（row 12）-----------
+Window 2: top=13, left=1,  height=11, width=39   ← 左下
+|  ← 垂直セパレータ（col 40）
+Window 3: top=13, left=41, height=11, width=40   ← 右下
+</code></pre>
+
+<p>row 12 の行計画は <code>[{ type: :hsep, width: 80 }]</code>、row 13〜23 の行計画は <code>[{ type: :window, id: 2 }, { type: :vsep }, { type: :window, id: 3 }]</code> となる。</p>
+
+<h2 id="ch-screen--バッファ文字列から画面セルへの変換">12.7 バッファ文字列から画面セルへの変換</h2>
+
+<p>バッファは行を Ruby の String として保持する。しかし、1 文字がターミナル上で何カラム消費するかは文字によって異なる。ASCII は 1 カラム、CJK 文字は 2 カラム、タブは <code>tabstop</code> 設定に依存し、結合文字は 0 カラムだ。この「文字インデックス」と「画面カラム」のギャップを吸収するのが <strong>Cell</strong> 抽象だ。</p>
+
+<pre><code class="language-ruby">class Cell
+  attr_reader :glyph          # 表示する文字（タブは " "、制御文字は "?"）
+  attr_reader :source_col     # バッファ行内の文字インデックス
+  attr_reader :display_width  # この文字が占める画面カラム数
+end
+</code></pre>
+
+<p><code>TextMetrics.clip_cells_for_width</code> がバッファの文字列を Cell の配列に変換する。</p>
+
+<pre><code class="language-ruby">def clip_cells_for_width(text, width, source_col_start: 0, tabstop: 2)
+  cells = []
+  display_col = 0
+
+  text.each_char do |ch|
+    code = ch.ord
+    # ASCII 高速パス
+    if code &gt;= 0x20 &amp;&amp; code &lt;= 0x7E
+      break if display_col &gt;= width
+      cells &lt;&lt; Cell.new(ch, source_col, 1)
+      display_col += 1
+      source_col += 1
+      next
+    end
+
+    if ch == "\t"
+      w = tabstop - (display_col % tabstop)  # 次のタブ位置まで
+      break if display_col + w &gt; width
+      w.times { cells &lt;&lt; Cell.new(" ", source_col, 1) }  # 空白セルに展開
+      display_col += w
+      source_col += 1    # バッファ上は 1 文字
+      next
+    end
+    # ... 制御文字 → "?"、CJK → display_width: 2
+  end
+  [cells, display_col]
+end
+</code></pre>
+
+<p>ここに重要な設計がある。<strong>タブ文字は複数の Cell に展開されるが、すべての Cell が同じ <code>source_col</code> を持つ</strong>。つまり、画面上のカラム位置からバッファの文字位置を逆引きできる。ビジュアル選択や検索ハイライトが <code>source_col</code> を使って色付けの要否を判定するため、タブ展開が正しく動作する。</p>
+
+<h2 id="ch-screen--描画のレイヤー構造">12.8 描画のレイヤー構造</h2>
+
+<p>Cell 配列ができたら、各セルに色を重ねていく。色の決定は <strong>優先度順</strong> で、最初にマッチした条件が採用される（カーソル &gt; ビジュアル選択 &gt; 検索 &gt; シンタックス色 &gt; 素の文字）。色レイヤーの詳細は <a href="#13-シンタックスハイライト--色を付ける">13. シンタックスハイライト — 色を付ける</a> の「描画時の色レイヤー統合」を参照。</p>
+
+<pre><code class="language-ruby">cells.each do |cell|
+  ch = display_glyph_for_cell(cell, ...)  # list モードでの表示文字変換
+  buffer_col = cell.source_col
+
+  if cursor_here
+    highlighted &lt;&lt; cursor_cell_render(editor, ch)
+  elsif selected
+    highlighted &lt;&lt; "\e[7m#{ch}\e[m"
+  elsif search_cols[buffer_col]
+    highlighted &lt;&lt; "#{search_bg_seq(editor)}#{ch}\e[m"
+  elsif (syntax_color = syntax_cols[buffer_col])
+    highlighted &lt;&lt; "#{syntax_color}#{ch}\e[m"
+  else
+    highlighted &lt;&lt; ch
+  end
+end
+</code></pre>
+
+<p>色情報はすべて <code>{ 文字インデックス =&gt; ANSI エスケープ文字列 }</code> のハッシュとして提供される。シンタックスハイライト、検索マッチ、スペルチェックが同じインターフェースを持つことで、描画コードは色の出所を知る必要がない。</p>
+
+<h2 id="ch-screen--高速パス-色も特殊文字もない行">12.9 高速パス — 色も特殊文字もない行</h2>
+
+<p>画面に見えるすべての行で Cell を生成するのは無駄が多い。条件が揃えば、<strong>文字列のスライスだけで済む</strong>高速パスを通る。</p>
+
+<pre><code class="language-ruby">def can_bulk_render_line?(text, ...)
+  return false if cursor_on_this_line     # カーソル行は描画が特殊
+  return false if visual_active?          # 選択範囲がある
+  return false if text.include?("\t")     # タブは展開が必要
+  return false unless text.ascii_only?    # CJK は幅計算が必要
+  return false unless syntax_cols.empty?  # ハイライトがある
+  return false unless search_cols.empty?  # 検索マッチがある
+  true
+end
+
+def bulk_render_line(text, width, col_offset:)
+  clipped = text[col_offset, width].to_s
+  clipped + (" " * [width - clipped.length, 0].max)  # 右パディング
+end
+</code></pre>
+
+<p>ASCII のみでハイライトも特殊文字もない行は、単純な <code>String#[]</code> でクリップして空白を埋めるだけだ。Cell オブジェクトの生成も ANSI エスケープの出力も不要で、大量のプレーンテキストで効果が大きい。</p>
+
+<h2 id="ch-screen--編集による再描画の流れ">12.10 編集による再描画の流れ</h2>
+
+<p>ユーザーが文字を挿入すると、以下の連鎖が起きる。</p>
+
+<pre><code>キー入力 → Buffer#insert_char → @lines[row] = 新しい文字列
+→ App#run_ui_loop が @needs_redraw を検出
+→ Screen#render → build_frame
+→ 変更された行: Cell 変換 → 色重ね → 文字列化
+→ 未変更の行: @last_frame と同一 → スキップ
+→ 差分出力: 変更行だけ端末に送信
+</code></pre>
+
+<p>ここでキャッシュの無効化は <strong>暗黙的</strong> に起きる。バッファの行が編集されると新しい文字列オブジェクトが生成される（<code>insert_char</code> の <code>line.dup.insert(col, char)</code> による）。シンタックスキャッシュは <code>[言語モジュール, 行テキスト]</code> をキーとするため、文字列が変われば自動的にキャッシュミスし、再計算される。明示的な invalidation は不要だ。</p>
+
+<p>さらに、差分レンダリングにより、編集で変わった行だけが端末に送信される。10 万行のファイルで 1 行だけ変更しても、出力されるのはその 1 行のエスケープシーケンスだけだ。</p>
+
+<h2 id="ch-screen--座標系の変換">12.11 座標系の変換</h2>
+
+<p>エディタ内では 3 つの座標系が共存する。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>座標系</th>
+      <th>単位</th>
+      <th>用途</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>バッファ座標</td>
+      <td><code>(行番号, 文字インデックス)</code></td>
+      <td>カーソル位置、テキスト操作</td>
+    </tr>
+    <tr>
+      <td>画面座標</td>
+      <td><code>(行番号, 画面カラム)</code></td>
+      <td>描画位置の計算</td>
+    </tr>
+    <tr>
+      <td>ターミナル座標</td>
+      <td><code>(行番号, カラム)</code></td>
+      <td>ANSI エスケープの出力先</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>バッファ座標から画面座標への変換は <code>TextMetrics.screen_col_for_char_index</code> が担う。</p>
+
+<pre><code class="language-ruby">def screen_col_for_char_index(line, char_index, tabstop: 2)
+  prefix = line[0...char_index].to_s
+  DisplayWidth.display_width(prefix, tabstop:)
+end
+</code></pre>
+
+<p>逆方向（画面座標 → バッファ座標）は <code>char_index_for_screen_col</code> だ。マウスクリックや水平スクロールで使われる。</p>
+
+<p>ウィンドウの <code>col_offset</code>（水平スクロール量）はバッファ座標（文字インデックス）で保持し、描画時に画面座標に変換する。カーソル位置 <code>cursor_x</code> もバッファ座標だ。レイアウトツリーから算出された矩形のオフセットを加算して、最終的なターミナル座標（<code>\e[行;列H</code> で使う値）を得る。</p>
+
+<h2 id="ch-screen--折り返しwrap">12.12 折り返し（Wrap）</h2>
+
+<p><code>wrap</code> オプション（デフォルト有効）が有効なとき、ウィンドウ幅に収まらない長い行は <strong>複数の表示行に折り返される</strong>。水平スクロールの代わりに、行を分割して表示するのだ。</p>
+
+<h2 id="ch-screen--セグメント分割">12.13 セグメント分割</h2>
+
+<p>折り返しの単位は <strong>セグメント</strong> と呼ぶ。1 つのバッファ行が N 個のセグメントに分割され、各セグメントが 1 つの表示行になる。</p>
+
+<pre><code class="language-ruby">def compute_wrapped_segments(line, width:, tabstop:, linebreak:, showbreak:, indent_prefix:)
+  segs = []
+  start_col = 0
+  first = true
+
+  while start_col &lt; line.length
+    display_prefix = first ? "" : "#{showbreak}#{indent_prefix}"
+    prefix_w = DisplayWidth.display_width(display_prefix, tabstop:)
+    avail = [width - prefix_w, 1].max
+
+    # 利用可能な幅に収まるだけの Cell を切り出す
+    cells, = TextMetrics.clip_cells_for_width(line[start_col..], avail, ...)
+    break if cells.empty?
+
+    # linebreak: 単語の途中で折り返さない
+    if linebreak &amp;&amp; cells.length &gt; 1
+      break_idx = linebreak_break_index(cells, line)
+      cells = cells[0..break_idx] if break_idx
+    end
+
+    segs &lt;&lt; { source_col_start: start_col, display_prefix: display_prefix }
+    start_col = cells.last.source_col + 1
+  end
+  segs.freeze
+end
+</code></pre>
+
+<p>処理の流れはこうだ。</p>
+
+<ol>
+  <li><code>clip_cells_for_width</code> で、利用可能な幅に収まるだけの Cell を取得する</li>
+  <li><code>linebreak</code> オプションが有効なら、空白位置で折り返して単語を分断しない</li>
+  <li>各セグメントに <code>source_col_start</code>（バッファ行内の開始文字位置）と <code>display_prefix</code>（折り返し行の先頭に表示する文字列）を記録する</li>
+</ol>
+
+<h2 id="ch-screen--折り返し関連オプション">12.14 折り返し関連オプション</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>オプション</th>
+      <th>効果</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>wrap</code></td>
+      <td>折り返しの有効/無効。無効の場合は水平スクロール</td>
+    </tr>
+    <tr>
+      <td><code>linebreak</code></td>
+      <td>単語の途中で折り返さない（空白位置で分割）</td>
+    </tr>
+    <tr>
+      <td><code>showbreak</code></td>
+      <td>折り返し行の先頭に表示する文字列（例: <code>"↪ "</code>）</td>
+    </tr>
+    <tr>
+      <td><code>breakindent</code></td>
+      <td>折り返し行に元の行のインデントを引き継ぐ</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><code>showbreak</code> と <code>breakindent</code> は <strong><code>display_prefix</code></strong> として結合され、2 行目以降のセグメントの先頭に表示される。例えば <code>showbreak</code> が <code>"↪ "</code> で元の行が 4 スペースインデントなら、<code>display_prefix</code> は <code>"↪     "</code> になる。この分だけ利用可能な幅（<code>avail</code>）が減る。</p>
+
+<h2 id="ch-screen--描画">12.15 描画</h2>
+
+<p><code>wrapped_window_render_rows</code> は、セグメント単位でループする。</p>
+
+<pre><code class="language-ruby">def wrapped_window_render_rows(editor, window, buffer, height:, gutter_w:, content_w:)
+  rows = []
+  row_idx = window.row_offset
+  seg_skip = window.wrap_seg_offset      # 先頭行の先頭セグメントのスキップ数
+
+  while rows.length &lt; height
+    line = buffer.line_at(row_idx)
+    segments = wrapped_segments_for_line(editor, window, buffer, line, width: content_w)
+
+    segments.each_with_index do |seg, seg_i|
+      next seg_skip -= 1 if seg_skip &gt; 0  # スクロール済みセグメントをスキップ
+      break if rows.length &gt;= height
+
+      # 行番号は各バッファ行の最初のセグメントにだけ表示
+      gutter = render_gutter_prefix(editor, window, buffer,
+                 seg_i.zero? ? row_idx : nil, gutter_w)
+      rows &lt;&lt; gutter + render_text_segment(line, ...,
+                source_col_start: seg[:source_col_start],
+                display_prefix: seg[:display_prefix])
+    end
+    row_idx += 1
+  end
+  rows
+end
+</code></pre>
+
+<p>行番号ガターは各バッファ行の <strong>最初のセグメントにだけ</strong> 表示し、折り返し行は空白ガターにする。これにより、折り返しが起きていても元のバッファ行の区切りが視覚的にわかる。</p>
+
+<h2 id="ch-screen--スクロールとカーソル追従">12.16 スクロールとカーソル追従</h2>
+
+<p>折り返しモードでは、ウィンドウは 2 つのオフセットでスクロール位置を管理する。</p>
+
+<ul>
+  <li><strong><code>row_offset</code></strong>: 画面最上部に表示するバッファ行番号</li>
+  <li><strong><code>wrap_seg_offset</code></strong>: その行の先頭から何セグメントスキップするか</li>
+</ul>
+
+<p><code>ensure_visible_under_wrap</code> は、カーソルが画面内に収まるようにこの 2 つを調整する。</p>
+
+<pre><code>1. カーソルがある行のセグメントを計算
+2. row_offset からカーソル行までの視覚行数を積算
+3. カーソル行が画面に収まらない → row_offset を進める（上の行を押し出す）
+4. カーソル行自体が画面より長い → wrap_seg_offset でセグメント単位スキップ
+</code></pre>
+
+<p>重要なのは、折り返しモードでは <code>col_offset</code>（水平スクロール）は使わないことだ。すべての文字が折り返しによって表示されるため、水平スクロールが不要になる。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-screen.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-editor'); return false;">&larr; 11. エディタ — 状態の統括者</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-syntax'); return false;">13. シンタックスハイライト — 色を付ける &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-syntax" style="display: none;">
+    <h1 id="ch-syntax--シンタックスハイライト-色を付ける">13. シンタックスハイライト — 色を付ける</h1>
+
+<blockquote>
+  <p>「色は匂えど散りぬるを」 — いろは歌</p>
+</blockquote>
+
+<h2 id="ch-syntax--langbase-色付けの基盤">13.1 Lang::Base — 色付けの基盤</h2>
+
+<p>すべての言語モジュールは <code>Lang::Base</code> を継承する。</p>
+
+<pre><code class="language-ruby">class Base
+  def self.instance
+    @instance ||= new.freeze   # フリーズしたシングルトン
+  end
+
+  KEYWORD_COLOR  = "\e[36m"   # シアン
+  STRING_COLOR   = "\e[32m"   # 緑
+  NUMBER_COLOR   = "\e[33m"   # 黄
+  COMMENT_COLOR  = "\e[90m"   # 暗いグレー
+  VARIABLE_COLOR = "\e[93m"   # 明るい黄
+  CONSTANT_COLOR = "\e[96m"   # 明るいシアン
+
+  def apply_regex(cols, text, regex, color, override: false)
+    text.to_enum(:scan, regex).each do
+      m = Regexp.last_match
+      (m.begin(0)...m.end(0)).each do |idx|
+        next if cols.key?(idx) &amp;&amp; !override
+        cols[idx] = color
+      end
+    end
+  end
+end
+</code></pre>
+
+<p><code>apply_regex</code> は、テキストに正規表現を適用し、マッチした範囲に色を割り当てる。<code>override: false</code> の場合、既に色が付いている位置はスキップする。これにより、優先順位を制御できる。例えば、コメントの色は他のどの色よりも優先される（<code>override: true</code>）。</p>
+
+<h2 id="ch-syntax--langruby-prism-による正確なハイライト">13.2 Lang::Ruby — Prism による正確なハイライト</h2>
+
+<p>Ruby のシンタックスハイライトは、正規表現ベースではなく <strong>Prism レキサー</strong> を使う。Prism は Ruby の公式パーサで、正確なトークン列を返す。</p>
+
+<pre><code class="language-ruby">class Ruby &lt; Base
+  def color_columns(text)
+    cols = {}
+    Prism.lex(text).value.each do |entry|
+      token = entry[0]
+      type = token.type
+      range = token.location.start_offset...token.location.end_offset
+
+      if PRISM_STRING_TYPES.include?(type)
+        range.each { |idx| cols[idx] = STRING_COLOR unless cols.key?(idx) }
+      elsif PRISM_KEYWORD_TYPES.include?(type)
+        range.each { |idx| cols[idx] = KEYWORD_COLOR unless cols.key?(idx) }
+      elsif PRISM_COMMENT_TYPES.include?(type)
+        range.each { |idx| cols[idx] = COMMENT_COLOR }   # コメントは上書き
+      end
+      # ...
+    end
+    cols
+  end
+end
+</code></pre>
+
+<p>Prism を使うことで、正規表現では正しく扱えないケース（ヒアドキュメント、文字列補間内のコード、複数行コメントなど）も正確に色付けできる。</p>
+
+<p>他の言語（JSON, YAML, Markdown, C, Go, Rust, Python, …）は正規表現ベースの <code>apply_regex</code> で実装されている。言語ごとのモジュールは <code>autoload</code> で必要になるまでロードされない。</p>
+
+<h2 id="ch-syntax--色の重ね方-apply_regex-の優先度制御">13.3 色の重ね方 — apply_regex の優先度制御</h2>
+
+<p>正規表現ベースの言語モジュールでは、<code>color_columns</code> の中で <code>apply_regex</code> を <strong>呼ぶ順序</strong> が色の優先度を決める。</p>
+
+<p>C 言語の例を見てみよう。</p>
+
+<pre><code class="language-ruby">def color_columns(text)
+  cols = {}
+  apply_regex(cols, text, CHAR_RE, STRING_COLOR)         # 1. 文字リテラル
+  apply_regex(cols, text, STRING_RE, STRING_COLOR)        # 2. 文字列
+  apply_regex(cols, text, KEYWORD_RE, KEYWORD_COLOR)      # 3. キーワード
+  apply_regex(cols, text, NUMBER_RE, NUMBER_COLOR)        # 4. 数値
+  apply_regex(cols, text, CONSTANT_RE, CONSTANT_COLOR)    # 5. 定数
+  apply_regex(cols, text, PREPROCESSOR_RE, "\e[35m")      # 6. プリプロセッサ
+  apply_regex(cols, text, BLOCK_COMMENT_RE, COMMENT_COLOR, override: true)  # 7. ブロックコメント
+  apply_regex(cols, text, LINE_COMMENT_RE, COMMENT_COLOR, override: true)   # 8. 行コメント
+  cols
+end
+</code></pre>
+
+<p><code>apply_regex</code> は <code>cols</code> ハッシュに <code>{ 文字位置 =&gt; 色 }</code> を書き込む。デフォルトでは <strong>既に色が付いている位置はスキップする</strong>（<code>override: false</code>）。</p>
+
+<pre><code class="language-ruby">def apply_regex(cols, text, regex, color, override: false)
+  text.to_enum(:scan, regex).each do
+    m = Regexp.last_match
+    (m.begin(0)...m.end(0)).each do |idx|
+      next if cols.key?(idx) &amp;&amp; !override  # 既に色があればスキップ
+      cols[idx] = color
+    end
+  end
+end
+</code></pre>
+
+<p>つまり、<strong>先に呼ばれた regex が勝つ</strong>。文字列中の <code>if</code> がキーワード色にならないのは、<code>STRING_RE</code> が先に適用されて文字列内の位置に色が付いており、後から <code>KEYWORD_RE</code> がマッチしてもスキップされるからだ。</p>
+
+<p>ただし <code>override: true</code> を指定すると、既存の色を上書きする。コメントに使われるのがこのパターンだ。<code>// TODO: fix this</code> のような行では、まず <code>KEYWORD_RE</code> 等が個別のトークンに色を付けるが、最後に <code>LINE_COMMENT_RE</code> が <code>override: true</code> で全体をコメント色に塗り替える。</p>
+
+<p>この仕組みにより、各言語モジュールは正規表現の適用順序を変えるだけで、色の優先度を柔軟に制御できる。</p>
+
+<h2 id="ch-syntax--描画時の色レイヤー統合">13.4 描画時の色レイヤー統合</h2>
+
+<p>言語モジュールが返す <code>{ 文字位置 =&gt; 色 }</code> ハッシュは、描画パイプラインでさらに他の色情報と重ね合わされる。<code>render_cells</code> では以下の優先度でチェックする。</p>
+
+<pre><code>1. カーソル位置      → 反転表示 (\e[7m)
+2. ビジュアル選択    → 反転表示 (\e[7m)
+3. 検索ハイライト    → 黄色背景 (\e[43m)
+4. カラーカラム      → 灰色背景
+5. カーソル行背景    → 背景色
+6. シンタックス色    → 各言語モジュールの色（スペルチェック下線と併用可）
+7. スペルチェック    → 赤下線 (\e[4;31m)
+8. なし              → 素の文字
+</code></pre>
+
+<p>重要なポイントは、すべての色情報が <strong>同じインターフェース</strong>（<code>{ 文字位置 =&gt; 値 }</code> のハッシュ）で提供されることだ。シンタックスハイライト、検索マッチ、スペルチェックが同じ形式なので、描画コードは色の出所を知る必要がない。</p>
+
+<p>シンタックス色とスペルチェックだけは <strong>併用可能</strong> だ。文字にシンタックス色がある位置がスペルミスでもある場合、<code>"#{syntax_color}\e[4;31m#{glyph}\e[m"</code> のように ANSI コードを連結して、色付き + 赤下線の両方を適用する。</p>
+
+<h2 id="ch-syntax--キャッシュ">13.5 キャッシュ</h2>
+
+<p>シンタックスハイライトの計算結果は <code>[言語モジュール, 行テキスト]</code> をキーとしてキャッシュされる（上限 2048 エントリ）。行が編集されると新しい文字列オブジェクトが生成されるため、自動的にキャッシュミスし、再計算される。明示的な invalidation は不要だ。</p>
+
+<h2 id="ch-syntax--インデント支援">13.6 インデント支援</h2>
+
+<p>各言語モジュールは、インデントのためのフックも提供する。</p>
+
+<pre><code class="language-ruby"># 行がインデントを増やすか？
+def indent_trigger?(line)
+  stripped = line.to_s.rstrip.lstrip
+  first_word = stripped[/\A(\w+)/, 1].to_s
+  return true if %w[def class module if unless ...].include?(first_word)
+  return true if stripped.match?(/\bdo\s*(\|[^|]*\|)?\s*$/)
+  false
+end
+
+# デデント（インデント減少）のトリガー文字
+DEDENT_TRIGGERS = {
+  "d" =&gt; /\A(\s*)end\z/,
+  "e" =&gt; /\A(\s*)(?:else|rescue|ensure)\z/,
+  "f" =&gt; /\A(\s*)elsif\z/,
+  "n" =&gt; /\A(\s*)(?:when|in)\z/
+}
+</code></pre>
+
+<p>ユーザーが <code>end</code> と入力すると、<code>d</code> の入力時にデデントトリガーがチェックされ、自動的にインデントが減少する。</p>
+
+<h2 id="ch-syntax--on_save-フック">13.7 on_save フック</h2>
+
+<p>Ruby ファイルの場合、保存時に <code>ruby -wc</code>（シンタックスチェック）を実行し、エラーがあれば Quickfix リストにセットする。</p>
+
+<pre><code class="language-ruby">def on_save(ctx, path)
+  output, status = Open3.capture2e("ruby", "-wc", path)
+  unless status.success?
+    items = message.lines.filter_map { |line|
+      if line =~ /\A.+?:(\d+):/
+        { buffer_id:, row: $1.to_i - 1, col: 0, text: line.strip }
+      end
+    }
+    ctx.editor.set_quickfix_list(items)
+    ctx.editor.echo_error("#{first}#{hint}")
+  end
+end
+</code></pre>
+
+<p>C/C++ ファイルでは <code>gcc -fsyntax-only</code> / <code>g++ -fsyntax-only</code> が同様に使われる。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-syntax.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-screen'); return false;">&larr; 12. 画面描画 — Screen と差分レンダリング</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-unicode'); return false;">14. Unicode 対応 — 文字幅の深淵 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-unicode" style="display: none;">
+    <h1 id="ch-unicode--unicode-対応-文字幅の深淵">14. Unicode 対応 — 文字幅の深淵</h1>
+
+<blockquote>
+  <p>「文字は文化そのものである」 — 白川静</p>
+</blockquote>
+
+<p>テキストエディタにおける Unicode 対応は、表面的な「UTF-8 を扱えます」を遥かに超える問題だ。最大の課題は <strong>表示幅</strong> の計算である。</p>
+
+<h2 id="ch-unicode--問題">14.1 問題</h2>
+
+<p>ターミナルは固定幅グリッドで文字を表示する。ASCII 文字は 1 セルだが、CJK 文字（漢字、ひらがな等）は 2 セル分の幅を取る。絵文字も通常 2 セルだ。結合文字（例: <code>e</code> + <code>́</code> → <code>é</code>）は前の文字に重なるため幅 0 だ。</p>
+
+<p>これを正しく計算しないと、カーソル位置がずれる。「こんにちは」の「に」にカーソルがあるはずが、「ち」の位置に表示される、といった問題が起きる。</p>
+
+<h2 id="ch-unicode--displaywidth-モジュール">14.2 DisplayWidth モジュール</h2>
+
+<pre><code class="language-ruby">module DisplayWidth
+  def cell_width(ch, col: 0, tabstop: 2)
+    return 1 if ch.nil? || ch.empty?
+
+    # タブ: タブストップに揃える（可変幅）
+    if ch == "\t"
+      width = tabstop - (col % tabstop)
+      return width.zero? ? tabstop : width
+    end
+
+    # ASCII の高速パス
+    return 1 if ch.bytesize == 1
+
+    code = ch.ord
+    uncached_codepoint_width(code)
+  end
+
+  def uncached_codepoint_width(code)
+    return 0 if combining_mark?(code)      # 結合文字: 幅 0
+    return 0 if zero_width_codepoint?(code) # ZWJ など: 幅 0
+    return ambiguous_width if ambiguous_codepoint?(code)  # 曖昧文字
+    return 2 if emoji_codepoint?(code)     # 絵文字: 幅 2
+    return 2 if wide_codepoint?(code)      # CJK: 幅 2
+    1                                       # その他: 幅 1
+  end
+end
+</code></pre>
+
+<h2 id="ch-unicode--コードポイント範囲の分類">14.3 コードポイント範囲の分類</h2>
+
+<pre><code class="language-ruby">def combining_mark?(code)
+  (0x0300..0x036F).cover?(code) ||   # Combining Diacritical Marks
+    (0x1AB0..0x1AFF).cover?(code) || # Combining Diacritical Marks Extended
+    (0x1DC0..0x1DFF).cover?(code) || # Combining Diacritical Marks Supplement
+    (0x20D0..0x20FF).cover?(code) || # Combining Diacritical Marks for Symbols
+    (0xFE20..0xFE2F).cover?(code)    # Combining Half Marks
+end
+
+def wide_codepoint?(code)
+  (0x1100..0x115F).cover?(code) ||   # Hangul Jamo
+    (0x2E80..0xA4CF).cover?(code) || # CJK Radicals 〜 Yi Radicals
+    (0xAC00..0xD7A3).cover?(code) || # Hangul Syllables
+    (0xF900..0xFAFF).cover?(code) || # CJK Compatibility Ideographs
+    # ... 他
+end
+</code></pre>
+
+<h2 id="ch-unicode--曖昧幅文字">14.4 曖昧幅文字</h2>
+
+<p>Unicode には「曖昧幅（Ambiguous Width）」という文字カテゴリがある。ギリシャ文字（α, β）や罫線文字（─, │）などは、東アジアの端末では幅 2、西洋の端末では幅 1 で表示される。</p>
+
+<pre><code class="language-ruby">def ambiguous_width
+  env = ::ENV["RUVIM_AMBIGUOUS_WIDTH"]
+  (env == "2" ? 2 : 1)
+end
+</code></pre>
+
+<p><code>RUVIM_AMBIGUOUS_WIDTH=2</code> 環境変数で切り替えられる。</p>
+
+<h2 id="ch-unicode--タブの可変幅">14.5 タブの可変幅</h2>
+
+<p>タブ文字の幅は固定ではなく、<strong>現在の表示位置</strong> に依存する。</p>
+
+<pre><code>位置 0: タブ → 幅 4 (tabstop=4 の場合、次の 4 の倍数まで)
+位置 1: タブ → 幅 3
+位置 3: タブ → 幅 1
+位置 4: タブ → 幅 4
+</code></pre>
+
+<p><code>cell_width</code> が <code>col:</code> パラメータを受け取るのはこのためだ。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-unicode.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-syntax'); return false;">&larr; 13. シンタックスハイライト — 色を付ける</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-c-extension'); return false;">15. C 拡張 — ホットパスの高速化 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-c-extension" style="display: none;">
+    <h1 id="ch-c-extension--c-拡張-ホットパスの高速化">15. C 拡張 — ホットパスの高速化</h1>
+
+<blockquote>
+  <p>「適材適所」 — 日本のことわざ</p>
+</blockquote>
+
+<p>DisplayWidth と TextMetrics の計算は、画面描画のたびに何千回も呼ばれるホットパスだ。Ruby で書いた Pure Ruby 実装でも動作するが、C 拡張に置き換えることで大幅に高速化できる。</p>
+
+<h2 id="ch-c-extension--デュアル実装パターン">15.1 デュアル実装パターン</h2>
+
+<pre><code class="language-ruby"># C 拡張を試みる
+begin
+  require_relative "ruvim_ext"
+rescue LoadError
+  # C 拡張なし → Pure Ruby フォールバック
+end
+
+module DisplayWidth
+  if defined?(RuVim::DisplayWidthExt)
+    # C 拡張パス
+    def cell_width(ch, col: 0, tabstop: 2)
+      sync_ambiguous_width
+      DisplayWidthExt.cell_width(ch, col:, tabstop:)
+    end
+  else
+    # Pure Ruby パス
+    def cell_width(ch, col: 0, tabstop: 2)
+      # ... Ruby 実装
+    end
+  end
+end
+</code></pre>
+
+<p><code>require_relative "ruvim_ext"</code> が失敗しても <code>LoadError</code> をキャッチして Pure Ruby にフォールバックする。ユーザーが C コンパイラを持っていなくても動く。</p>
+
+<h2 id="ch-c-extension--c-拡張の実装">15.2 C 拡張の実装</h2>
+
+<p>C 拡張は約 520 行で、以下の関数を実装する。</p>
+
+<ul>
+  <li><code>cell_width</code> — 1 文字の表示幅</li>
+  <li><code>display_width</code> — 文字列全体の表示幅</li>
+  <li><code>expand_tabs</code> — タブをスペースに展開</li>
+  <li><code>clip_cells_for_width</code> — 指定幅にクリップしてセル配列を返す</li>
+  <li><code>char_index_for_screen_col</code> — 画面列から文字インデックスに変換</li>
+</ul>
+
+<p>例えば <code>display_width</code> の C 実装を見てみよう。</p>
+
+<pre><code class="language-c">static VALUE
+rb_display_width(int argc, VALUE *argv, VALUE self)
+{
+    VALUE str, opts;
+    rb_scan_args(argc, argv, "1:", &amp;str, &amp;opts);
+
+    const char *ptr = RSTRING_PTR(str);
+    const char *end = ptr + RSTRING_LEN(str);
+    rb_encoding *enc = rb_utf8_encoding();
+    int col = start_col;
+
+    while (ptr &lt; end) {
+        unsigned int code;
+        int clen = rb_enc_precise_mbclen(ptr, end, enc);
+
+        if (!MBCLEN_CHARFOUND_P(clen)) {
+            ptr++; col++; continue;   // 不正バイト: 幅 1
+        }
+        clen = MBCLEN_CHARFOUND_LEN(clen);
+        code = rb_enc_codepoint(ptr, end, enc);
+        ptr += clen;
+
+        if (code == '\t') {
+            int w = tabstop - (col % tabstop);
+            if (w == 0) w = tabstop;
+            col += w;
+        } else if (clen == 1) {
+            col++;   // ASCII 高速パス
+        } else {
+            col += codepoint_width(code);
+        }
+    }
+
+    return INT2FIX(col - start_col);
+}
+</code></pre>
+
+<p><code>rb_enc_precise_mbclen</code> で UTF-8 のマルチバイト長を正確に取得し、<code>rb_enc_codepoint</code> でコードポイントを取得する。Ruby のエンコーディング API を直接使うので、エンコーディングの不整合は起きない。</p>
+
+<p><code>codepoint_width</code> は Unicode テーブルを C の静的配列として持ち、線形走査で判定する。</p>
+
+<pre><code class="language-c">static const range_t wide_ranges[] = {
+    {0x1100, 0x115F},  // Hangul Jamo
+    {0x2329, 0x232A},
+    {0x2E80, 0xA4CF},  // CJK
+    // ...
+};
+
+static inline int
+in_ranges(unsigned int code, const range_t *ranges, int count)
+{
+    for (int i = 0; i &lt; count; i++) {
+        if (code &lt; ranges[i].lo) return 0;  // ソート済み → 早期脱出
+        if (code &lt;= ranges[i].hi) return 1;
+    }
+    return 0;
+}
+</code></pre>
+
+<p>テーブルがソートされているため、<code>code &lt; ranges[i].lo</code> で早期に脱出できる。テーブルサイズが小さい（各カテゴリ 5〜10 エントリ程度）ので、二分探索よりも線形走査の方が実用的に速い。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-c-extension.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-unicode'); return false;">&larr; 14. Unicode 対応 — 文字幅の深淵</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-streams'); return false;">16. ストリーム — 非同期 I/O と外部プロセス &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-streams" style="display: none;">
+    <h1 id="ch-streams--ストリーム-非同期-io-と外部プロセス">16. ストリーム — 非同期 I/O と外部プロセス</h1>
+
+<blockquote>
+  <p>「水は方円の器に随う」 — 日本のことわざ</p>
+</blockquote>
+
+<p>RuVim は、外部コマンドの出力をリアルタイムにバッファに表示できる。<code>:run ls -la</code> と打つと、ls の出力が逐次表示される。</p>
+
+<h2 id="ch-streams--stream-階層">16.1 Stream 階層</h2>
+
+<pre><code>Stream（基底クラス: state, stop!）
+├── Stream::Stdin  — stdin からのパイプ入力
+├── Stream::Run    — 外部コマンド実行（PTY or popen）
+├── Stream::Follow — ファイル監視（tail -f 相当）
+└── Stream::FileLoad — 大規模ファイルの非同期読み込み
+</code></pre>
+
+<h2 id="ch-streams--streamrun-pty-による外部コマンド実行">16.2 Stream::Run — PTY による外部コマンド実行</h2>
+
+<pre><code class="language-ruby">class Stream::Run &lt; Stream
+  def initialize(command:, buffer_id:, queue:, chdir: nil, ...)
+    @state = :live
+    @thread = Thread.new do
+      if chdir
+        run_popen(command, chdir, buffer_id, queue, ...)
+      else
+        run_pty(command, buffer_id, queue, ...)
+      end
+    end
+  end
+
+  def run_pty(command, buffer_id, queue, stream, &amp;notify)
+    PTY.spawn(shell, "-c", command) do |r, _w, pid|
+      stream.io = r
+      stream.pid = pid
+      while (chunk = r.readpartial(4096))
+        text = Buffer.decode_text(chunk).delete("\r")
+        queue &lt;&lt; { type: :stream_data, buffer_id:, data: text }
+        notify.call
+      end
+    rescue EOFError, Errno::EIO
+      # PTY は子プロセス終了時に EIO を送る
+    end
+    status = Process.waitpid2(pid)[1]
+    queue &lt;&lt; { type: :stream_eof, buffer_id:, status: status }
+    notify.call
+  end
+end
+</code></pre>
+
+<p>バックグラウンドスレッドで PTY を開き、4KB ずつ読み取り、スレッドセーフなキュー（<code>Queue</code>）にイベントをプッシュする。<code>notify.call</code> は先述のシグナルパイプへの書き込みで、メインループをウェイクアップする。</p>
+
+<p>PTY を使うのは、多くのコマンドが PTY 接続時にのみカラー出力や行バッファリングを行うためだ。<code>chdir</code> 指定がある場合は <code>IO.popen</code> にフォールバックする（PTY は <code>chdir</code> をサポートしない）。</p>
+
+<h2 id="ch-streams--streammixer-イベントの合流">16.3 StreamMixer — イベントの合流</h2>
+
+<p><code>StreamMixer</code> は、複数のストリームからのイベントを 1 つのキューで受け取り、メインループの各サイクルで処理する。</p>
+
+<pre><code class="language-ruby">def drain_events!
+  return false unless @stream_event_queue
+
+  changed = false
+  loop do
+    event = @stream_event_queue.pop(true)   # non-blocking pop
+    case event[:type]
+    when :stream_data
+      changed = apply_stream_chunk!(event[:buffer_id], event[:data]) || changed
+    when :stream_eof
+      changed = finish_stream!(event[:buffer_id], ...) || changed
+    when :follow_data
+      changed = apply_stream_chunk!(...) || changed
+    when :file_lines
+      changed = apply_async_file_lines!(...) || changed
+    end
+  end
+rescue ThreadError   # キューが空
+  changed
+end
+</code></pre>
+
+<p><code>Queue#pop(true)</code> はノンブロッキングで、キューが空なら <code>ThreadError</code> を投げる。これを <code>rescue</code> して「処理するイベントがなくなった」と判断する。</p>
+
+<h2 id="ch-streams--大規模ファイルの非同期読み込み">16.4 大規模ファイルの非同期読み込み</h2>
+
+<p>64MB 以上のファイルは非同期で読み込む。最初の 8MB を同期的に読み込んで即座に表示し、残りをバックグラウンドスレッドで追記する。</p>
+
+<pre><code class="language-ruby">def open_path_asynchronously!(path)
+  file_size = File.size(path)
+  buf = @editor.add_empty_buffer(path:)
+
+  io = File.open(path, "rb")
+  prefix = io.read(8 * 1024 * 1024)   # 最初の 8MB を同期読み込み
+
+  # 改行で切る（中途半端な行を避ける）
+  last_nl = prefix.rindex("\n".b)
+  if last_nl &amp;&amp; last_nl &lt; prefix.bytesize - 1
+    io.seek(-(prefix.bytesize - last_nl - 1), IO::SEEK_CUR)
+    prefix = prefix[0..last_nl]
+  end
+
+  buf.append_stream_text!(Buffer.decode_text(prefix))
+
+  # 残りをバックグラウンドで
+  buf.stream = Stream::FileLoad.new(io:, file_size:, buffer_id: buf.id, ...)
+end
+</code></pre>
+
+<p>プレフィックスを改行境界で切断するのは、行の途中でバッファが分断されるのを防ぐためだ。</p>
+
+<h2 id="ch-streams--自動追従">16.5 自動追従</h2>
+
+<p>ストリーム出力のバッファで、カーソルが最終行にある場合、新しいデータが追加されると自動的にカーソルが最終行に移動する（<code>tail -f</code> のような動作）。</p>
+
+<pre><code class="language-ruby">def stream_window_following_end?(win, buf)
+  last_row = buf.line_count - 1
+  win.cursor_y &gt;= last_row   # カーソルが最終行にいれば追従
+end
+</code></pre>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-streams.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-c-extension'); return false;">&larr; 15. C 拡張 — ホットパスの高速化</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-sixel'); return false;">17. Sixel — ターミナルに画像を描く &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-sixel" style="display: none;">
+    <h1 id="ch-sixel--sixel-ターミナルに画像を描く">17. Sixel — ターミナルに画像を描く</h1>
+
+<blockquote>
+  <p>「百聞は一見にしかず」 — 日本のことわざ</p>
+</blockquote>
+
+<p>テキストエディタに画像表示は贅沢に聞こえるが、Markdown のプレビューや画像ファイルの確認など、実用的な場面は多い。RuVim は <strong>Sixel</strong> プロトコルを使って、ターミナル上に画像を直接描画する。</p>
+
+<h2 id="ch-sixel--sixel-プロトコルの仕様">17.1 Sixel プロトコルの仕様</h2>
+
+<p>Sixel は DEC 社が 1980 年代に VT300 シリーズ端末のために開発したグラフィックスプロトコルだ。名前の由来は “<strong>six</strong> pix<strong>el</strong>s” — 縦 6 ピクセルを 1 カラム単位で表現する。</p>
+
+<h2 id="ch-sixel--データ構造">17.2 データ構造</h2>
+
+<p>Sixel データは <strong>DCS (Device Control String)</strong> シーケンスで囲まれる。</p>
+
+<pre><code>ESC P &lt;P1&gt;;&lt;P2&gt;;&lt;P3&gt; q &lt;sixel-data&gt; ESC \
+</code></pre>
+
+<ul>
+  <li><code>ESC P</code> (<code>\eP</code>) — DCS 開始</li>
+  <li><code>P1</code> — ピクセルアスペクト比（通常 0）</li>
+  <li><code>P2</code> — 背景モード（0: 現在の背景色、1: スクロール無効）</li>
+  <li><code>P3</code> — 水平グリッドサイズ（通常省略）</li>
+  <li><code>q</code> — Sixel モード開始</li>
+  <li><code>ESC \</code> (<code>\e\\</code>) — ST (String Terminator)</li>
+</ul>
+
+<p>RuVim では <code>P2=1</code>（スクロール無効モード）を指定する。これは画像が画面下部に近い場合に、ターミナルがスクロールしてしまうのを防ぐためだ。</p>
+
+<pre><code class="language-ruby">out = +"\eP0;1q"
+</code></pre>
+
+<h2 id="ch-sixel--ラスター属性">17.3 ラスター属性</h2>
+
+<p>Sixel データの先頭で画像の寸法を宣言できる。</p>
+
+<pre><code>"Pan;Pad;Ph;Pv
+</code></pre>
+
+<ul>
+  <li><code>Pan</code>, <code>Pad</code> — ピクセルのアスペクト比（通常 1:1）</li>
+  <li><code>Ph</code> — 画像の幅（ピクセル）</li>
+  <li><code>Pv</code> — 画像の高さ（ピクセル）</li>
+</ul>
+
+<pre><code class="language-ruby">out &lt;&lt; "\"1;1;#{width};#{height}"
+</code></pre>
+
+<h2 id="ch-sixel--カラーレジスタ">17.4 カラーレジスタ</h2>
+
+<p>Sixel は最大 256 色のパレットを使う。色は <strong>レジスタ</strong> に登録する。</p>
+
+<pre><code>#&lt;番号&gt;;2;&lt;R&gt;;&lt;G&gt;;&lt;B&gt;
+</code></pre>
+
+<p>ここで R, G, B は <strong>0〜100 のパーセンテージ</strong>だ。RGB の 0-255 値を変換する必要がある。</p>
+
+<pre><code class="language-ruby">palette.each_with_index do |c, i|
+  rp = (c[0] * 100.0 / 255).round
+  gp = (c[1] * 100.0 / 255).round
+  bp = (c[2] * 100.0 / 255).round
+  out &lt;&lt; "##{i};2;#{rp};#{gp};#{bp}"
+end
+</code></pre>
+
+<h2 id="ch-sixel--バンドベースのエンコーディング">17.5 バンドベースのエンコーディング</h2>
+
+<p>Sixel の核心は、画像を <strong>6 行ずつのバンド</strong> に分割して描画する仕組みだ。</p>
+
+<p>各カラムの 6 ピクセルは 6 ビットで表現され、63 を加算して ASCII 文字（<code>?</code> 〜 <code>~</code>）にマッピングされる。</p>
+
+<pre><code>ビット 0 (最上行) → 値 1
+ビット 1           → 値 2
+ビット 2           → 値 4
+ビット 3           → 値 8
+ビット 4           → 値 16
+ビット 5 (最下行) → 値 32
+</code></pre>
+
+<p>例えば、6 ピクセルすべてが描画対象なら <code>1+2+4+8+16+32 = 63</code>、ASCII では <code>63 + 63 = 126</code> = <code>~</code> になる。</p>
+
+<p>特殊文字:</p>
+<ul>
+  <li><code>$</code> — キャリッジリターン（バンド内で横位置を先頭に戻す）</li>
+  <li><code>-</code> — グラフィックス改行（次のバンドへ移動）</li>
+</ul>
+
+<h2 id="ch-sixel--色の重ね塗り">17.6 色の重ね塗り</h2>
+
+<p>Sixel は <strong>色ごと</strong> にバンドを描画する。1 つのバンドで複数の色を使う場合、色を選択（<code>#番号</code>）→ データを出力 → <code>$</code> で先頭に戻る → 次の色を選択、という手順を繰り返す。最後の色の後は <code>$</code> 不要で、<code>-</code>（次バンド）か ST（終了）に進む。</p>
+
+<pre><code class="language-ruby">keys.each_with_index do |idx, ci|
+  out &lt;&lt; "##{idx}"                                    # 色を選択
+  color_data[idx].each { |bits| out &lt;&lt; (bits + 63).chr }  # データ
+  out &lt;&lt; "$" unless ci == keys.length - 1             # 最後以外は CR
+end
+out &lt;&lt; "-" if y &lt; height  # 次のバンドへ
+</code></pre>
+
+<h2 id="ch-sixel--pure-ruby-png-デコーダ">17.7 Pure Ruby PNG デコーダ</h2>
+
+<p>Sixel エンコードの入力となるのは PNG 画像だ。外部ライブラリへの依存を避けるため、RuVim は Pure Ruby で PNG デコーダを実装している。</p>
+
+<h2 id="ch-sixel--チャンク解析">17.8 チャンク解析</h2>
+
+<p>PNG ファイルは 8 バイトのシグネチャに続いて、チャンクの連続で構成される。</p>
+
+<pre><code>[長さ: 4B] [タイプ: 4B] [データ: N B] [CRC: 4B]
+</code></pre>
+
+<p>RuVim は 3 種類のチャンクだけを解析する。</p>
+
+<ul>
+  <li><strong>IHDR</strong> — 画像ヘッダ（幅、高さ、ビット深度、カラータイプ）</li>
+  <li><strong>IDAT</strong> — 圧縮された画像データ（複数チャンクの場合あり）</li>
+  <li><strong>IEND</strong> — ファイル終端</li>
+</ul>
+
+<pre><code class="language-ruby">while pos + 8 &lt;= data.bytesize
+  length = data.byteslice(pos, 4).unpack1("N")
+  type   = data.byteslice(pos + 4, 4)
+  chunk_data = data.byteslice(pos + 8, length)
+  pos += 12 + length  # length + type + data + CRC
+
+  case type
+  when "IHDR" then ihdr = parse_ihdr(chunk_data)
+  when "IDAT" then idat_chunks &lt;&lt; chunk_data
+  when "IEND" then break
+  end
+end
+</code></pre>
+
+<p>対応するカラータイプは RGB (2) と RGBA (6) の 8bit のみ。インデクスカラーやグレースケールは非対応だが、写真やスクリーンショットの表示には十分だ。</p>
+
+<h2 id="ch-sixel--idat-の解凍とフィルタリング">17.9 IDAT の解凍とフィルタリング</h2>
+
+<p>IDAT チャンクを連結して zlib 展開すると、生のピクセルデータが得られる。ただし、各行の先頭にはフィルタタイプのバイトがあり、PNG の圧縮効率を上げるためのフィルタリングが施されている。</p>
+
+<p>PNG は 5 種類のフィルタを定義する。</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>タイプ</th>
+      <th>名称</th>
+      <th>復元式</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>0</td>
+      <td>None</td>
+      <td>そのまま</td>
+    </tr>
+    <tr>
+      <td>1</td>
+      <td>Sub</td>
+      <td><code>x + a</code> (左隣)</td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>Up</td>
+      <td><code>x + b</code> (上の行)</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td>Average</td>
+      <td><code>x + floor((a + b) / 2)</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td>Paeth</td>
+      <td><code>x + PaethPredictor(a, b, c)</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Paeth 予測子は、左 (a)、上 (b)、左上 (c) の 3 つの隣接ピクセルから最も近いものを予測値として使う。</p>
+
+<pre><code class="language-ruby">def paeth(a, b, c)
+  p_val = a + b - c
+  pa = (p_val - a).abs
+  pb = (p_val - b).abs
+  pc = (p_val - c).abs
+  if pa &lt;= pb &amp;&amp; pa &lt;= pc then a
+  elsif pb &lt;= pc then b
+  else c
+  end
+end
+</code></pre>
+
+<p>この予測子は Alan W. Paeth が 1991 年に発表したもので、周囲のピクセルとの差分を最小化することで、zlib 圧縮の効率を大幅に向上させる。</p>
+
+<h2 id="ch-sixel--安全対策">17.10 安全対策</h2>
+
+<p>デコーダには複数の安全制限がある。</p>
+
+<ul>
+  <li>最大ピクセル数: 5,000 万ピクセル（メモリ枯渇を防ぐ）</li>
+  <li>最大展開サイズ: 200 MB（zip bomb 対策）</li>
+  <li>ストリーミング展開で逐次チェック</li>
+</ul>
+
+<pre><code class="language-ruby">MAX_PIXELS = 50_000_000
+MAX_INFLATE_SIZE = 200 &lt;&lt; 20
+
+def safe_inflate(data)
+  zstream = Zlib::Inflate.new
+  buf = +""
+  zstream.inflate(data) do |chunk|
+    buf &lt;&lt; chunk
+    raise Error, "too large" if buf.bytesize &gt; MAX_INFLATE_SIZE
+  end
+  buf
+ensure
+  zstream.close
+end
+</code></pre>
+
+<h2 id="ch-sixel--減色-median-cut-量子化">17.11 減色 — Median-Cut 量子化</h2>
+
+<p>フルカラーの画像を Sixel の 256 色パレットに変換するには、<strong>減色（Color Quantization）</strong> が必要だ。RuVim は <strong>Median-Cut</strong> アルゴリズムを採用している。</p>
+
+<h2 id="ch-sixel--5-ビットヒストグラム">17.12 5 ビットヒストグラム</h2>
+
+<p>まず、RGB 各チャネルを 8 ビットから 5 ビットに縮約し、32K（32×32×32）の色空間にマッピングする。ピクセルごとではなくユニークな色ごとの頻度をカウントするため、大きな画像でも高速に処理できる。</p>
+
+<pre><code class="language-ruby">SHIFT = 3  # 8bit → 5bit
+hist = Hash.new(0)
+height.times do |y|
+  row = pixels[y]
+  width.times do |x|
+    r, g, b = row[x]
+    key = ((r &gt;&gt; SHIFT) &lt;&lt; 10) | ((g &gt;&gt; SHIFT) &lt;&lt; 5) | (b &gt;&gt; SHIFT)
+    hist[key] += 1
+  end
+end
+</code></pre>
+
+<p>10 ビット左シフトされた R、5 ビット左シフトされた G、そのままの B を OR 結合することで、15 ビットのキーにパックしている。</p>
+
+<h2 id="ch-sixel--median-cut-の分割">17.13 Median-Cut の分割</h2>
+
+<p>色空間を「箱」に分割していく。各ステップで、RGB のうち <strong>最大レンジを持つチャネル</strong> に沿って箱をソートし、<strong>ピクセル数の中央値</strong> で二分する。</p>
+
+<pre><code class="language-ruby">boxes = [make_box(entries)]
+while boxes.length &lt; 256
+  # レンジが最大の箱を見つける
+  best_idx = ...
+  box = boxes[best_idx]
+  ch = box[:ranges].index(best_range)  # 最大レンジのチャネル
+  sorted = box[:entries].sort_by { |e| e[ch] }
+
+  # ピクセル数の中央値で分割
+  half = total / 2
+  acc = 0
+  sorted.each_with_index do |e, i|
+    acc += e[3]  # e[3] = ピクセル数
+    if acc &gt;= half
+      split = [i + 1, 1].max
+      break
+    end
+  end
+  boxes[best_idx] = make_box(sorted[0...split])
+  boxes.push(make_box(sorted[split..]))
+end
+</code></pre>
+
+<p>ピクセル数で重み付けした分割により、使用頻度の高い色域に多くのパレットエントリが割り当てられる。</p>
+
+<h2 id="ch-sixel--パレット色の算出">17.14 パレット色の算出</h2>
+
+<p>各箱の代表色は、箱内のエントリの <strong>ピクセル数で重み付けした平均</strong> だ。5 ビットに縮約した値を元の 8 ビット空間に戻す際、<code>(値 &lt;&lt; 3) + 4</code> として中心値を使う。</p>
+
+<p>最終的に、各ピクセルはルックアップテーブル（LUT）を通じてパレットインデックスに変換される。LUT のキーは 15 ビットの量子化キーなので、検索は O(1) だ。</p>
+
+<h2 id="ch-sixel--リサイズ-nearest-neighbor">17.15 リサイズ — Nearest-Neighbor</h2>
+
+<p>ターミナルのセルサイズに合わせて画像をリサイズする。品質よりも速度を優先し、<strong>最近傍補間</strong> を使う。</p>
+
+<pre><code class="language-ruby">def resize(pixels, src_w, src_h, dst_w, dst_h)
+  Array.new(dst_h) do |y|
+    src_y = (y * src_h / dst_h).clamp(0, src_h - 1)
+    Array.new(dst_w) do |x|
+      src_x = (x * src_w / dst_w).clamp(0, src_w - 1)
+      pixels[src_y][src_x]
+    end
+  end
+end
+</code></pre>
+
+<p>最大サイズはターミナルのセル数×セルサイズ（ピクセル）で計算される。縦横比を維持するため、縦横の縮小率のうち小さい方を採用する。</p>
+
+<h2 id="ch-sixel--ターミナル能力の検出">17.16 ターミナル能力の検出</h2>
+
+<p>すべてのターミナルが Sixel を表示できるわけではない。RuVim は起動時に 2 つの問い合わせを行う。</p>
+
+<h2 id="ch-sixel--da1-device-attributes-による-sixel-対応検出">17.17 DA1 (Device Attributes) による Sixel 対応検出</h2>
+
+<pre><code>ESC [ c  →  応答: ESC [ ? &lt;属性リスト&gt; c
+</code></pre>
+
+<p>応答に <strong>属性 4</strong> が含まれていれば、Sixel 対応ターミナルだ。xterm、mlterm、WezTerm、foot など主要なターミナルエミュレータが対応している。</p>
+
+<h2 id="ch-sixel--セルサイズの取得">17.18 セルサイズの取得</h2>
+
+<p>Sixel はピクセル単位で描画するが、エディタのレイアウトはセル（文字）単位だ。ピクセルをセル数に変換するため、1 セルのピクセルサイズを知る必要がある。</p>
+
+<pre><code>ESC [ 16 t  →  応答: ESC [ 6 ; &lt;height&gt; ; &lt;width&gt; t
+</code></pre>
+
+<p>この応答から <code>cell_width</code> と <code>cell_height</code> が得られる。検出に失敗した場合は、一般的な値 <code>8×16</code> をフォールバックとして使う。</p>
+
+<h2 id="ch-sixel--画面統合-sixel_covered-マーカー">17.19 画面統合 — SIXEL_COVERED マーカー</h2>
+
+<p>Sixel 画像はターミナルの通常テキストとは独立して描画される。Sixel データを出力した行の下に、画像が複数行にわたって覆う領域ができる。Screen はこれを <strong><code>SIXEL_COVERED</code></strong> マーカーで管理する。</p>
+
+<pre><code class="language-ruby"># 画像行の描画
+rows &lt;&lt; prefix + result[:text]   # Sixel データ本体
+(result[:rows] - 1).times do
+  rows &lt;&lt; SIXEL_COVERED           # 画像に覆われた行
+end
+</code></pre>
+
+<p>差分レンダリング時、<code>SIXEL_COVERED</code> の行はスキップされる。Sixel データが上の行で出力済みなので、その下の行に通常テキストを書き込むと画像が壊れてしまうためだ。</p>
+
+<pre><code class="language-ruby">next if line == SIXEL_COVERED  # 覆われた行はスキップ
+</code></pre>
+
+<p>逆に、以前は画像があったが今はない場合、行をクリアして通常テキストを書き込む。</p>
+
+<pre><code class="language-ruby">if old_line == SIXEL_COVERED &amp;&amp; new_line != SIXEL_COVERED
+  out &lt;&lt; "\e[#{row_no};1H\e[2K"  # 行クリア
+  out &lt;&lt; (new_line || "")
+end
+</code></pre>
+
+<h2 id="ch-sixel--img2sixel-フォールバックと二段構え">17.20 img2sixel フォールバックと二段構え</h2>
+
+<p>Pure Ruby の Sixel エンコーダは依存関係ゼロだが、品質面では専用ツールに劣る。RuVim は <strong>img2sixel</strong>（libsixel のコマンドラインツール）が利用可能なら、そちらを優先する。</p>
+
+<pre><code class="language-ruby">def load_image(path, ...)
+  result = encode_with_img2sixel(full_path, max_px_w, max_px_h, cell_height) ||
+           encode_file(full_path, ...)  # フォールバック: Pure Ruby
+end
+</code></pre>
+
+<p>img2sixel は高品質なディザリングを提供し、PNG 以外の形式（JPEG, GIF, BMP 等）にも対応する。Pure Ruby 実装はフォールバックとして、img2sixel がインストールされていない環境でも画像表示を可能にする。</p>
+
+<h2 id="ch-sixel--キャッシュ戦略">17.21 キャッシュ戦略</h2>
+
+<p>Sixel エンコードは計算コストが高い。スクロールのたびにエンコードし直すのは現実的ではないため、結果をキャッシュする。</p>
+
+<pre><code class="language-ruby">class Cache
+  def get(path, mtime, width, height)
+    key = [path, mtime, width, height]
+    @entries[key]
+  end
+
+  def put(path, mtime, width, height, result)
+    key = [path, mtime, width, height]
+    @entries.shift if @entries.size &gt;= 64  # FIFO で上限 64
+    @entries[key] = result
+  end
+end
+</code></pre>
+
+<p>キャッシュキーにファイルの <code>mtime</code> を含めることで、画像ファイルが更新された場合は自動的に再エンコードされる。ウィンドウサイズも含まれるため、リサイズ時にも正しく再生成される。</p>
+
+<h2 id="ch-sixel--画像ファイルの-richview">17.22 画像ファイルの RichView</h2>
+
+<p>画像ファイル（PNG, JPEG, GIF, BMP, WEBP）を <code>:edit</code> で開くと、自動的に RichView モードになる。<code>ImageRenderer</code> はバイナリデータの代わりに <code>![ファイル名](パス)</code> という Markdown 画像行を持つ仮想バッファを作成し、Markdown レンダラがこの画像行を Sixel に変換して表示する。</p>
+
+<p>画像ファイルを開くだけで中身が見える。テキストエディタとは思えない体験だが、Sixel プロトコルのおかげでターミナルの中に収まっている。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-sixel.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-streams'); return false;">&larr; 16. ストリーム — 非同期 I/O と外部プロセス</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-config'); return false;">18. 設定システム — Ruby DSL による拡張 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-config" style="display: none;">
+    <h1 id="ch-config--設定システム-ruby-dsl-による拡張">18. 設定システム — Ruby DSL による拡張</h1>
+
+<blockquote>
+  <p>「型があるから型破りができる」 — 中村勘三郎</p>
+</blockquote>
+
+<p>RuVim の設定ファイルは、そのまま Ruby コードだ。<code>~/.config/ruvim/init.rb</code> に以下のように書ける。</p>
+
+<pre><code class="language-ruby"># キーバインド
+nmap "K", "buffer.scroll_up"
+nmap " ff", "meta.fuzzy_find"
+
+# インラインコマンド定義
+nmap "gf" do |ctx|
+  word = ctx.buffer.current_word
+  ctx.editor.open_path(word)
+end
+
+# Ex コマンド
+ex_command "hello", desc: "Say hello" do |ctx, **|
+  ctx.editor.echo("Hello, World!")
+end
+
+# オプション
+set "number"
+set "tabstop=4"
+</code></pre>
+
+<h2 id="ch-config--configdsl-basicobject-による安全なサンドボックス">18.1 ConfigDSL — BasicObject による安全なサンドボックス</h2>
+
+<pre><code class="language-ruby">class ConfigDSL &lt; BasicObject
+  def initialize(command_registry:, ex_registry:, keymaps:, command_host:, ...)
+    @command_registry = command_registry
+    @ex_registry = ex_registry
+    @keymaps = keymaps
+    @command_host = command_host
+  end
+
+  def nmap(seq, command_id = nil, desc: "user keymap", **opts, &amp;block)
+    command_id = inline_map_command_id(:normal, seq, desc:, &amp;block) if block
+    if @filetype
+      @keymaps.bind_filetype(@filetype, seq, command_id.to_s, mode: :normal, **opts)
+    else
+      @keymaps.bind(:normal, seq, command_id.to_s, **opts)
+    end
+  end
+end
+</code></pre>
+
+<p><code>ConfigDSL</code> は <code>BasicObject</code> を継承している。<code>BasicObject</code> は <code>Object</code> のメソッド（<code>puts</code>, <code>require</code> など）を持たないため、DSL のメソッド名が衝突しにくい。ユーザーが定義した <code>nmap</code> や <code>set</code> だけが使える、クリーンな名前空間を提供する。</p>
+
+<h2 id="ch-config--ファイルタイプ別設定">18.2 ファイルタイプ別設定</h2>
+
+<p>ファイルタイプ固有の設定は <code>~/.config/ruvim/ftplugin/&lt;filetype&gt;.rb</code> に置く。</p>
+
+<pre><code class="language-ruby"># ~/.config/ruvim/ftplugin/ruby.rb
+set "tabstop=2"
+set "shiftwidth=2"
+nmap "&lt;C-r&gt;", "meta.run_current"
+</code></pre>
+
+<p>ファイルタイプ名はバリデーションされ、パストラバーサルを防いでいる。</p>
+
+<h2 id="ch-config--ブロック付きキーマップ">18.3 ブロック付きキーマップ</h2>
+
+<p><code>nmap</code> にブロックを渡すと、自動的にコマンド ID が生成されて登録される。</p>
+
+<pre><code class="language-ruby">def inline_map_command_id(mode, seq, desc:, &amp;block)
+  @inline_map_command_seq += 1
+  id = "user.keymap.#{mode}.#{sanitize_seq_label(seq)}.#{@inline_map_command_seq}"
+  command(id, desc:, &amp;block)
+  id
+end
+</code></pre>
+
+<p>生成される ID は <code>user.keymap.normal.gf.1</code> のような形式で、一意性が保証される。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-config.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-sixel'); return false;">&larr; 17. Sixel — ターミナルに画像を描く</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-testing'); return false;">19. テスト戦略 — エディタをどうテストするか &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-testing" style="display: none;">
+    <h1 id="ch-testing--テスト戦略-エディタをどうテストするか">19. テスト戦略 — エディタをどうテストするか</h1>
+
+<blockquote>
+  <p>「備えあれば憂いなし」 — 日本のことわざ</p>
+</blockquote>
+
+<p>テキストエディタのテストは難しい。ターミナル I/O を使い、ユーザーのキー入力に応答し、画面に出力する。自動テストにはターミナルを模擬する必要がある。</p>
+
+<h2 id="ch-testing--テストヘルパー">19.1 テストヘルパー</h2>
+
+<pre><code class="language-ruby"># test/test_helper.rb
+module RuVimTestHelpers
+  def fresh_editor
+    editor = RuVim::Editor.new
+    editor.ensure_bootstrap_buffer!
+    editor
+  end
+end
+</code></pre>
+
+<p><code>fresh_editor</code> は、ターミナルを持たない裸の <code>Editor</code> を生成する。入力も描画もなく、純粋にエディタの状態だけをテストできる。</p>
+
+<h2 id="ch-testing--統合テスト-appscenariotest">19.2 統合テスト — AppScenarioTest</h2>
+
+<p>より高レベルのテストでは、<code>App</code> を生成し、キー入力をプログラム的に注入する。</p>
+
+<pre><code class="language-ruby">class AppScenarioTest &lt; Minitest::Test
+  def setup
+    @app = RuVim::App.new(clean: true, ...)
+    @editor = @app.instance_variable_get(:@editor)
+    @dispatcher = @app.instance_variable_get(:@dispatcher)
+    @key_handler = @app.instance_variable_get(:@key_handler)
+  end
+
+  def feed(keys)
+    keys.each_char { |ch| @key_handler.handle(ch) }
+  end
+
+  def test_insert_hello
+    feed("iHello\e")   # Insert モードに入り、"Hello" と打ち、ESC で Normal に戻る
+    assert_equal "Hello", @editor.current_buffer.line_at(0)
+    assert_equal :normal, @editor.mode
+  end
+end
+</code></pre>
+
+<p><code>feed</code> メソッドでキーシーケンスを送り、エディタの状態をアサートする。画面描画は行わないが、バッファの内容、カーソル位置、モード、レジスタの中身など、すべての内部状態を検証できる。</p>
+
+<p>テストスイートは 300 以上のアサーションを含み、挿入、検索、ビジュアルモード、ドットリピート、インデント、テキストオブジェクトなど幅広い操作をカバーしている。</p>
+
+<h2 id="ch-testing--ユニットテスト">19.3 ユニットテスト</h2>
+
+<p>各コンポーネントは独立してテスト可能だ。</p>
+
+<ul>
+  <li><code>buffer_test</code> — バッファの行操作、undo/redo、ファイル I/O</li>
+  <li><code>window_test</code> — カーソル移動、スクロール、クランプ</li>
+  <li><code>keymap_manager_test</code> — キーの登録と解決</li>
+  <li><code>display_width_test</code> — Unicode 文字幅</li>
+  <li><code>text_metrics_test</code> — グラフェム境界、画面列変換</li>
+  <li><code>highlighter_test</code> — 各言語の色付け</li>
+  <li><code>dispatcher_test</code> — レンジ解析、substitute 解析</li>
+</ul>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-testing.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-config'); return false;">&larr; 18. 設定システム — Ruby DSL による拡張</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-design-patterns'); return false;">20. 設計パターンと判断の記録 &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-design-patterns" style="display: none;">
+    <h1 id="ch-design-patterns--設計パターンと判断の記録">20. 設計パターンと判断の記録</h1>
+
+<blockquote>
+  <p>「迷ったら原点に戻れ」 — 松下幸之助</p>
+</blockquote>
+
+<p>最後に、RuVim の設計で採用されたパターンと、その背景にある判断を整理する。</p>
+
+<h2 id="ch-design-patterns--依存注入-dependency-injection">20.1 依存注入 (Dependency Injection)</h2>
+
+<p>すべてのコンポーネントは <code>App</code> が生成し、コンストラクタ引数やセッターで注入する。<code>Editor</code> は <code>KeymapManager</code> や <code>StreamMixer</code> への参照を外部からもらう。これにより、テスト時にモックや単純な実装に差し替えられる。</p>
+
+<h2 id="ch-design-patterns--遅延ロード-lazy-loading">20.2 遅延ロード (Lazy Loading)</h2>
+
+<pre><code class="language-ruby">module RuVim
+  autoload :Clipboard, File.expand_path("clipboard", __dir__)
+  autoload :Browser, File.expand_path("browser", __dir__)
+  autoload :SpellChecker, File.expand_path("spell_checker", __dir__)
+  autoload :FileWatcher, File.expand_path("file_watcher", __dir__)
+end
+</code></pre>
+
+<p>クリップボード、ブラウザ、スペルチェッカー、ファイルウォッチャー、すべての言語モジュール、Git/GitHub インテグレーションは、初めて参照されるまでロードされない。起動時間を短縮するための重要な戦略だ。</p>
+
+<h2 id="ch-design-patterns--フリーズしたシングルトン">20.3 フリーズしたシングルトン</h2>
+
+<p>言語モジュールは <code>@instance ||= new.freeze</code> というパターンでインスタンスを提供する。<code>freeze</code> することで、ハイライト処理中に誤って状態を変更する可能性を排除する。</p>
+
+<h2 id="ch-design-patterns--コールバックとしてのラムダ">20.4 コールバックとしてのラムダ</h2>
+
+<p><code>Editor</code> は <code>@suspend_handler</code>、<code>@shell_executor</code>、<code>@confirm_key_reader</code> といったコールバックをラムダとして保持する。これにより、Editor が Terminal や Input の存在を知らなくても、必要な操作を実行できる。</p>
+
+<pre><code class="language-ruby">@editor.shell_executor = -&gt;(command) {
+  result = @terminal.suspend_for_shell(command)
+  @screen.invalidate_cache!
+  result
+}
+</code></pre>
+
+<h2 id="ch-design-patterns--状態機械としてのペンディング状態">20.5 状態機械としてのペンディング状態</h2>
+
+<p><code>KeyHandler</code> の各ペンディング状態（オペレータ、レジスタ、マーク等）は、明示的なフラグとして管理される。有限状態機械の各状態に対応するメソッドが呼ばれ、次の入力に応じて遷移する。</p>
+
+<p>複雑さを制御するため、<code>PendingState</code>、<code>MacroDot</code>、<code>InsertMode</code> の 3 つのモジュールに分割している。</p>
+
+<h2 id="ch-design-patterns--エラー境界としての-commanderror">20.6 エラー境界としての CommandError</h2>
+
+<p>すべてのコマンドエラーは <code>RuVim::CommandError</code> として送出され、<code>KeyHandler#handle</code> と <code>Dispatcher#dispatch</code> で捕捉される。</p>
+
+<pre><code class="language-ruby">def handle(key)
+  # ... キー処理 ...
+rescue RuVim::CommandError =&gt; e
+  @editor.echo_error(e.message)
+  false
+end
+</code></pre>
+
+<p>どんなコマンドがエラーを起こしても、エディタ自体はクラッシュせず、エラーメッセージを表示して通常動作を続ける。</p>
+
+<h2 id="ch-design-patterns--モノトニッククロックの一貫した使用">20.7 モノトニッククロックの一貫した使用</h2>
+
+<p>時刻が関わる処理（タイムアウト、パフォーマンス計測、メッセージの有効期限）はすべて <code>Process.clock_gettime(Process::CLOCK_MONOTONIC)</code> を使う。<code>Time.now</code> は NTP 同期で巻き戻る可能性があるため使わない。</p>
+
+<pre><code class="language-ruby">def monotonic_now
+  Process.clock_gettime(Process::CLOCK_MONOTONIC)
+rescue StandardError
+  Time.now.to_f   # フォールバック
+end
+</code></pre>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-design-patterns.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-testing'); return false;">&larr; 19. テスト戦略 — エディタをどうテストするか</a>
+      <a href="#" class="nav-next" onclick="showChapter('ch-epilogue'); return false;">21. おわりに &rarr;</a>
+    </nav>
+  </section>
+  <section class="chapter" id="chapter-ch-epilogue" style="display: none;">
+    <h1 id="ch-epilogue--おわりに">21. おわりに</h1>
+
+<blockquote>
+  <p>「初心忘るべからず」 — 世阿弥</p>
+</blockquote>
+
+<p>テキストエディタは、小さな世界に見えて驚くほど広い問題空間を持つプログラムだ。ターミナル制御、Unicode、非同期 I/O、状態機械、パフォーマンス最適化 — ソフトウェアエンジニアリングの多くの側面が凝縮されている。</p>
+
+<p>RuVim は Ruby で書かれているが、ホットパスを C 拡張に逃がすデュアル実装パターン、ペースト最適化や差分レンダリングといった実用的な最適化により、日常的な使用に十分な性能を実現している。</p>
+
+<p>この記事が、エディタの内部構造に興味を持つきっかけになれば幸いだ。ソースコードは全公開されているので、気になった部分はぜひ読んでみてほしい。</p>
+
+    <div class="edit-link">
+      <a href="https://github.com/ko1/ruvim/blob/HEAD/docs/impl_book_src/ch-epilogue.md" target="_blank" rel="noopener">View on GitHub</a>
+    </div>
+    <nav class="chapter-nav">
+      <a href="#" class="nav-prev" onclick="showChapter('ch-design-patterns'); return false;">&larr; 20. 設計パターンと判断の記録</a>
+    </nav>
+  </section>
+</main>
+
+<script>
+(function() {
+  var chapters = ["cover", "ch-overview", "ch-startup", "ch-mainloop", "ch-terminal", "ch-key-input", "ch-keymap", "ch-dispatch", "ch-key-handler", "ch-buffer", "ch-window", "ch-editor", "ch-screen", "ch-syntax", "ch-unicode", "ch-c-extension", "ch-streams", "ch-sixel", "ch-config", "ch-testing", "ch-design-patterns", "ch-epilogue"];
+  var currentChapter = null;
+
+  function showChapter(slug) {
+    chapters.forEach(function(ch) {
+      var el = document.getElementById('chapter-' + ch);
+      if (el) el.style.display = (ch === slug) ? 'block' : 'none';
+    });
+
+    // Update active state in TOC
+    var tocItems = document.querySelectorAll('.toc-chapter');
+    tocItems.forEach(function(item) {
+      if (item.dataset.chapter === slug) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+
+    currentChapter = slug;
+    history.replaceState(null, '', '#' + slug);
+    window.scrollTo(0, 0);
+
+    // Re-apply highlight if search is active
+    if (searchInput && searchInput.value) {
+      highlightContent(searchInput.value);
+    }
+  }
+
+  function showChapterAndScroll(slug, headingId) {
+    showChapter(slug);
+    history.replaceState(null, '', '#' + headingId);
+    setTimeout(function() {
+      var target = document.getElementById(headingId);
+      if (target) target.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+  }
+
+  // Handle initial hash
+  function handleHash() {
+    var hash = location.hash.replace('#', '');
+    if (!hash) {
+      if (chapters.length > 0) showChapter(chapters[0]);
+      return;
+    }
+
+    // Check if hash matches a chapter slug directly
+    if (chapters.indexOf(hash) !== -1) {
+      showChapter(hash);
+      return;
+    }
+
+    // Check for deep link (chapter--heading)
+    var parts = hash.split('--');
+    if (parts.length >= 2) {
+      var chSlug = parts[0];
+      if (chapters.indexOf(chSlug) !== -1) {
+        showChapterAndScroll(chSlug, hash);
+        return;
+      }
+    }
+
+    // Fallback
+    if (chapters.length > 0) showChapter(chapters[0]);
+  }
+
+  // TOC search + content highlight
+  var searchInput = document.getElementById('toc-search');
+  var clearBtn = document.getElementById('search-clear');
+
+  function updateSearch() {
+    var query = searchInput.value.toLowerCase();
+    var items = document.querySelectorAll('.toc-chapter');
+    items.forEach(function(item) {
+      var text = item.textContent.toLowerCase();
+      item.style.display = text.indexOf(query) !== -1 ? '' : 'none';
+    });
+    clearBtn.style.display = query ? 'block' : 'none';
+    highlightContent(searchInput.value);
+  }
+
+  searchInput.addEventListener('input', updateSearch);
+
+  clearBtn.addEventListener('click', function() {
+    searchInput.value = '';
+    updateSearch();
+    searchInput.focus();
+  });
+
+  // Content highlight
+  function highlightContent(query) {
+    // Remove existing highlights
+    var marks = document.querySelectorAll('mark.search-highlight');
+    marks.forEach(function(mark) {
+      var parent = mark.parentNode;
+      parent.replaceChild(document.createTextNode(mark.textContent), mark);
+      parent.normalize();
+    });
+
+    if (!query || query.length < 2) return;
+
+    // Highlight in current chapter
+    if (!currentChapter) return;
+    var section = document.getElementById('chapter-' + currentChapter);
+    if (!section) return;
+
+    highlightInNode(section, query.toLowerCase());
+  }
+
+  function highlightInNode(node, query) {
+    if (node.nodeType === 3) { // Text node
+      var text = node.textContent;
+      var lower = text.toLowerCase();
+      var idx = lower.indexOf(query);
+      if (idx === -1) return;
+
+      var frag = document.createDocumentFragment();
+      var lastIdx = 0;
+      while (idx !== -1) {
+        frag.appendChild(document.createTextNode(text.substring(lastIdx, idx)));
+        var mark = document.createElement('mark');
+        mark.className = 'search-highlight';
+        mark.textContent = text.substring(idx, idx + query.length);
+        frag.appendChild(mark);
+        lastIdx = idx + query.length;
+        idx = lower.indexOf(query, lastIdx);
+      }
+      frag.appendChild(document.createTextNode(text.substring(lastIdx)));
+      node.parentNode.replaceChild(frag, node);
+    } else if (node.nodeType === 1 && node.tagName !== 'SCRIPT' && node.tagName !== 'STYLE' && node.tagName !== 'MARK' && node.tagName !== 'PRE') {
+      // Collect children into array first (live NodeList changes during iteration)
+      var children = Array.prototype.slice.call(node.childNodes);
+      children.forEach(function(child) { highlightInNode(child, query); });
+    }
+  }
+
+  // Sidebar toggle for mobile
+  var toggle = document.getElementById('sidebar-toggle');
+  var sidebar = document.getElementById('sidebar');
+  toggle.addEventListener('click', function() {
+    sidebar.classList.toggle('open');
+  });
+
+  // Close sidebar when clicking a link on mobile
+  var tocLinks = document.querySelectorAll('.toc a');
+  tocLinks.forEach(function(link) {
+    link.addEventListener('click', function() {
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+      }
+    });
+  });
+
+  // Dark mode toggle
+  var themeToggle = document.getElementById('theme-toggle');
+  var savedTheme = localStorage.getItem('ligarb-theme');
+  if (savedTheme) {
+    document.documentElement.setAttribute('data-theme', savedTheme);
+  }
+  themeToggle.addEventListener('click', function() {
+    var current = document.documentElement.getAttribute('data-theme');
+    var next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('ligarb-theme', next);
+  });
+
+  // Expose to onclick handlers
+  window.showChapter = showChapter;
+  window.showChapterAndScroll = showChapterAndScroll;
+
+  // Initialize
+  handleHash();
+  window.addEventListener('hashchange', handleHash);
+})();
+</script>
+<script src="js/highlight.min.js"></script>
+<script>hljs.highlightAll();</script>
+</body>
+</html>

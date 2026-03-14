@@ -1,0 +1,50 @@
+title: "RuVim 完全ガイド"
+language: "ja"
+output_dir: "../tutorial_book"
+chapter_numbers: true
+repository: https://github.com/ko1/ruvim/
+author: Claude Code (asked by @ko1)
+chapters:
+  - cover: cover.md
+  - part: part1.md
+    chapters:
+      - ch-intro.md
+      - ch-basic-movement.md
+      - ch-basic-editing.md
+      - ch-files.md
+  - part: part2.md
+    chapters:
+      - ch-operators-motions.md
+      - ch-text-objects.md
+      - ch-inline-movement.md
+      - ch-search-replace.md
+      - ch-visual-mode.md
+      - ch-dot-macro-register.md
+      - ch-marks-jumps.md
+      - ch-misc-editing.md
+  - part: part3.md
+    chapters:
+      - ch-buffers.md
+      - ch-windows.md
+      - ch-tabs.md
+      - ch-search-workflow.md
+      - ch-git.md
+      - ch-github.md
+  - part: part4.md
+    chapters:
+      - ch-options.md
+      - ch-config.md
+      - ch-plugin-api.md
+      - ch-syntax-languages.md
+      - ch-rich-view.md
+      - ch-streams.md
+      - ch-completion.md
+      - ch-security.md
+  - appendix:
+    - appendix-a.md
+    - appendix-b.md
+    - appendix-c.md
+    - appendix-d.md
+    - appendix-e.md
+    - appendix-f.md
+    - appendix-g.md

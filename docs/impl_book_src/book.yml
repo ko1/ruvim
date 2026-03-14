@@ -1,0 +1,29 @@
+title: "RuVim 実装解説"
+language: "ja"
+output_dir: "../impl_book"
+chapter_numbers: true
+repository: https://github.com/ko1/ruvim/
+author: Claude Code (asked by @ko1)
+chapters:
+  - cover: cover.md
+  - ch-overview.md
+  - ch-startup.md
+  - ch-mainloop.md
+  - ch-terminal.md
+  - ch-key-input.md
+  - ch-keymap.md
+  - ch-dispatch.md
+  - ch-key-handler.md
+  - ch-buffer.md
+  - ch-window.md
+  - ch-editor.md
+  - ch-screen.md
+  - ch-syntax.md
+  - ch-unicode.md
+  - ch-c-extension.md
+  - ch-streams.md
+  - ch-sixel.md
+  - ch-config.md
+  - ch-testing.md
+  - ch-design-patterns.md
+  - ch-epilogue.md

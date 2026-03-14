@@ -42,7 +42,7 @@ Web で読みやすい形式のドキュメントは https://ko1.github.io/ruvim
 | ドキュメント | 内容 |
 |---|---|
 | [tutorial.md](docs/tutorial.md) | 基本操作のチュートリアル。起動・移動・編集・保存の流れをひと通り学べます |
-| [tutorial_book.md](docs/tutorial_book.md) | 完全ガイド（チュートリアルブック）。基本から応用・カスタマイズまで網羅した一冊。[HTML 版](docs/tutorial_book.html)もあります |
+| [RuVim 完全ガイド](docs/tutorial_book/index.html) | 完全ガイド（チュートリアルブック）。基本から応用・カスタマイズまで全 26 章 + 付録で網羅 |
 
 ### リファレンス
 
@@ -64,7 +64,7 @@ Web で読みやすい形式のドキュメントは https://ko1.github.io/ruvim
 | ドキュメント | 内容 |
 |---|---|
 | [spec.md](docs/spec.md) | 仕様書。アーキテクチャ・設計方針・各サブシステムの詳細 |
-| [implementation.md](docs/implementation.md) | 実装解説記事。「Ruby でテキストエディタを作る」をテーマに内部設計を解説 |
+| [RuVim 実装解説](docs/impl_book/index.html) | 実装解説。「Ruby でテキストエディタを作る」をテーマに内部設計を全 20 章で解説 |
 | [todo.md](docs/todo.md) | TODO リスト。今後の開発予定と検討中の機能 |
 | [done.md](docs/done.md) | 完了項目。実装済みの機能をカテゴリ別に記録 |
 
