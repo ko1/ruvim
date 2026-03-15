@@ -47,7 +47,10 @@ class ConfigDSL < BasicObject
 end
 ```
 
-`ConfigDSL` は `BasicObject` を継承している。`BasicObject` は `Object` のメソッド（`puts`, `require` など）を持たないため、DSL のメソッド名が衝突しにくい。ユーザーが定義した `nmap` や `set` だけが使える、クリーンな名前空間を提供する。
+[`ConfigDSL`](#index:ConfigDSL) は `BasicObject` を継承している。`BasicObject` は `Object` のメソッド（`puts`, `require` など）を持たないため、DSL のメソッド名が衝突しにくい。ユーザーが定義した `nmap` や `set` だけが使える、クリーンな名前空間を提供する。
+
+> [!NOTE]
+> `BasicObject` を継承する理由は、`Object` のメソッド（`puts`, `require`, `class` など 60 以上）と DSL メソッドの名前衝突を防ぐためだ。ただし、DSL ブロック内で `require` や `puts` を使いたい場合は `::Kernel.require` のように修飾が必要になる。
 
 ## ファイルタイプ別設定
 
@@ -61,6 +64,9 @@ nmap "<C-r>", "meta.run_current"
 ```
 
 ファイルタイプ名はバリデーションされ、パストラバーサルを防いでいる。
+
+> [!CAUTION]
+> ftplugin のファイル名にはファイルタイプ名がそのまま使われる。`../` を含むファイルタイプ名を受け付けるとパストラバーサル攻撃が可能になるため、英数字とアンダースコアのみを許可するバリデーションが入っている。
 
 ## ブロック付きキーマップ
 

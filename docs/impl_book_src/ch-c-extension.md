@@ -2,7 +2,7 @@
 
 > 「適材適所」 — 日本のことわざ
 
-DisplayWidth と TextMetrics の計算は、画面描画のたびに何千回も呼ばれるホットパスだ。Ruby で書いた Pure Ruby 実装でも動作するが、C 拡張に置き換えることで大幅に高速化できる。
+[DisplayWidth](#index:C 拡張/DisplayWidth) と [TextMetrics](#index:C 拡張/TextMetrics) の計算は、[画面描画](ch-screen.md)のたびに何千回も呼ばれるホットパスだ。Ruby で書いた Pure Ruby 実装でも動作するが、C 拡張に置き換えることで大幅に高速化できる。
 
 ## デュアル実装パターン
 
@@ -31,6 +31,9 @@ end
 ```
 
 `require_relative "ruvim_ext"` が失敗しても `LoadError` をキャッチして Pure Ruby にフォールバックする。ユーザーが C コンパイラを持っていなくても動く。
+
+> [!IMPORTANT]
+> このデュアル実装パターンにより、C コンパイラがない環境でも RuVim は動作する。パフォーマンスは低下するが機能は完全に同一だ。詳しくは[設計パターン](ch-design-patterns.md)を参照。
 
 ## C 拡張の実装
 
@@ -106,3 +109,6 @@ in_ranges(unsigned int code, const range_t *ranges, int count)
 ```
 
 テーブルがソートされているため、`code < ranges[i].lo` で早期に脱出できる。テーブルサイズが小さい（各カテゴリ 5〜10 エントリ程度）ので、二分探索よりも線形走査の方が実用的に速い。
+
+> [!TIP]
+> ベンチマークは `benchmark/cext_compare.rb` で Pure Ruby 版と C 拡張版の性能を比較できる。一般的にC拡張版は3〜5倍高速だ。

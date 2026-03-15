@@ -35,4 +35,7 @@ App
 └── ConfigLoader ── ユーザー設定の読み込み
 ```
 
-すべてのオブジェクトは `App` が生成し、依存注入（Dependency Injection）で結合する。グローバル変数やグローバルなシングルトンへの暗黙的な依存は避け、テスタビリティを確保している。
+すべてのオブジェクトは [`App`](#index:App) が生成し、[依存注入](#index:依存注入/Dependency Injection)（Dependency Injection）で結合する。グローバル変数やグローバルなシングルトンへの暗黙的な依存は避け、テスタビリティを確保している。
+
+> [!NOTE]
+> この依存注入パターンの詳細は[設計パターンと判断の記録](ch-design-patterns.md#依存注入-dependency-injection)で解説している。
