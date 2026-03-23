@@ -655,8 +655,13 @@ module RuVim
       return unless @buffers.empty?
 
       buffer = add_empty_buffer
-      add_window(buffer_id: buffer.id)
-      ensure_initial_tabpage!
+      if @windows.empty?
+        add_window(buffer_id: buffer.id)
+        ensure_initial_tabpage!
+      else
+        # Reuse existing windows (e.g. after evict_bootstrap_buffer! + failed open_path)
+        @windows.each_value { |w| w.buffer_id = buffer.id }
+      end
     end
 
     def show_help_buffer!(title:, lines:, filetype: "help")

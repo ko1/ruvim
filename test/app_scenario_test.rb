@@ -1360,6 +1360,7 @@ class AppScenarioTest < Minitest::Test
       editor = app.instance_variable_get(:@editor)
       assert_match(/is a directory/, editor.message)
       assert editor.current_buffer, "should have a fallback buffer"
+      assert_equal 1, editor.windows.size, "should not split when opening a directory"
     end
   end
 end
