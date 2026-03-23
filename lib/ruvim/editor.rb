@@ -612,6 +612,11 @@ module RuVim
     end
 
     def open_path_sync(path)
+      if path && File.directory?(path)
+        echo_error("\"#{path}\" is a directory")
+        return nil
+      end
+
       # For filetypes with auto_open rich view (e.g., images), skip reading
       # the file as text to avoid decoding large binary data.
       ft = detect_filetype(path)

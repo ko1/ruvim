@@ -885,6 +885,32 @@ class DispatcherTest < Minitest::Test
     end
   end
 
+  # ---- open_path with directory ----
+
+  class OpenPathDirectoryTest < Minitest::Test
+    def setup
+      @app = RuVim::App.new
+      @editor = @app.instance_variable_get(:@editor)
+    end
+
+    def test_open_path_directory_shows_error
+      Dir.mktmpdir do |dir|
+        original_buffer = @editor.current_buffer
+        @editor.open_path(dir)
+        assert_equal original_buffer, @editor.current_buffer, "buffer should not change"
+        assert_equal :error, @editor.instance_variable_get(:@message_kind)
+        assert_match(/is a directory/, @editor.instance_variable_get(:@message))
+      end
+    end
+
+    def test_open_path_sync_directory_returns_nil
+      Dir.mktmpdir do |dir|
+        result = @editor.send(:open_path_sync, dir)
+        assert_nil result
+      end
+    end
+  end
+
   # ---- parse_global ----
 
   class ParseGlobalTest < Minitest::Test

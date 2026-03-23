@@ -367,6 +367,7 @@ module RuVim
         @editor.tabnext(-(@editor.tabpage_count - 1))
       else
         rest.each do |p|
+          next if File.directory?(p)
           buf = @editor.add_buffer_from_file(p)
           @editor.start_follow!(buf) if @startup.follow
         end
@@ -375,11 +376,19 @@ module RuVim
 
     def open_path_in_split!(path, layout:)
       @editor.split_current_window(layout:)
-      @editor.open_path(path)
-      apply_startup_buffer_flags!
+      result = @editor.open_path(path)
+      if result.nil?
+        @editor.close_current_window!
+      else
+        apply_startup_buffer_flags!
+      end
     end
 
     def open_path_in_tab!(path)
+      if File.directory?(path)
+        @editor.echo_error("\"#{path}\" is a directory")
+        return
+      end
       @editor.tabnew(path:)
       apply_startup_buffer_flags!
     end
