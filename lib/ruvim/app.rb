@@ -350,8 +350,12 @@ module RuVim
       @editor.set_arglist(list)
 
       first, *rest = list
-      @editor.open_path(first)
-      apply_startup_buffer_flags!
+      result = @editor.open_path(first)
+      if result
+        apply_startup_buffer_flags!
+      else
+        @editor.ensure_bootstrap_buffer!
+      end
 
       case @startup.open_layout
       when :horizontal

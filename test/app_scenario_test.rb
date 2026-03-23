@@ -1353,4 +1353,13 @@ class AppScenarioTest < Minitest::Test
     assert_equal ["aa", "bb", ""], @editor.current_buffer.lines
     assert_equal :insert, @editor.mode
   end
+
+  def test_open_directory_does_not_crash
+    Dir.mktmpdir do |dir|
+      app = RuVim::App.new(clean: true, paths: [dir])
+      editor = app.instance_variable_get(:@editor)
+      assert_match(/is a directory/, editor.message)
+      assert editor.current_buffer, "should have a fallback buffer"
+    end
+  end
 end
